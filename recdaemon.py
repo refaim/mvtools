@@ -9,6 +9,18 @@ import sys
 import rt.log
 import rt.process
 
+CRFS = {
+    'animation': 18,
+    'film': 22,
+    'trash': 23,
+}
+
+TUNES = {
+    'trash': 'film',
+    'film': 'film',
+    'animation': 'animation',
+}
+
 def jobs(root):
     for filename in list(os.listdir(root)):
         filepath = os.path.join(root, filename)
@@ -43,10 +55,10 @@ def encode(srcpath, srcscan, srcbps, dstpath, dsttune):
         '-dn',
         '-c:v libx264',
         '-preset veryslow',
-        '-tune {}'.format(dsttune),
+        '-tune {}'.format(TUNES[dsttune]),
         '-profile:v high',
         '-level:v 4.1',
-        '-crf 18',
+        '-crf {}'.format(CRFS[dsttune]),
         '-map_metadata -1',
         '-map_chapters -1',
         # '-maxrate {}'.format(kbps),
