@@ -30,7 +30,7 @@ def jobs(root):
                     data = line.split()
                     dsttune = data[0]
                     srcscan = data[1]
-                    srcpath = ' '.join(data[2:])
+                    srcpath = u' '.join(data[2:])
                     dstpath = os.path.join(os.path.dirname(srcpath), u'{}_enc_{}.mkv'.format(os.path.splitext(os.path.basename(srcpath))[0], dsttune))
                     yield (srcpath, srcscan, dstpath, dsttune)
             os.remove(filepath)
