@@ -10,7 +10,7 @@ def movies(path):
         for filename in sorted(files):
             if filename.endswith('.mkv') and not filename.endswith('_enc.mkv'):
                 filepath = os.path.join(root, filename)
-                yield os.path.relpath(filepath, path), pymediainfo.MediaInfo.parse(filepath)
+                yield os.path.relpath(filepath, path), pymediainfo.MediaInfo.parse(filepath, library_file=os.path.join(os.path.dirname(__file__), 'MediaInfo.dll'))
 
 def main():
     parser = argparse.ArgumentParser()
