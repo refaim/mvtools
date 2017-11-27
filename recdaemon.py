@@ -22,7 +22,7 @@ TUNES = {
 }
 
 def jobs(root):
-    for filename in list(os.listdir(root)):
+    for filename in sorted(os.listdir(root)):
         filepath = os.path.join(root, filename)
         if os.path.isfile(filepath) and filename.endswith('.job'):
             with codecs.open(filepath, 'r', 'utf-8') as fobj:
