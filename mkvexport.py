@@ -1,18 +1,25 @@
 #!/usr/bin/python
+# coding: utf-8
 
 from __future__ import print_function
 
 import argparse
+import codecs
 import os
 import re
 import subprocess
 import sys
 
-TRACKS_TYPES = {
-    'video': 'v',
-    'audio': 'a',
-    'subtitles': 's',
-}
+LANG_ORDER = ['und', 'jpn', 'eng', 'rus']
+MUX_SCRIPT = 'mux.cmd'
+
+def translate(value):
+    rus_string = 'абвгдеёжзиклмнопрстуфхцчшщьыъэюя'
+    eng_list = "a|b|v|g|d|e|e|zh|z|i|k|l|m|n|o|p|r|s|t|u|f|h|c|ch|sh|shch|'|y|'|e|yu|ya".split('|')
+    return ''.join(eng_list[rus_string.index(c)] if c in rus_string else c for c in value)
+
+def pprint(value):
+    print(translate(value))
 
 def quote(path):
     character = "'"
@@ -20,17 +27,7 @@ def quote(path):
         character = '"'
     return character + path + character
 
-def movies(path):
-    for root, dirs, files in os.walk(path):
-        for filename in files:
-            if filename.endswith('.mkv'):
-                yield os.path.join(root, filename)
-
 def process(command):
-    # commandString = command
-    # if isinstance(command, list):
-    #     commandString = ' '.join(command)
-    # print(commandString, file=sys.stderr)
     p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = p.communicate()
     if p.returncode != 0 or stderr:
@@ -38,113 +35,182 @@ def process(command):
         raise Exception()
     return stdout
 
+class Track(object):
+    AUD = 'audio'
+    VID = 'video'
+    SUB = 'subtitles'
+
+    def __init__(self, raw_params):
+        self._data = raw_params
+
+    def id(self):
+        return self._data['id']
+
+    def type(self):
+        return self._data['type']
+
+    def name(self):
+        return self._data.get('track_name', '').replace('\\s', ' ')
+
+    def language(self):
+        return self._data['language']
+
+    def setLanguage(self, value):
+        self._data['language'] = value
+
+    def codecId(self):
+        return self._data['codec_id'] # TODO enum
+
+    def audioChannels(self):
+        return int(self._data['audio_channels'])
+
+class Movie(object):
+    def __init__(self, path):
+        self._path = path
+        self._tracks = None
+
+    def path(self):
+        return self._path
+
+    def _get_tracks(self):
+        if self._tracks is None:
+            track_objects = {}
+            raw_strings = (line for line in process(['mkvmerge', '--identify-verbose', self._path]).splitlines() if line.startswith('Track'))
+            for line in raw_strings:
+                match = re.match(r'^Track ID (?P<id>\d+): (?P<type>[a-z]+).+$', line)
+                raw_params = match.groupdict()
+                for raw_string in re.match(r'^.+?\[(.+?)\].*$', line).group(1).split():
+                    k, v = raw_string.split(':')
+                    raw_params[k] = v
+                track = Track(raw_params)
+                track_objects.setdefault(track.type(), [])
+                track_objects[track.type()].append(track)
+            self._tracks = track_objects
+            assert len(self._tracks[Track.VID]) == 1
+        return self._tracks
+
+    def tracks(self, track_type):
+        return self._get_tracks()[track_type]
+
+def mkvs(path):
+    for root, dirs, files in os.walk(path):
+        for filename in sorted(files):
+            if filename.endswith('.mkv'):
+                yield os.path.join(root, filename)
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('src', help='path to source directory')
     parser.add_argument('dst', help='path to destination directory')
-    parser.add_argument('--alangs', nargs='*', choices=['rus', 'eng', 'jpn'], default=['eng', 'rus'], help='ordered list of audio languages to keep')
-    parser.add_argument('--slangs', nargs='*', choices=['rus', 'eng', 'jpn'], default=['eng', 'rus'], help='ordered list of subtitles languages to keep')
-    parser.add_argument('--fnames', default=None, help='path to names map file')
-    parser.add_argument('-ws', '--with-subtitles', action='store_true', default=False, help='keep subtitles')
-    parser.add_argument('-wc', '--with-chapters', action='store_true', default=False, help='keep chapters')
+    parser.add_argument('-al', nargs='*', choices=['rus', 'eng', 'jpn'], default=['eng', 'rus'], help='ordered list of audio languages to keep')
+    parser.add_argument('-sl', nargs='*', choices=['rus', 'eng', 'jpn'], default=[], help='ordered list of subtitles languages to keep')
+    parser.add_argument('-dm', default=False, action='store_true', help='downmix multi-channel audio to aac')
+    parser.add_argument('-nf', default=None, help='path to names map file')
     args = parser.parse_args()
 
-    langs = { 'a': args.alangs, 's': args.slangs }
-
-    namesMap = None
-    if args.fnames:
-        namesMap = {}
-        with open(args.fnames) as fobj:
+    filenames_map = None
+    if args.nf and os.path.exists(args.nf):
+        filenames_map = {}
+        with open(args.nf) as fobj:
             for line in fobj:
-                k, v = [os.path.normpath(s.strip()) for s in line.split('=')]
-                namesMap[k] = v
+                k, v = [os.path.normpath(s.strip()).replace('.mkv', '') for s in line.split('=')]
+                filenames_map[k] = v
 
-    for movie in movies(args.src):
-        curName = os.path.normpath(os.path.relpath(movie, args.src))
-        newName = curName
-        if namesMap is not None:
-            newNameRaw = namesMap[os.path.splitext(curName)[0]]
-            newName = None
-            if newNameRaw == 'NO':
-                continue
-            elif newNameRaw == 'KEEP':
-                newName = curName
-            else:
-                newName = newNameRaw + '.mkv'
+    movies = {}
+    for filepath in mkvs(args.src):
+        cur_name = os.path.normpath(os.path.relpath(filepath, args.src))
+        new_name = cur_name
+        if filenames_map is not None:
+            raw_new_name_string = filenames_map[os.path.splitext(cur_name)[0]]
+            new_name = None
+            if raw_new_name_string == 'NO': continue
+            elif raw_new_name_string == 'KEEP': new_name = cur_name
+            else: new_name = '{}.mkv'.format(raw_new_name_string)
+        movies[os.path.join(os.path.abspath(args.dst), new_name)] = Movie(os.path.abspath(filepath))
 
-        stdout = process(['mkvmerge', '--identify-verbose', movie])
-        srcTracks = { k: [] for k in TRACKS_TYPES.itervalues() }
-        for line in stdout.splitlines():
-            if line.startswith('Track'):
-                match = re.match(r'^Track ID (?P<id>\d+): (?P<type>[a-z]+).+$', line)
-                track = match.groupdict()
-                for rawString in re.match(r'^.+?\[(.+?)\].*$', line).group(1).split():
-                    k, v = rawString.split(':')
-                    for rawKey, dstKey in [('language', 'lang'), ('track_name', 'name')]:
-                        if k == rawKey:
-                            track[dstKey] = v
-                ttype = TRACKS_TYPES[track['type']]
-                if ttype == 'v':
-                    track['lang'] = 'und'
-                track['name'] = track.get('name', '').replace('\\s', ' ')
-                if ttype == 'v' or track['lang'] in langs[ttype] or track['lang'] == 'und':
-                    srcTracks[ttype].append(track)
-        assert len(srcTracks['v']) == 1
+    output_track_types = {
+        Track.VID: ['und'],
+        Track.AUD: args.al,
+        Track.SUB: args.sl,
+    }
 
-        dstTracks = { k: [] for k in TRACKS_TYPES.itervalues() }
-        dstTracks['v'] = srcTracks['v']
+    try:
+        os.remove(MUX_SCRIPT)
+    except:
+        pass
 
-        outputTrackTypes = ['a']
-        if args.with_subtitles:
-            outputTrackTypes.append('s')
-        for ttype in outputTrackTypes:
-            for lang in langs[ttype]:
-                langTracks = { track['id']: track for track in srcTracks[ttype] if track['lang'] in (lang, 'und') }
-                if len(langTracks) == 0:
-                    raise Exception('{} {} track not found'.format(ttype, lang))
+    for target_path, movie in movies.iteritems():
+        output_tracks = { track_type: [] for track_type in output_track_types }
+        used_tracks = set()
+        for track_type, lang_list in output_track_types.iteritems():
+            for target_lang in lang_list:
+                candidates = { track.id(): track for track in movie.tracks(track_type)
+                    if track.id() not in used_tracks and (track.language() == target_lang or 'und' in (target_lang, track.language()))
+                }
+                if not candidates:
+                    raise Exception('{} {} not found'.format(track_type, target_lang))
 
-                trackId = None
-                if len(langTracks) == 1 and list(langTracks.values())[0]['lang'] != 'und':
-                    trackId = list(langTracks.keys())[0]
-                while trackId not in langTracks:
-                    print(curName)
-                    print('=== Select {} {} Track ==='.format(lang.upper(), { v: k for k, v in TRACKS_TYPES.iteritems() }[ttype]))
-                    for track in sorted(langTracks.itervalues(), key=lambda x: x['id']):
-                        # TODO cyrillic encoding
-                        print('{} {} {}'.format(track['id'], track['lang'], track['name']))
-                    print('===')
-                    trackId = raw_input('ID: ')
+                chosen_track_id = None
+                if len(candidates) == 1: chosen_track_id = list(candidates.keys())[0]
+                if len(candidates) == 2:
+                    comment_track_ids = [track_id for track_id, track
+                        in candidates.iteritems() if re.search(r'(comment|коммент)', track.name().lower())]
+                    if len(comment_track_ids) == 1:
+                        chosen_track_id = list(set(candidates.keys()) - set(comment_track_ids))[0]
 
-                langTracks[trackId]['lang'] = lang
-                dstTracks[ttype].append(langTracks[trackId])
+                while chosen_track_id not in candidates:
+                    pprint(movie.path())
+                    pprint('=== {}, {} ==='.format(track_type.capitalize(), target_lang.upper()))
+                    for cand in sorted(candidates.itervalues(), key=lambda x: x.id()):
+                        pprint('{} {} {} {}'.format(cand.id(), cand.language(), cand.codecId(), cand.name()))
+                    chosen_track_id = raw_input('Enter track ID: ') # TODO abort, retry, preview, undo, wtf
 
-        for ttype in outputTrackTypes:
-            dstTracks[ttype].sort(key=lambda x: langs[ttype].index(x['lang']))
+                used_tracks.add(chosen_track_id)
+                chosen_track = candidates[chosen_track_id]
+                chosen_track.setLanguage(target_lang)
+                output_tracks[track_type].append(chosen_track)
 
-        command = ['mkvmerge']
-        if not args.with_subtitles:
-            command.append('--no-subtitles')
-        if not args.with_chapters:
-            command.append('--no-chapters')
-        command.extend(['--output', quote(os.path.join(os.path.abspath(args.dst), newName))])
-        command.extend(['--no-track-tags', '--no-global-tags', '--disable-track-statistics-tags'])
+        for track_type, track_list in output_tracks.iteritems():
+            track_list.sort(key=lambda t: LANG_ORDER.index(t.language()))
 
-        for ttype, prefix in [('v', None), ('a', 'audio'), ('s', 'subtitle')]:
-            if len(dstTracks[ttype]) > 0:
-                if prefix is not None:
-                    command.append('--{}-tracks {}'.format(prefix, ','.join(x['id'] for x in dstTracks[ttype])))
-                for i, track in enumerate(dstTracks[ttype]):
-                    command.append('--track-name {0}:"" --language {0}:{1} --default-track {0}:{2}'.format(track['id'], track['lang'], 'yes' if i == 0 else 'no'))
+        if args.dm: # TODO implement
+            for track in output_tracks[Track.AUD]:
+                if track.audioChannels() > 2:
+                    ffm = ['ffmpeg']
+                    ffm.extend(['-i', quote(movie.path())])
+                    # TODO map tracks
+                    ffm.extend(['-f wav', '-acodec pcm_f32le', '-ac 2'])
+                    # qaac.exe --tvbr 127 --quality 2 --rate keep --ignorelength --no-delay - -o "audio-2ch-downmix.m4a"
+                    print(' '.join(ffm), file=sys.stderr)
 
-        command.append(quote(os.path.abspath(movie)))
-        command.append('--title ""')
+        track_type_prefixes = {
+            Track.VID: None,
+            Track.AUD: 'audio',
+            Track.SUB: 'subtitle',
+        }
 
-        order = []
-        for ttype in ['v', 'a', 's']:
-            order.extend('0:{}'.format(track['id']) for track in dstTracks[ttype])
-        command.append('--track-order {}'.format(','.join(order)))
+        mux = ['mkvmerge']
+        mux.extend(['--output', quote(target_path)])
+        mux.extend(['--no-track-tags', '--no-global-tags', '--disable-track-statistics-tags'])
 
-        print(' '.join(command), file=sys.stderr)
+        for track_type, prefix in track_type_prefixes.iteritems():
+            tracks = output_tracks[track_type]
+            if tracks:
+                if prefix:
+                    mux.append('--{}-tracks {}'.format(prefix, ','.join(track.id() for track in tracks)))
+                for i, track in enumerate(tracks):
+                    mux.append('--track-name {0}:"" --language {0}:{1} --default-track {0}:{2}'.format(track.id(), track.language(), 'yes' if i == 0 else 'no'))
+
+        mux.append(quote(movie.path()))
+        mux.append('--title ""')
+
+        track_order = []
+        for track_type in [Track.VID, Track.AUD, Track.SUB]:
+            track_order.extend('0:{}'.format(track.id()) for track in output_tracks[track_type])
+        mux.append('--track-order {}'.format(','.join(track_order)))
+
+        with codecs.open(MUX_SCRIPT, 'a', 'cp866') as fobj:
+            fobj.write(u' '.join(mux) + '\r\n')
 
     return 0
 
