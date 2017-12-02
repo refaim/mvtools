@@ -45,6 +45,8 @@ def vbr(srcpath):
     return result * 1000.0
 
 def encode(srcpath, srcscan, srcbps, dstpath, dsttune):
+    # TODO support crop
+
     # gpu
     # 'ffmpeg -y -threads 4 -hwaccel cuvid -i "{src}" -an -sn -c:v h264_nvenc -preset slow -rc constqp -qp 20 -pix_fmt yuv420p -profile:v high -level:v 4.1 "{dst}"'
 
@@ -64,6 +66,7 @@ def encode(srcpath, srcscan, srcbps, dstpath, dsttune):
         # '-maxrate {}'.format(kbps),
         # '-bufsize {}'.format(kbps),
     ]
+    # TODO detect interlaced automatically
     if srcscan == 'int':
         options.append('-vf yadif')
     rt.process.run(gl, u'ffmpeg -y -i "{src}" {options} "{dst}"'.format(src=srcpath, dst=dstpath, options=u' '.join(options)), shell=True)
