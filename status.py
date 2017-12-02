@@ -15,7 +15,7 @@ def movies(path):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('storage', help='path to movies directory')
-    parser.add_argument('-m', '--mode', choices=['res', 'bit'], default=None)
+    parser.add_argument('-m', '--mode', choices=['res', 'bit', 'fhd'], default=None)
     args = parser.parse_args()
 
     if args.mode is None:
@@ -26,8 +26,8 @@ def main():
         vtracks = [track for track in movie.tracks if track.track_type == 'Video']
         assert len(vtracks) == 1
         video = vtracks[0]
-        if args.mode == 'res':
-            if video.width < 1920 or video.height < 1080:
+        if (args.mode == 'res' and (video.width < 1920 or video.height < 1080)) or\
+           (args.mode == 'fhd' and video.width >= 1920 and video.height >= 1080):
                 print('{0:4} {1:4}  {2}'.format(video.width, video.height, filepath))
         elif args.mode == 'bit':
             for attr in dir(video):
