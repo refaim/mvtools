@@ -33,9 +33,11 @@ def is_windows():
     return 'win' in sys.platform
 
 def quote(path):
-    character = u"'"
-    if is_windows() or '"' in path:
-        character = u'"'
+    character = ''
+    if ' ' in path:
+        character = u"'"
+        if is_windows() or '"' in path:
+            character = u'"'
     return character + path + character
 
 def process(command):
