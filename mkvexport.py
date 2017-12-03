@@ -237,7 +237,7 @@ def main():
         # TODO what if there is crf already?
         # TODO support crop
         video_track = movie.video_track()
-        if video_track.crf() is None:
+        if not args.kv and video_track.crf() is None:
             enumerated_tunes = { i + 1: tune_id for i, tune_id in enumerate(sorted(TUNES.iterkeys())) }
             chosen_tune_id = None
             while chosen_tune_id not in enumerated_tunes:
