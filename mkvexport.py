@@ -55,6 +55,12 @@ class Track(object):
     VID = 'video'
     SUB = 'subtitles'
 
+    TYPE_FLAGS = {
+        VID: (None, '-D'),
+        AUD: ('--audio-tracks', '-A'),
+        SUB: ('--subtitle-tracks', '-S'),
+    }
+
     def __init__(self, raw_params, media_info):
         self._data = raw_params
         self._media_info = media_info
@@ -271,18 +277,20 @@ def main():
         if args.dm:
             for track in output_tracks[Track.AUD]:
                 if track.channels() > 2:
-                    new_audio_path = os.path.join(encode_root, u'{}.m4a'.format(uuid.uuid4()))
-                    decode = ffmpeg_command(movie.path(), '-', ['-f wav', '-acodec pcm_f32le', '-ac 2'])
-                    qaac_options = ['--tvbr 63', '--quality 2', '--rate keep', '--ignorelength', '--no-delay']
-                    encode = 'qaac {} - -o {}'.format(u' '.join(qaac_options), quote(new_audio_path))
-                    result_commands.append(u'{} | {}'.format(decode, encode))
-                    track_sources[track.id()] = [new_audio_path, 0]
+                    wav_path = os.path.join(encode_root, u'{}.wav'.format(uuid.uuid4()))
+                    decode = ffmpeg_command(movie.path(), wav_path, [
+                        '-dn', '-sn', '-vn',
+                        '-map_metadata -1', '-map_chapters -1',
+                        '-c:a pcm_f32le', '-ac 2', '-f wav', '-map 0:{}'.format(track.id()),
+                    ])
+                    result_commands.append(decode)
 
-        track_type_prefixes = {
-            Track.VID: None,
-            Track.AUD: 'audio',
-            Track.SUB: 'subtitle',
-        }
+                    m4a_path = os.path.join(encode_root, u'{}.m4a'.format(uuid.uuid4()))
+                    qaac_options = ['--tvbr 63', '--quality 2', '--rate keep', '--ignorelength', '--no-delay']
+                    encode = u'qaac64 {} {} -o {}'.format(u' '.join(qaac_options), quote(wav_path), quote(m4a_path))
+                    result_commands.append(encode)
+                    result_commands.append(u'del /q {}'.format(quote(wav_path)))
+                    track_sources[track.id()] = [m4a_path, 0]
 
         mux = ['mkvmerge']
         mux.extend(['--output', quote(target_path)])
@@ -295,15 +303,17 @@ def main():
         source_file_ids = {}
         for i, (source_file, track_ids_map) in enumerate(track_ids_by_files.iteritems()):
             source_file_ids[source_file] = i
-            for track_type, tracks_prefix in track_type_prefixes.iteritems():
+            for track_type, (tracks_flags_yes, tracks_flag_no) in Track.TYPE_FLAGS.iteritems():
                 cur_file_tracks = [track for track in output_tracks[track_type] if track.id() in track_ids_map]
                 if cur_file_tracks:
-                    if tracks_prefix:
-                        mux.append('--{}-tracks {}'.format(tracks_prefix, ','.join(str(track_ids_map[track.id()]) for track in cur_file_tracks)))
+                    if tracks_flags_yes:
+                        mux.append('{} {}'.format(tracks_flags_yes, ','.join(str(track_ids_map[track.id()]) for track in cur_file_tracks)))
                     for track in cur_file_tracks:
                         default = track.id() == output_tracks[track_type][0].id()
                         mux.append('--track-name {0}:"" --language {0}:{1} --default-track {0}:{2}'.format(track_ids_map[track.id()], track.language(), 'yes' if default else 'no'))
-            mux.append(quote(source_file))
+                elif tracks_flag_no:
+                    mux.append(tracks_flag_no)
+            mux.append(u'--no-track-tags --no-attachments --no-buttons --no-global-tags {}'.format(quote(source_file)))
 
         mux.append('--title ""')
 
