@@ -29,22 +29,19 @@ def try_int(value):
     except:
         return None
 
-def translate(value):
-    rus_string = u'абвгдеёжзиклмнопрстуфхцчшщьыъэюя'
-    eng_list = u"a|b|v|g|d|e|e|zh|z|i|k|l|m|n|o|p|r|s|t|u|f|h|c|ch|sh|shch|'|y|'|e|yu|ya".split('|')
-    return u''.join(eng_list[rus_string.index(c)] if c in rus_string else c for c in value)
-
-def pprint(value):
-    print(translate(value))
+def is_windows():
+    return 'win' in sys.platform
 
 def quote(path):
     character = u"'"
-    if 'win' in sys.platform or '"' in path:
+    if is_windows() or '"' in path:
         character = u'"'
     return character + path + character
 
 def process(command):
-    p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    cmd_encoding = 'cp1251' if is_windows() else 'utf-8'
+    result_command = [arg.encode(cmd_encoding) for arg in command]
+    p = subprocess.Popen(result_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = p.communicate()
     if p.returncode != 0 or stderr:
         print(stderr, file=sys.stderr)
@@ -67,16 +64,16 @@ class Track(object):
         return self._data['type']
 
     def name(self):
-        return self._data.get('track_name', '').replace('\\s', ' ')
+        return self._data.get('track_name', '')
 
     def language(self):
-        return self._data['language']
+        return unicode(self._data['language'])
 
     def setLanguage(self, value):
         self._data['language'] = value
 
     def codecId(self):
-        return self._data['codec_id'] # TODO enum
+        return unicode(self._data['codec_id']) # TODO enum
 
 class AudioTrack(Track):
     def channels(self):
@@ -116,13 +113,15 @@ class Movie(object):
                     mei_tracks_by_id[int(track.track_id) - 1] = track
 
             track_objects = {}
-            raw_strings = (line for line in process(['mkvmerge', '--identify-verbose', self._path]).splitlines() if line.startswith('Track'))
+            raw_strings = (line for line in process([u'mkvmerge', u'--identify-verbose', self._path]).splitlines() if line.startswith('Track'))
             for line in raw_strings:
                 match = re.match(r'^Track ID (?P<id>\d+): (?P<type>[a-z]+).+$', line)
                 gd = match.groupdict()
                 raw_params = { 'id': int(gd['id']), 'type': gd['type'] }
                 for raw_string in re.match(r'^.+?\[(.+?)\].*$', line).group(1).split():
                     k, v = raw_string.split(':')
+                    if isinstance(v, str):
+                        v = v.decode('utf-8').replace('\\s', ' ')
                     raw_params[k] = v
                 track = Movie.TRACK_CLASSES[raw_params['type']](raw_params, mei_tracks_by_id[raw_params['id']])
                 track_objects.setdefault(track.type(), [])
@@ -141,7 +140,10 @@ def mkvs(path):
     for root, dirs, files in os.walk(path):
         for filename in sorted(files):
             if filename.lower().endswith('.mkv'):
-                yield os.path.join(root, filename)
+                filepath = os.path.join(root, filename)
+                if is_windows():
+                    filepath = filepath.decode('cp1251')
+                yield filepath
 
 def ffmpeg_command(src, dst, options):
     return u'ffmpeg -y -i {src} {options} {dst}'.format(
@@ -209,11 +211,10 @@ def main():
                         chosen_track_id = list(set(candidates.keys()) - set(comment_track_ids))[0]
 
                 while chosen_track_id not in candidates:
-                    pprint(movie.path())
-                    pprint('--- {}, {} ---'.format(track_type.capitalize(), target_lang.upper()))
+                    print(u'--- {}, {} ---'.format(track_type.capitalize(), target_lang.upper()))
                     for cand in sorted(candidates.itervalues(), key=lambda x: x.id()):
-                        pprint('{} {} {} {}'.format(cand.id(), cand.language(), cand.codecId(), cand.name()))
-                    chosen_track_id = try_int(raw_input('Enter track ID: ')) # TODO abort, retry, preview, undo, wtf
+                        print(u'{} {} {} {}'.format(cand.id(), cand.language(), cand.codecId(), cand.name()))
+                    chosen_track_id = try_int(raw_input(u'Enter track ID: ')) # TODO abort, retry, preview, undo, wtf
 
                 used_tracks.add(chosen_track_id)
                 chosen_track = candidates[chosen_track_id]
@@ -317,7 +318,7 @@ def main():
 
         with codecs.open(MUX_SCRIPT, 'a', 'cp866') as fobj:
             for command in result_commands:
-                fobj.write(u'{} || exit /b 1\r\n'.format(command))
+                fobj.write(u'{} || exit /b 1\r\n'.format(command.strip()))
 
     return 0
 
