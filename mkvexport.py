@@ -140,23 +140,24 @@ def mkvs(path):
     for root, dirs, files in os.walk(path):
         for filename in sorted(files):
             if filename.lower().endswith('.mkv'):
-                filepath = os.path.join(root, filename)
-                if is_windows():
-                    filepath = filepath.decode('cp1251')
-                yield filepath
+                yield os.path.join(root, filename)
 
 def ffmpeg_command(src, dst, options):
     return u'ffmpeg -y -i {src} {options} {dst}'.format(
         src=quote(src), dst=quote(dst), options=u' '.join(options))
 
+def cmd_string(bytestring):
+    return bytestring.decode(sys.getfilesystemencoding())
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('src', help='path to source directory') # TODO support not folder but list of files
-    parser.add_argument('dst', help='path to destination directory')
+    parser.add_argument('src', type=cmd_string, help='path to source directory') # TODO support not folder but list of files
+    parser.add_argument('dst', type=cmd_string, help='path to destination directory')
     parser.add_argument('-al', nargs='*', choices=['rus', 'eng', 'jpn'], default=['eng', 'rus'], help='ordered list of audio languages to keep')
     parser.add_argument('-sl', nargs='*', choices=['rus', 'eng', 'jpn'], default=[], help='ordered list of subtitles languages to keep')
     parser.add_argument('-dm', default=False, action='store_true', help='downmix multi-channel audio to aac')
-    parser.add_argument('-nf', default=None, help='path to names map file')
+    parser.add_argument('-kv', default=False, action='store_true', help='keep video from re-encoding')
+    parser.add_argument('-nf', type=cmd_string, default=None, help='path to names map file')
     args = parser.parse_args()
 
     filenames_map = None
