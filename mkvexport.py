@@ -320,6 +320,7 @@ def main():
             new_video_path = make_output_file(encode_root, 'mkv')
             result_commands.append(cmd_ffmpeg(movie.path(), new_video_path, ffmpeg_options))
             track_sources[video_track.id()] = [new_video_path, 0]
+            temporary_files.append(new_video_path)
 
         if args.dm:
             for track in output_tracks[Track.AUD]:
