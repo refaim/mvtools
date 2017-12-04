@@ -14,13 +14,14 @@ import uuid
 LANG_ORDER = ['und', 'jpn', 'eng', 'rus']
 MUX_SCRIPT = 'mux.cmd'
 
-TUNES_IDX_CRF = 0
-TUNES_IDX_REAL_TUNE = 1
+TUNES_IDX_SORT_KEY = 0
+TUNES_IDX_CRF = 1
+TUNES_IDX_REAL_TUNE = 2
 TUNES = {
-    'animation': (18, 'animation'),
-    'film': (22, 'film'),
-    'trash': (23, 'film'),
-    'supertrash': (25, 'film'),
+    'animation': (1, 18, 'animation'),
+    'film': (2, 22, 'film'),
+    'trash': (3, 23, 'film'),
+    'supertrash': (4, 25, 'film'),
 }
 
 def try_int(value):
@@ -81,9 +82,14 @@ class Track(object):
         self._data['language'] = value
 
     def codecId(self):
-        return unicode(self._data['codec_id']) # TODO enum
+        return unicode(self._data['codec_id'])
 
 class AudioTrack(Track):
+    CODEC_AAC = 'A_AAC'
+    CODEC_AC3 = 'A_AC3'
+    CODEC_DTS = 'A_DTS'
+    CODEC_MP3 = 'A_MPEG/L3'
+
     def channels(self):
         return int(self._data['audio_channels'])
 
@@ -144,49 +150,62 @@ class Movie(object):
     def video_track(self):
         return self.tracks(Track.VID)[0]
 
-def mkvs(path):
-    for root, dirs, files in os.walk(path):
-        for filename in sorted(files):
-            if filename.lower().endswith('.mkv'):
-                yield os.path.join(root, filename)
+def is_movie(filepath):
+    return os.path.isfile(filepath) and filepath.lower().endswith('.mkv')
 
-def ffmpeg_command(src, dst, options):
-    return u'ffmpeg -y -i {src} {options} {dst}'.format(
-        src=quote(src), dst=quote(dst), options=u' '.join(options))
+def mkvs(path):
+    if os.path.isdir(path):
+        for root, dirs, files in os.walk(path):
+            for filename in sorted(files):
+                if filename.lower().endswith('.mkv'):
+                    yield os.path.join(root, filename)
+    elif is_movie(path):
+        yield path
+
+def ffmpeg_commands(src, dst, options):
+    return [u'chcp 65001 && ffmpeg -y -i {src} {options} {dst} & chcp 866'.format(
+        src=quote(src), dst=quote(dst), options=u' '.join(options))]
 
 def cmd_string(bytestring):
     return bytestring.decode(sys.getfilesystemencoding())
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('src', type=cmd_string, help='path to source directory') # TODO support not folder but list of files
+    parser.add_argument('sources', type=cmd_string, nargs='+', help='paths to source directories/files')
     parser.add_argument('dst', type=cmd_string, help='path to destination directory')
     parser.add_argument('-al', nargs='*', choices=['rus', 'eng', 'jpn'], default=['eng', 'rus'], help='ordered list of audio languages to keep')
     parser.add_argument('-sl', nargs='*', choices=['rus', 'eng', 'jpn'], default=[], help='ordered list of subtitles languages to keep')
-    parser.add_argument('-dm', default=False, action='store_true', help='downmix multi-channel audio to aac')
+    parser.add_argument('-dm', default=False, action='store_true', help='downmix multi-channel and/or ac3/dts audio to aac')
     parser.add_argument('-kv', default=False, action='store_true', help='keep video from re-encoding')
     parser.add_argument('-nf', type=cmd_string, default=None, help='path to names map file')
+    parser.add_argument('-xx', default=False, action='store_true', help='remove original source files')
+    parser.add_argument('-eo', default=False, action='store_true', help='remux only if re-encoding')
+    # TODO add parametes to ask for file name !!!
     args = parser.parse_args()
 
     filenames_map = None
     if args.nf and os.path.exists(args.nf):
         filenames_map = {}
-        with open(args.nf) as fobj:
+        with codecs.open(args.nf, 'r', 'utf-8') as fobj:
             for line in fobj:
-                k, v = [os.path.normpath(s.strip()).replace('.mkv', '') for s in line.split('=')]
+                k, v = [os.path.normpath(s.strip()).replace(u'.mkv', u'') for s in line.split('=')]
                 filenames_map[k] = v
 
     movies = {}
-    for filepath in mkvs(args.src):
-        cur_name = os.path.normpath(os.path.relpath(filepath, args.src))
-        new_name = cur_name
-        if filenames_map is not None:
-            raw_new_name_string = filenames_map[os.path.splitext(cur_name)[0]]
-            new_name = None
-            if raw_new_name_string == 'NO': continue
-            elif raw_new_name_string == 'KEEP': new_name = cur_name
-            else: new_name = '{}.mkv'.format(raw_new_name_string)
-        movies[os.path.join(os.path.abspath(args.dst), new_name)] = Movie(os.path.abspath(filepath))
+    for argspath in args.sources:
+        for filepath in mkvs(argspath):
+            cur_name = os.path.basename(filepath)
+            if os.path.isdir(argspath):
+                cur_name = os.path.relpath(filepath, argspath)
+            cur_name = os.path.normpath(cur_name)
+            new_name = cur_name
+            if filenames_map is not None:
+                raw_new_name_string = filenames_map[os.path.splitext(cur_name)[0]]
+                new_name = None
+                if raw_new_name_string == 'NO': continue
+                elif raw_new_name_string == 'KEEP': new_name = cur_name
+                else: new_name = u'{}.mkv'.format(raw_new_name_string)
+            movies[os.path.join(os.path.abspath(args.dst), new_name)] = Movie(os.path.abspath(filepath))
 
     output_track_types = {
         Track.VID: ['und'],
@@ -213,11 +232,11 @@ def main():
 
                 chosen_track_id = None
                 if len(candidates) == 1: chosen_track_id = list(candidates.keys())[0]
-                if len(candidates) == 2:
-                    comment_track_ids = [track_id for track_id, track
-                        in candidates.iteritems() if re.search(r'(comment|коммент)', track.name().lower())]
-                    if len(comment_track_ids) == 1:
-                        chosen_track_id = list(set(candidates.keys()) - set(comment_track_ids))[0]
+
+                comment_track_ids = [track_id for track_id, track
+                    in candidates.iteritems() if any(s in track.name().lower() for s in [u'comment', u'коммент'])]
+                if len(comment_track_ids) == len(candidates) - 1:
+                    chosen_track_id = list(set(candidates.keys()) - set(comment_track_ids))[0]
 
                 while chosen_track_id not in candidates:
                     print(u'--- {}, {} ---'.format(track_type.capitalize(), target_lang.upper()))
@@ -243,6 +262,8 @@ def main():
         # TODO what if there is crf already?
         # TODO support crop
         video_track = movie.video_track()
+        # if not args.kv:
+        # TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         if not args.kv and video_track.crf() is None:
             enumerated_tunes = { i + 1: tune_id for i, tune_id in enumerate(sorted(TUNES.iterkeys())) }
             chosen_tune_id = None
@@ -262,7 +283,7 @@ def main():
                 '-map_metadata -1', '-map_chapters -1',
             ])
             new_video_path = os.path.join(encode_root, u'{}.mkv'.format(uuid.uuid4()))
-            result_commands.append(ffmpeg_command(movie.path(), new_video_path, ffmpeg_options))
+            result_commands.extend(ffmpeg_commands(movie.path(), new_video_path, ffmpeg_options))
             track_sources[video_track.id()] = [new_video_path, 0]
 
         # TODO convert PGS subtitles !!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -276,14 +297,16 @@ def main():
 
         if args.dm:
             for track in output_tracks[Track.AUD]:
-                if track.channels() > 2:
+                # TODO ZALEPA :()
+                if track.codecId() not in (AudioTrack.CODEC_AC3, AudioTrack.CODEC_DTS, AudioTrack.CODEC_AAC, AudioTrack.CODEC_MP3):
+                    raise Exception('Unhandled codec {}'.format(track.codecId()))
+                if track.codecId() in (AudioTrack.CODEC_AC3, AudioTrack.CODEC_DTS) or track.channels() > 2:
                     wav_path = os.path.join(encode_root, u'{}.wav'.format(uuid.uuid4()))
-                    decode = ffmpeg_command(movie.path(), wav_path, [
+                    result_commands.extend(ffmpeg_commands(movie.path(), wav_path, [
                         '-dn', '-sn', '-vn',
                         '-map_metadata -1', '-map_chapters -1',
                         '-c:a pcm_f32le', '-ac 2', '-f wav', '-map 0:{}'.format(track.id()),
-                    ])
-                    result_commands.append(decode)
+                    ]))
 
                     m4a_path = os.path.join(encode_root, u'{}.m4a'.format(uuid.uuid4()))
                     qaac_options = ['--tvbr 63', '--quality 2', '--rate keep', '--ignorelength', '--no-delay']
@@ -323,15 +346,23 @@ def main():
                 source_file, source_file_track_id = track_sources[track.id()]
                 track_order.append('{}:{}'.format(source_file_ids[source_file], source_file_track_id))
         mux.append('--track-order {}'.format(','.join(track_order)))
-        result_commands.append(u' '.join(mux))
 
-        for source_file in source_file_ids.iterkeys():
-            if source_file != movie.path():
-                result_commands.append(u'del /q {}'.format(source_file))
+        if len(source_file_ids) > 1 or not args.eo:
+            result_commands.append(u' '.join(mux))
+            for source_file in source_file_ids.iterkeys():
+                if source_file != movie.path() or args.xx:
+                    result_commands.append(u'del /q {}'.format(quote(source_file)))
 
         with codecs.open(MUX_SCRIPT, 'a', 'cp866') as fobj:
             for command in result_commands:
                 fobj.write(u'{} || exit /b 1\r\n'.format(command.strip()))
+                # TODO add empty line between movies
+
+        # TODO add this to batch files
+        try:
+            os.makedirs(os.path.dirname(target_path))
+        except:
+            pass
 
     return 0
 
