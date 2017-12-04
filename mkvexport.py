@@ -196,6 +196,8 @@ def main():
     parser.add_argument('-xx', default=False, action='store_true', help='remove original source files')
     parser.add_argument('-eo', default=False, action='store_true', help='remux only if re-encoding')
     parser.add_argument('-pp', default=False, action='store_true', help='prefer pgs subtitles')
+    parser.add_argument('-cr', default=False, action='store_true', help='crop video')
+    parser.add_argument('-ft', help='force tune')
     # TODO add parametes to ask for file name !!!
     args = parser.parse_args()
 
@@ -287,17 +289,28 @@ def main():
         # if not args.kv:
         # TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         if not args.kv and video_track.crf() is None:
-            enumerated_tunes = { i + 1: tune_id for i, tune_id in enumerate(sorted(TUNES.iterkeys())) }
-            chosen_tune_id = None
-            while chosen_tune_id not in enumerated_tunes:
-                for tune_id, tune in sorted(enumerated_tunes.iteritems()):
-                    print('{} {}'.format(tune_id, tune))
-                chosen_tune_id = try_int(raw_input('Enter tune ID: '))
-            tune_params = TUNES[enumerated_tunes[chosen_tune_id]]
+            chosen_tune = args.ft or None
+            if chosen_tune not in TUNES:
+                enumerated_tunes = { i + 1: tune_id for i, tune_id in enumerate(sorted(TUNES.iterkeys())) }
+                chosen_tune_idx = None
+                while chosen_tune_idx not in enumerated_tunes:
+                    for tune_id, tune in sorted(enumerated_tunes.iteritems()):
+                        print('{} {}'.format(tune_id, tune))
+                    chosen_tune_idx = try_int(raw_input('Enter tune ID: '))
+                chosen_tune = enumerated_tunes[chosen_tune_idx]
+            tune_params = TUNES[chosen_tune]
+
+            ffmpeg_filters = []
+            if video_track.is_interlaced():
+                ffmpeg_filters.append('yadif=1:-1:0')
+            if args.cr:
+                os.system('ffmpegyag')
+                crop_params = raw_input('Enter crop parameters (w:h:x:y): ')
+                # TODO validation
+                ffmpeg_filters.append('crop={}'.format(crop_params))
 
             ffmpeg_options = ['-an', '-sn', '-dn']
-            if video_track.is_interlaced():
-                ffmpeg_options.append('-vf yadif=1:-1:0')
+            ffmpeg_options.append('-filter:v {}'.format(','.join(ffmpeg_filters)))
             ffmpeg_options.extend([
                 '-c:v libx264', '-preset veryslow',
                 '-tune {}'.format(tune_params[TUNES_IDX_REAL_TUNE]),
