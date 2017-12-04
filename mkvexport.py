@@ -356,7 +356,7 @@ def main():
         with codecs.open(MUX_SCRIPT, 'a', 'cp866') as fobj:
             for command in result_commands:
                 fobj.write(u'{} || exit /b 1\r\n'.format(command.strip()))
-                # TODO add empty line between movies
+            fobj.write(u'\r\n')
 
         # TODO add this to batch files
         try:
