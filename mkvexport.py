@@ -120,6 +120,7 @@ class Movie(object):
     def _get_tracks(self):
         if self._mkv_tracks is None:
             mei_tracks_by_id = {}
+            # TODO do not use mediainfo
             media_info = pymediainfo.MediaInfo.parse(self._path,
                 library_file=os.path.join(os.path.dirname(__file__), 'MediaInfo.dll'))
             for track in media_info.tracks:
