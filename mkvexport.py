@@ -236,7 +236,7 @@ def main():
     except:
         pass
 
-    for target_path, movie in sorted(movies.iteritems()):
+    for target_path, movie in sorted(movies.iteritems(), key=lambda t: t[1].path()):
         print(u'=== {} ==='.format(movie.path()))
         output_tracks = { track_type: [] for track_type in output_track_types }
         used_tracks = set()
