@@ -319,7 +319,8 @@ def main():
                 ffmpeg_filters.append('crop={}'.format(crop_params))
 
             ffmpeg_options = ['-an', '-sn', '-dn']
-            ffmpeg_options.append('-filter:v {}'.format(','.join(ffmpeg_filters)))
+            if ffmpeg_filters:
+                ffmpeg_options.append('-filter:v {}'.format(','.join(ffmpeg_filters)))
             ffmpeg_options.extend([
                 '-c:v libx264', '-preset veryslow',
                 '-tune {}'.format(tune_params[TUNES_IDX_REAL_TUNE]),
