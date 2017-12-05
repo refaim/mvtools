@@ -106,6 +106,7 @@ class AudioTrack(Track):
     CODEC_AC3 = 'A_AC3'
     CODEC_DTS = 'A_DTS'
     CODEC_MP3 = 'A_MPEG/L3'
+    KNOWN_CODECS = set([CODEC_AAC, CODEC_AC3, CODEC_DTS, CODEC_MP3])
 
     def channels(self):
         return int(self._data['audio_channels'])
@@ -324,6 +325,8 @@ def main():
 
         if args.dm:
             for track in output_tracks[Track.AUD]:
+                if track.codecId() not in AudioTrack.KNOWN_CODECS:
+                    raise Exception(u'Unknown audio codec {}'.format(track.codecId()))
                 if track.codecId() in (AudioTrack.CODEC_AC3, AudioTrack.CODEC_DTS) or track.channels() > 2:
                     wav_path = make_output_file(encode_root, 'wav')
                     result_commands.append(cmd_ffmpeg(movie.path(), wav_path, [
