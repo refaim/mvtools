@@ -198,6 +198,7 @@ def main():
     parser.add_argument('-eo', default=False, action='store_true', help='remux only if re-encoding')
     parser.add_argument('-pp', default=False, action='store_true', help='prefer pgs subtitles')
     parser.add_argument('-cr', default=False, action='store_true', help='crop video')
+    parser.add_argument('-sc', default=False, action='store_true', help='use same crop values for all files')
     parser.add_argument('-ft', help='force tune')
     # TODO add parametes to ask for file name !!!
     args = parser.parse_args()
@@ -237,6 +238,7 @@ def main():
     except:
         pass
 
+    global_crop_params = None
     for target_path, movie in sorted(movies.iteritems(), key=lambda t: t[1].path()):
         print(u'=== {} ==='.format(movie.path()))
         output_tracks = { track_type: [] for track_type in output_track_types }
@@ -305,9 +307,15 @@ def main():
             if video_track.is_interlaced():
                 ffmpeg_filters.append('yadif=1:-1:0')
             if args.cr:
-                os.system('ffmpegyag')
-                crop_params = raw_input('Enter crop parameters (w:h:x:y): ')
-                # TODO validation
+                crop_params = None
+                if global_crop_params is not None:
+                    crop_params = global_crop_params
+                if crop_params is None:
+                    os.system('ffmpegyag')
+                    # TODO validation
+                    crop_params = raw_input('Enter crop parameters (w:h:x:y): ')
+                    if args.sc:
+                        global_crop_params = crop_params
                 ffmpeg_filters.append('crop={}'.format(crop_params))
 
             ffmpeg_options = ['-an', '-sn', '-dn']
