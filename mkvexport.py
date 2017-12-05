@@ -189,6 +189,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('sources', type=cmd_string, nargs='+', help='paths to source directories/files')
     parser.add_argument('dst', type=cmd_string, help='path to destination directory')
+    # TODO make list order matter
     parser.add_argument('-al', nargs='*', choices=languages, default=['eng', 'rus'], help='ordered list of audio languages to keep')
     parser.add_argument('-sl', nargs='*', choices=languages, default=[], help='ordered list of subtitles languages to keep')
     parser.add_argument('-dm', default=False, action='store_true', help='downmix multi-channel and/or ac3/dts audio to aac')
