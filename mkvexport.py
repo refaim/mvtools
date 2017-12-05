@@ -4,8 +4,8 @@ from __future__ import print_function
 
 import argparse
 import codecs
+import json
 import os
-import pymediainfo
 import re
 import subprocess
 import sys
@@ -50,8 +50,11 @@ def quote(path):
 
 def process(command):
     cmd_encoding = 'cp1251' if is_windows() else 'utf-8'
-    result_command = [arg.encode(cmd_encoding) for arg in command]
-    p = subprocess.Popen(result_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if isinstance(command, list):
+        result_command = [arg.encode(cmd_encoding) for arg in command]
+    else:
+        result_command = command.encode(cmd_encoding)
+    p = subprocess.Popen(result_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     stdout, stderr = p.communicate()
     if p.returncode != 0 or stderr:
         print(stderr, file=sys.stderr)
@@ -69,9 +72,9 @@ class Track(object):
         SUB: ('--subtitle-tracks', '-S'),
     }
 
-    def __init__(self, raw_params, media_info):
+    def __init__(self, parent_path, raw_params):
+        self._parent_path = parent_path
         self._data = raw_params
-        self._media_info = media_info
 
     def id(self):
         return self._data['id']
@@ -92,14 +95,40 @@ class Track(object):
         return unicode(self._data['codec_id'])
 
 class VideoTrack(Track):
+    FO_PRG = 'progressive'
+    FO_INT_TOP = 'tt'
+    FO_INT_BOT = 'bb'
+    _KNOWN_FO = set([FO_PRG, FO_INT_BOT, FO_INT_TOP])
+
+    def __init__(self, parent_path, raw_params):
+        super(VideoTrack, self).__init__(parent_path, raw_params)
+        self._crf = None
+        self._probe = None
+
+    def probe(self):
+        if self._probe is None:
+            stdout = process(
+                u'ffprobe -v quiet -print_format json -select_streams v -show_streams {}'.format(
+                    quote(self._parent_path)))
+            self._probe = json.loads(stdout)['streams'][0]
+        return self._probe
+
     def crf(self):
-        match = re.search(r'crf=(?P<crf>[\d\.]+)', self._media_info.encoding_settings or '')
-        if not match:
-            return None
-        return float(match.groupdict()['crf'])
+        if self._crf is None:
+            stdout = process(
+                u'ffmpeg -i {} -an -vframes 1 -f null - -v 48 2>&1'.format(
+                    quote(self._parent_path)))
+            match = re.search(r'crf=(?P<crf>[\d\.]+)', stdout)
+            if match:
+                self._crf = float(match.groupdict()['crf'])
+        return self._crf
 
     def is_interlaced(self):
-        return self._media_info.scan_type == 'Interlaced'
+        if not hasattr(self, '_field_order'):
+            self._field_order = self.probe()['field_order']
+        if self._field_order not in self._KNOWN_FO:
+            raise Exception(u'Unknown field order {}'.format(self._field_order))
+        return self._field_order in (self.FO_INT_BOT, self.FO_INT_TOP)
 
 class AudioTrack(Track):
     CODEC_AAC = 'A_AAC'
@@ -130,15 +159,8 @@ class Movie(object):
 
     def _get_tracks(self):
         if self._mkv_tracks is None:
-            mei_tracks_by_id = {}
-            # TODO do not use mediainfo
-            media_info = pymediainfo.MediaInfo.parse(self._path,
-                library_file=os.path.join(os.path.dirname(__file__), 'MediaInfo.dll'))
-            for track in media_info.tracks:
-                if track.track_id is not None:
-                    mei_tracks_by_id[int(track.track_id) - 1] = track
-
             track_objects = {}
+            # TODO do not use mkvmerge, use only ffprobe
             raw_strings = (line for line in process([u'mkvmerge', u'--identify-verbose', self._path]).splitlines() if line.startswith('Track'))
             for line in raw_strings:
                 match = re.match(r'^Track ID (?P<id>\d+): (?P<type>[a-z]+).+$', line)
@@ -149,7 +171,7 @@ class Movie(object):
                     if isinstance(v, str):
                         v = v.decode('utf-8').replace('\\s', ' ')
                     raw_params[k] = v
-                track = Movie.TRACK_CLASSES[raw_params['type']](raw_params, mei_tracks_by_id[raw_params['id']])
+                track = Movie.TRACK_CLASSES[raw_params['type']](self._path, raw_params)
                 track_objects.setdefault(track.type(), [])
                 track_objects[track.type()].append(track)
             self._mkv_tracks = track_objects
@@ -288,7 +310,6 @@ def main():
 
         # TODO check if codec x264 and profile 4.1
         # TODO what if there is crf already?
-        # TODO support crop
         video_track = movie.video_track()
         # if not args.kv:
         # TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -304,6 +325,7 @@ def main():
                 chosen_tune = enumerated_tunes[chosen_tune_idx]
             tune_params = TUNES[chosen_tune]
 
+            # TODO convert colorspace, color matrix, etc
             ffmpeg_filters = []
             if video_track.is_interlaced():
                 ffmpeg_filters.append('yadif=1:-1:0')
