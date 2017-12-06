@@ -209,6 +209,15 @@ def cmd_string(bytestring):
 def make_output_file(root, extension):
     return os.path.join(root, u'{}.{}'.format(uuid.uuid4(), extension))
 
+def write_commands(commands, fail_safe=True):
+    with codecs.open(MUX_SCRIPT, 'a', 'cp866') as fobj:
+        for command in commands:
+            result_string = command.strip()
+            if fail_safe:
+                result_string = u'{} || exit /b 1'.format(command)
+            fobj.write(u'{}\r\n'.format(result_string))
+        fobj.write(u'\r\n')
+
 def main():
     languages = sorted(LANGUAGES.iterkeys())
     parser = argparse.ArgumentParser()
@@ -259,10 +268,7 @@ def main():
         Track.SUB: args.sl,
     }
 
-    try:
-        os.remove(MUX_SCRIPT)
-    except:
-        pass
+    write_commands(['@echo off'], fail_safe=False)
 
     global_crop_params = None
     for target_path, movie in sorted(movies.iteritems(), key=lambda t: t[1].path()):
@@ -307,7 +313,7 @@ def main():
             for track in track_list:
                 track_sources[track.id()] = [movie.path(), track.id()]
 
-        result_commands = []
+        result_commands = [u'echo {}'.format(movie.path())]
         temporary_files = []
         encode_root = os.path.dirname(target_path)
 
@@ -433,10 +439,7 @@ def main():
         for path in sorted(set(temporary_files)):
             result_commands.append(u'if exist {path} del /q {path}'.format(path=quote(path)))
 
-        with codecs.open(MUX_SCRIPT, 'a', 'cp866') as fobj:
-            for command in result_commands:
-                fobj.write(u'{} || exit /b 1\r\n'.format(command.strip()))
-            fobj.write(u'\r\n')
+        write_commands(result_commands)
 
         # TODO add this to batch files
         try:
