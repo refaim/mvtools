@@ -196,9 +196,12 @@ def mkvs(path):
     elif is_movie(path):
         yield path
 
-def cmd_ffmpeg(src, dst, options):
-    return u'chcp 65001 && ffmpeg -y -i {src} {options} {dst} & chcp 866'.format(
-        src=quote(src), dst=quote(dst), options=u' '.join(options))
+def ffmpeg_cmds(src, dst, options):
+    return [
+        u'chcp 65001 && ffmpeg -y -i {src} {options} {dst}'.format(
+            src=quote(src), dst=quote(dst), options=u' '.join(options)),
+        u'chcp 866',
+    ]
 
 def cmd_string(bytestring):
     return bytestring.decode(sys.getfilesystemencoding())
@@ -351,7 +354,7 @@ def main():
                 '-map_metadata -1', '-map_chapters -1',
             ])
             new_video_path = make_output_file(encode_root, 'mkv')
-            result_commands.append(cmd_ffmpeg(movie.path(), new_video_path, ffmpeg_options))
+            result_commands.extend(ffmpeg_cmds(movie.path(), new_video_path, ffmpeg_options))
             track_sources[video_track.id()] = [new_video_path, 0]
             temporary_files.append(new_video_path)
 
@@ -361,7 +364,7 @@ def main():
                     raise Exception(u'Unknown audio codec {}'.format(track.codecId()))
                 if track.codecId() in (AudioTrack.CODEC_AC3, AudioTrack.CODEC_DTS) or track.channels() > 2:
                     wav_path = make_output_file(encode_root, 'wav')
-                    result_commands.append(cmd_ffmpeg(movie.path(), wav_path, [
+                    result_commands.extend(ffmpeg_cmds(movie.path(), wav_path, [
                         '-dn', '-sn', '-vn',
                         '-map_metadata -1', '-map_chapters -1',
                         '-c:a pcm_f32le', '-ac 2', '-f wav', '-map 0:{}'.format(track.id()),
