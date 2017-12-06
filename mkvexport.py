@@ -5,6 +5,7 @@ from __future__ import print_function
 import argparse
 import codecs
 import json
+import math
 import os
 import re
 import subprocess
@@ -355,11 +356,20 @@ def main():
                     crop_params = global_crop_params
                 if crop_params is None:
                     os.system('ffmpegyag')
-                    # TODO validation
                     crop_params = raw_input('Enter crop parameters (w:h:x:y): ')
                     if args.sc:
                         global_crop_params = crop_params
-                ffmpeg_filters.append('crop={}'.format(crop_params))
+
+                w, h, x, y = [int(n) for n in crop_params.split(':')]
+                dw = w % 16
+                dh = h % 8
+                x += int(math.ceil(dw * 0.5))
+                y += int(math.ceil(dh * 0.5))
+                w -= dw
+                h -= dh
+                assert w % 16 == 0 and h % 8 == 0
+
+                ffmpeg_filters.append('crop={w}:{h}:{x}:{y}'.format(w=w, h=h, x=x, y=y))
 
             ffmpeg_options = ['-an', '-sn', '-dn']
             if ffmpeg_filters:
