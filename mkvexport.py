@@ -268,6 +268,10 @@ def main():
         Track.SUB: args.sl,
     }
 
+    try:
+        os.remove(MUX_SCRIPT)
+    except:
+        pass
     write_commands(['@echo off'], fail_safe=False)
 
     global_crop_params = None
