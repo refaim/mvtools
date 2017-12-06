@@ -103,6 +103,7 @@ class VideoTrack(Track):
     def __init__(self, parent_path, raw_params):
         super(VideoTrack, self).__init__(parent_path, raw_params)
         self._crf = None
+        self._field_order = None
         self._probe = None
 
     def probe(self):
@@ -124,8 +125,9 @@ class VideoTrack(Track):
         return self._crf
 
     def is_interlaced(self):
-        if not hasattr(self, '_field_order'):
-            self._field_order = self.probe()['field_order']
+        if self._field_order is None:
+            self._field_order = self.probe().get('field_order') or \
+                ask_to_select(u'Specify field order', sorted(self._KNOWN_FO))
         if self._field_order not in self._KNOWN_FO:
             raise Exception(u'Unknown field order {}'.format(self._field_order))
         return self._field_order in (self.FO_INT_BOT, self.FO_INT_TOP)
