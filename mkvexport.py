@@ -184,6 +184,17 @@ class Movie(object):
     def video_track(self):
         return self.tracks(Track.VID)[0]
 
+def ask_to_select(prompt, values, header=None):
+    values_dict = values if isinstance(values, dict) else { i: v for i, v in enumerate(values) }
+    chosen_id = None
+    while chosen_id not in values_dict:
+        if header is not None:
+            print(header)
+        for i, v in sorted(values_dict.iteritems()):
+            print(u'{} {}'.format(i, v))
+        chosen_id = try_int(raw_input(u'{}: '.format(prompt)))
+    return values_dict[chosen_id]
+
 def is_movie(filepath):
     return os.path.isfile(filepath) and filepath.lower().endswith('.mkv')
 
@@ -300,11 +311,11 @@ def main():
                     if len(pgs_candidates) == 1:
                         chosen_track_id = pgs_candidates[0]
 
-                while chosen_track_id not in candidates:
-                    print(u'--- {}, {} ---'.format(track_type.capitalize(), target_lang.upper()))
-                    for cand in sorted(candidates.itervalues(), key=lambda x: x.id()):
-                        print(u'{} {} {} {}'.format(cand.id(), cand.language(), cand.codecId(), cand.name()))
-                    chosen_track_id = try_int(raw_input(u'Enter track ID: ')) # TODO abort, retry, preview, undo, wtf
+                if chosen_track_id not in candidates:
+                    candidates_strings = { t.id(): u'{} {} {}'.format(t.language(), t.codecId(), t.name())
+                        for t in sorted(candidates.itervalues(), key=lambda t: t.id()) }
+                    chosen_track_id = ask_to_select(u'Enter track ID', candidates_strings,
+                        header=u'--- {}, {} ---'.format(track_type.capitalize(), target_lang.upper()))
 
                 used_tracks.add(chosen_track_id)
                 chosen_track = candidates[chosen_track_id]
@@ -327,15 +338,9 @@ def main():
         # if not args.kv:
         # TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         if not args.kv and video_track.crf() is None:
-            chosen_tune = args.ft or None
-            if chosen_tune not in TUNES:
-                enumerated_tunes = { i + 1: tune_id for i, tune_id in enumerate(sorted(TUNES.iterkeys())) }
-                chosen_tune_idx = None
-                while chosen_tune_idx not in enumerated_tunes:
-                    for tune_id, tune in sorted(enumerated_tunes.iteritems()):
-                        print('{} {}'.format(tune_id, tune))
-                    chosen_tune_idx = try_int(raw_input('Enter tune ID: '))
-                chosen_tune = enumerated_tunes[chosen_tune_idx]
+            chosen_tune = args.ft or ask_to_select(
+                u'Enter tune ID',
+                sorted(TUNES.iterkeys(), key=lambda k: TUNES[k][TUNES_IDX_SORT_KEY]))
             tune_params = TUNES[chosen_tune]
 
             # TODO convert colorspace, color matrix, etc
