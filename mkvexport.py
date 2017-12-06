@@ -198,7 +198,7 @@ def mkvs(path):
 
 def ffmpeg_cmds(src, dst, options):
     return [
-        u'chcp 65001 && ffmpeg -y -i {src} {options} {dst}'.format(
+        u'chcp 65001 && ffmpeg -v error -stats -y -i {src} {options} {dst}'.format(
             src=quote(src), dst=quote(dst), options=u' '.join(options)),
         u'chcp 866',
     ]
