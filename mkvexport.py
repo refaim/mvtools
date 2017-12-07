@@ -230,6 +230,14 @@ class Movie(object):
     def video_track(self):
         return self.tracks(Track.VID)[0]
 
+def movie_dimensions_correct(w, h):
+    return w % 16 == h % 8 == 0
+
+def correct_movie_dimensions(w, h, x, y):
+    dw = w % 16
+    dh = h % 8
+    return (w - dw, h - dh, x + int(math.ceil(dw * 0.5)), y + int(math.ceil(dh * 0.5)))
+
 def ask_to_select(prompt, values, header=None):
     values_dict = values if isinstance(values, dict) else { i: v for i, v in enumerate(values) }
     chosen_id = None
@@ -341,7 +349,7 @@ def main():
     write_commands(['@echo off'], fail_safe=False)
 
     # TODO catch some of my exceptions, report skipped file, ask for action, log skipped file
-    global_crop_params = None
+    common_crop_args = None
     for target_path, movie in sorted(movies.iteritems(), key=lambda t: t[1].path()):
         print(u'=== {} ==='.format(movie.path()))
         output_tracks = { track_type: [] for track_type in output_track_langs }
@@ -406,26 +414,30 @@ def main():
             ffmpeg_filters = []
             if video_track.is_interlaced():
                 ffmpeg_filters.append('yadif=1:-1:0')
-            if args.cr: # TODO auto crop if not mod16 mod8
-                crop_params = None
-                if global_crop_params is not None:
-                    crop_params = global_crop_params
-                if crop_params is None:
+
+            # TODO test crop stuff
+            crop_args = None
+            if args.cr:
+                if common_crop_args is not None:
+                    crop_args = common_crop_args
+                if crop_args is None:
                     os.system('ffmpegyag')
-                    crop_params = raw_input('Enter crop parameters (w:h:x:y): ')
+                    while crop_args is None:
+                        try:
+                            crop_args = [int(x) for x in
+                                raw_input('Enter crop parameters (w:h:x:y): ').strip().split(':')]
+                        except:
+                            pass
                     if args.sc:
-                        global_crop_params = crop_params
-
-                w, h, x, y = [int(n) for n in crop_params.split(':')]
-                dw = w % 16
-                dh = h % 8
-                x += int(math.ceil(dw * 0.5))
-                y += int(math.ceil(dh * 0.5))
-                w -= dw
-                h -= dh
-                assert w % 16 == 0 and h % 8 == 0 # TODO move that assert outside of crop
-
-                ffmpeg_filters.append('crop={w}:{h}:{x}:{y}'.format(w=w, h=h, x=x, y=y))
+                        common_crop_args = crop_args
+            if crop_args is None:
+                crop_args = [video_track.width(), video_track.height(), 0, 0]
+            dw, dh, dx, dy = crop_args
+            if not movie_dimensions_correct(dw, dh):
+                dw, dh, dx, dy = correct_movie_dimensions(dw, dh, dx, dy)
+            assert movie_dimensions_correct(dw, dh)
+            if dx > 0 or dy > 0 or dw != video_track.width() or dh != video_track.height():
+                ffmpeg_filters.append('crop={w}:{h}:{x}:{y}'.format(w=dw, h=dh, x=dx, y=dy))
 
             src_color_space = video_track.color_space()
             dst_color_space = VideoTrack.CS_BT_709
