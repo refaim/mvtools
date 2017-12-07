@@ -159,34 +159,39 @@ class VideoTrack(Track):
         return self._crf
 
     def color_range(self):
-        return self.probe()['color_range']
+        if self._color_range is None:
+            cr = self.probe().get('color_range')
+            if cr is None and self.color_space() == self.BT_709:
+                cr = self.CR_TV
+            assert cr == self.CR_TV
+            self._color_range = cr
+        return self._color_range
 
     def color_space(self):
         if self._color_space is None:
             cs = self.probe().get('color_space')
             if cs is None and self.height() >= self.COLOR_SPACE_709_HEIGHT_THRESHOLD:
-                cs = self.CS_BT_709
-            if cs not in self._KNOWN_CS:
-                raise Exception(u'Unknown color space {}'.format(cs))
+                cs = self.BT_709
+            assert cs == self.BT_709
             self._color_space = cs
         return self._color_space
 
     # TODO what about interleaved?
     def is_interlaced(self):
         if self._field_order is None:
+            orders = (self.FO_PRG, self.FO_INT_BOT, self.FO_INT_TOP)
             fo = self.probe().get('field_order') or \
-                ask_to_select(u'Specify field order', sorted(self._KNOWN_FO))
-            if fo not in self._KNOWN_FO:
-                raise Exception(u'Unknown field order {}'.format(fo))
+                ask_to_select(u'Specify field order', sorted(orders))
+            assert fo in orders
             self._field_order = fo
         return self._field_order in (self.FO_INT_BOT, self.FO_INT_TOP)
 
 class AudioTrack(Track):
-    CODEC_AAC = 'A_AAC'
-    CODEC_AC3 = 'A_AC3'
-    CODEC_DTS = 'A_DTS'
-    CODEC_MP3 = 'A_MPEG/L3'
-    KNOWN_CODECS = set([CODEC_AAC, CODEC_AC3, CODEC_DTS, CODEC_MP3])
+    AAC = 'A_AAC'
+    AC3 = 'A_AC3'
+    DTS = 'A_DTS'
+    MP3 = 'A_MPEG/L3'
+    CODEC_IDS = (AAC, AC3, DTS, MP3)
 
     def channels(self):
         return int(self._data['audio_channels'])
@@ -487,9 +492,8 @@ def main():
         # TODO recode flac to ac3/aac/wtf
         # TODO normalize dvd sound, see rutracker for details
         for track in output_tracks[Track.AUD]:
-            if track.codecId() not in AudioTrack.KNOWN_CODECS:
-                raise Exception(u'Unknown audio codec {}'.format(track.codecId()))
-            if args.dm and (track.codecId() in (AudioTrack.CODEC_AC3, AudioTrack.CODEC_DTS) or track.channels() > 2):
+            assert track.codecId() in AudioTrack.CODEC_IDS
+            if args.dm and (track.codecId() in (AudioTrack.AC3, AudioTrack.DTS) or track.channels() > 2):
                 wav_path = make_output_file(encode_root, 'wav')
                 result_commands.extend(ffmpeg_cmds(movie.path(), wav_path, [], [
                     '-dn', '-sn', '-vn',
