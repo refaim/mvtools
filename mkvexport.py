@@ -264,19 +264,26 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('sources', type=cmd_string, nargs='+', help='paths to source directories/files')
     parser.add_argument('dst', type=cmd_string, help='path to destination directory')
-    parser.add_argument('-al', nargs='*', choices=languages, default=['eng', 'rus'], help='ordered list of audio languages to keep')
-    parser.add_argument('-sl', nargs='*', choices=languages, default=[], help='ordered list of subtitles languages to keep')
-    parser.add_argument('-dm', default=False, action='store_true', help='downmix multi-channel and/or ac3/dts audio to aac')
-    parser.add_argument('-kv', default=False, action='store_true', help='keep video from re-encoding')
-    parser.add_argument('-fv', default=False, action='store_true', help='force video re-encoding')
-    parser.add_argument('-nf', type=cmd_string, default=None, help='path to names map file')
-    parser.add_argument('-xx', default=False, action='store_true', help='remove original source files')
-    parser.add_argument('-eo', default=False, action='store_true', help='remux only if re-encoding')
-    parser.add_argument('-pp', default=False, action='store_true', help='prefer pgs subtitles')
+
+    # TODO add argument groups
+    parser.add_argument('-kv', default=False, action='store_true', help='keep source video')
+    parser.add_argument('-fv', default=False, action='store_true', help='recode video')
+    parser.add_argument('-ft', help='force tune')
     parser.add_argument('-cr', default=False, action='store_true', help='crop video')
     parser.add_argument('-sc', default=False, action='store_true', help='use same crop values for all files')
-    parser.add_argument('-ft', help='force tune')
+
+    parser.add_argument('-al', nargs='*', choices=languages, default=['eng', 'rus'], help='ordered list of audio languages to keep')
+    parser.add_argument('-dm', default=False, action='store_true', help='downmix multi-channel audio to stereo')
+
+    parser.add_argument('-sl', nargs='*', choices=languages, default=[], help='ordered list of subtitles languages to keep')
+    parser.add_argument('-pp', default=False, action='store_true', help='prefer pgs subtitles')
+
+    parser.add_argument('-xx', default=False, action='store_true', help='remove original source files')
+    parser.add_argument('-eo', default=False, action='store_true', help='remux only if re-encoding')
+    parser.add_argument('-nf', type=cmd_string, default=None, help='path to names map file')
+
     # TODO add parametes to ask for file name !!!
+
     args = parser.parse_args()
 
     filenames_map = None
@@ -416,26 +423,24 @@ def main():
             track_sources[video_track.id()] = [new_video_path, 0]
             temporary_files.append(new_video_path)
 
-        # TODO rename argument, separate downmix and recode
         # TODO recode flac to ac3/aac/wtf
-        if args.dm:
-            for track in output_tracks[Track.AUD]:
-                if track.codecId() not in AudioTrack.KNOWN_CODECS:
-                    raise Exception(u'Unknown audio codec {}'.format(track.codecId()))
-                if track.codecId() in (AudioTrack.CODEC_AC3, AudioTrack.CODEC_DTS) or track.channels() > 2:
-                    wav_path = make_output_file(encode_root, 'wav')
-                    result_commands.extend(ffmpeg_cmds(movie.path(), wav_path, [
-                        '-dn', '-sn', '-vn',
-                        '-map_metadata -1', '-map_chapters -1',
-                        '-c:a pcm_f32le', '-ac 2', '-f wav', '-map 0:{}'.format(track.id()),
-                    ]))
+        for track in output_tracks[Track.AUD]:
+            if track.codecId() not in AudioTrack.KNOWN_CODECS:
+                raise Exception(u'Unknown audio codec {}'.format(track.codecId()))
+            if args.dm and (track.codecId() in (AudioTrack.CODEC_AC3, AudioTrack.CODEC_DTS) or track.channels() > 2):
+                wav_path = make_output_file(encode_root, 'wav')
+                result_commands.extend(ffmpeg_cmds(movie.path(), wav_path, [
+                    '-dn', '-sn', '-vn',
+                    '-map_metadata -1', '-map_chapters -1',
+                    '-c:a pcm_f32le', '-ac 2', '-f wav', '-map 0:{}'.format(track.id()),
+                ]))
 
-                    m4a_path = make_output_file(encode_root, 'm4a')
-                    qaac_options = ['--tvbr 63', '--quality 2', '--rate keep', '--ignorelength', '--no-delay']
-                    encode = u'qaac64 {} {} -o {}'.format(u' '.join(qaac_options), quote(wav_path), quote(m4a_path))
-                    result_commands.append(encode)
-                    track_sources[track.id()] = [m4a_path, 0]
-                    temporary_files.extend([wav_path, m4a_path])
+                m4a_path = make_output_file(encode_root, 'm4a')
+                qaac_options = ['--tvbr 63', '--quality 2', '--rate keep', '--ignorelength', '--no-delay']
+                encode = u'qaac64 {} {} -o {}'.format(u' '.join(qaac_options), quote(wav_path), quote(m4a_path))
+                result_commands.append(encode)
+                track_sources[track.id()] = [m4a_path, 0]
+                temporary_files.extend([wav_path, m4a_path])
 
         pgs_tracks = { track.id(): track for track in output_tracks[Track.SUB]
             if track.codecId() == SubtitleTrack.CODEC_PGS }
