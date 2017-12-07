@@ -96,6 +96,10 @@ class Track(object):
         return unicode(self._data['codec_id'])
 
 class VideoTrack(Track):
+    CODEC_H264 = 'h264'
+    PROFILE_HIGH = 'High'
+    LEVEL_41 = 41
+
     FO_PRG = 'progressive'
     FO_INT_TOP = 'tt'
     FO_INT_BOT = 'bb'
@@ -114,6 +118,25 @@ class VideoTrack(Track):
                     quote(self._parent_path)))
             self._probe = json.loads(stdout)['streams'][0]
         return self._probe
+
+    def width(self):
+        p = self.probe()
+        assert p['width'] == p['coded_width']
+        return p['width']
+
+    def height(self):
+        p = self.probe()
+        assert p['height'] == p['coded_height']
+        return p['height']
+
+    def codecId(self):
+        return self.probe()['codec_name']
+
+    def profile(self):
+        return self.probe()['profile']
+
+    def level(self):
+        return self.probe()['level']
 
     def crf(self):
         if self._crf is None:
@@ -243,6 +266,7 @@ def main():
     parser.add_argument('-sl', nargs='*', choices=languages, default=[], help='ordered list of subtitles languages to keep')
     parser.add_argument('-dm', default=False, action='store_true', help='downmix multi-channel and/or ac3/dts audio to aac')
     parser.add_argument('-kv', default=False, action='store_true', help='keep video from re-encoding')
+    parser.add_argument('-fv', default=False, action='store_true', help='force video re-encoding')
     parser.add_argument('-nf', type=cmd_string, default=None, help='path to names map file')
     parser.add_argument('-xx', default=False, action='store_true', help='remove original source files')
     parser.add_argument('-eo', default=False, action='store_true', help='remux only if re-encoding')
@@ -310,6 +334,8 @@ def main():
                 if len(comment_track_ids) == len(candidates) - 1:
                     chosen_track_id = list(set(candidates.keys()) - set(comment_track_ids))[0]
 
+                # TODO choose full or sdh from forced, full and sdh subtitles
+
                 if args.pp and track_type == Track.SUB:
                     pgs_candidates = [track.id() for track in candidates.itervalues() if track.codecId() == SubtitleTrack.CODEC_PGS]
                     if len(pgs_candidates) == 1:
@@ -336,12 +362,13 @@ def main():
         temporary_files = []
         encode_root = os.path.dirname(target_path)
 
-        # TODO check if codec x264 and profile 4.1
         # TODO what if there is crf already?
         video_track = movie.video_track()
-        # if not args.kv:
-        # TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        if not args.kv and video_track.crf() is None:
+        encoded_ok = video_track.codecId() == VideoTrack.CODEC_H264 and \
+            video_track.crf() is not None and \
+            video_track.profile() == VideoTrack.PROFILE_HIGH and \
+            video_track.level() == VideoTrack.LEVEL_41
+        if args.fv or encoded_ok and not args.kv:
             chosen_tune = args.ft or ask_to_select(
                 u'Enter tune ID',
                 sorted(TUNES.iterkeys(), key=lambda k: TUNES[k][TUNES_IDX_SORT_KEY]))
