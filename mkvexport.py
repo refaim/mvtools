@@ -107,9 +107,10 @@ class VideoTrack(Track):
 
     def __init__(self, parent_path, raw_params):
         super(VideoTrack, self).__init__(parent_path, raw_params)
+        self._probe = None
         self._crf = None
         self._field_order = None
-        self._probe = None
+        self._color_space = None
 
     def probe(self):
         if self._probe is None:
@@ -150,10 +151,11 @@ class VideoTrack(Track):
 
     def is_interlaced(self):
         if self._field_order is None:
-            self._field_order = self.probe().get('field_order') or \
+            fo = self.probe().get('field_order') or \
                 ask_to_select(u'Specify field order', sorted(self._KNOWN_FO))
-        if self._field_order not in self._KNOWN_FO:
-            raise Exception(u'Unknown field order {}'.format(self._field_order))
+            if fo not in self._KNOWN_FO:
+                raise Exception(u'Unknown field order {}'.format(fo))
+            self._field_order = fo
         return self._field_order in (self.FO_INT_BOT, self.FO_INT_TOP)
 
 class AudioTrack(Track):
@@ -313,6 +315,7 @@ def main():
         pass
     write_commands(['@echo off'], fail_safe=False)
 
+    # TODO catch some of my exceptions, report skipped file, ask for action, log skipped file
     global_crop_params = None
     for target_path, movie in sorted(movies.iteritems(), key=lambda t: t[1].path()):
         print(u'=== {} ==='.format(movie.path()))
@@ -374,11 +377,11 @@ def main():
                 sorted(TUNES.iterkeys(), key=lambda k: TUNES[k][TUNES_IDX_SORT_KEY]))
             tune_params = TUNES[chosen_tune]
 
-            # TODO convert colorspace, color matrix, etc
+            # TODO check out rutracker manuals for dvd rip filters and stuff
             ffmpeg_filters = []
             if video_track.is_interlaced():
                 ffmpeg_filters.append('yadif=1:-1:0')
-            if args.cr:
+            if args.cr: # TODO auto crop if not mod16 mod8
                 crop_params = None
                 if global_crop_params is not None:
                     crop_params = global_crop_params
@@ -395,7 +398,7 @@ def main():
                 y += int(math.ceil(dh * 0.5))
                 w -= dw
                 h -= dh
-                assert w % 16 == 0 and h % 8 == 0
+                assert w % 16 == 0 and h % 8 == 0 # TODO move that assert outside of crop
 
                 ffmpeg_filters.append('crop={w}:{h}:{x}:{y}'.format(w=w, h=h, x=x, y=y))
 
@@ -413,6 +416,8 @@ def main():
             track_sources[video_track.id()] = [new_video_path, 0]
             temporary_files.append(new_video_path)
 
+        # TODO rename argument, separate downmix and recode
+        # TODO recode flac to ac3/aac/wtf
         if args.dm:
             for track in output_tracks[Track.AUD]:
                 if track.codecId() not in AudioTrack.KNOWN_CODECS:
