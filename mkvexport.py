@@ -396,7 +396,7 @@ def main():
             video_track.crf() is not None and \
             video_track.profile() == VideoTrack.PROFILE_HIGH and \
             video_track.level() == VideoTrack.LEVEL_41
-        if args.fv or encoded_ok and not args.kv:
+        if args.fv or not encoded_ok and not args.kv:
             chosen_tune = args.ft or ask_to_select(
                 u'Enter tune ID',
                 sorted(TUNES.iterkeys(), key=lambda k: TUNES[k][TUNES_IDX_SORT_KEY]))
