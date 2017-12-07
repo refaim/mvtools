@@ -196,7 +196,7 @@ def ask_to_select(prompt, values, header=None):
         for i, v in sorted(values_dict.iteritems()):
             print(u'{} {}'.format(i, v))
         chosen_id = try_int(raw_input(u'{}: '.format(prompt)))
-    return values_dict[chosen_id]
+    return chosen_id if isinstance(values, dict) else values_dict[chosen_id]
 
 def is_movie(filepath):
     return os.path.isfile(filepath) and filepath.lower().endswith('.mkv')
