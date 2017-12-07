@@ -105,6 +105,10 @@ class VideoTrack(Track):
     FO_INT_BOT = 'bb'
     _KNOWN_FO = set([FO_PRG, FO_INT_BOT, FO_INT_TOP])
 
+    COLOR_SPACE_709_HEIGHT_THRESHOLD = 720
+    CS_BT_709 = 'bt709'
+    _KNOWN_CS = set([CS_BT_709])
+
     def __init__(self, parent_path, raw_params):
         super(VideoTrack, self).__init__(parent_path, raw_params)
         self._probe = None
@@ -149,6 +153,20 @@ class VideoTrack(Track):
                 self._crf = float(match.groupdict()['crf'])
         return self._crf
 
+    def color_range(self):
+        return self.probe()['color_range']
+
+    def color_space(self):
+        if self._color_space is None:
+            cs = self.probe().get('color_space')
+            if cs is None and self.height() >= self.COLOR_SPACE_709_HEIGHT_THRESHOLD:
+                cs = self.CS_BT_709
+            if cs not in self._KNOWN_CS:
+                raise Exception(u'Unknown color space {}'.format(cs))
+            self._color_space = cs
+        return self._color_space
+
+    # TODO what about interleaved?
     def is_interlaced(self):
         if self._field_order is None:
             fo = self.probe().get('field_order') or \
@@ -409,14 +427,38 @@ def main():
 
                 ffmpeg_filters.append('crop={w}:{h}:{x}:{y}'.format(w=w, h=h, x=x, y=y))
 
+            src_color_space = video_track.color_space()
+            dst_color_space = VideoTrack.CS_BT_709
+            if video_track.height() < VideoTrack.COLOR_SPACE_709_HEIGHT_THRESHOLD:
+                # bt601-6-625 PAL
+                # bt601-6-525 NTSC
+                raise Exception('Not implemented')
+
+            if src_color_space != dst_color_space:
+                # TODO specify input/output color_range
+                # TODO specify each input component separately
+                # TODO The input transfer characteristics, color space, color primaries and color range should be set on the input data
+                # TODO clarify iall=all= format string
+                ffmpeg_filters.append('colorspace=iall={}:all={}'.format(src_color_space, dst_color_space))
+
             ffmpeg_options = ['-an', '-sn', '-dn']
             if ffmpeg_filters:
                 ffmpeg_options.append('-filter:v {}'.format(','.join(ffmpeg_filters)))
+
+            # TODO specify input color_range
+            # TODO somehow even without output color_range ffmpeg produces limited range (due to space/primaries/trc?)
+            # TODO shouldn't I always use TV color range?
+            # TODO tune grain for soviet old movies
+            src_color_range = video_track.color_range()
             ffmpeg_options.extend([
                 '-c:v libx264', '-preset veryslow',
                 '-tune {}'.format(tune_params[TUNES_IDX_REAL_TUNE]),
                 '-profile:v high', '-level:v 4.1', '-crf {}'.format(tune_params[TUNES_IDX_CRF]),
                 '-map_metadata -1', '-map_chapters -1',
+                '-color_range {}'.format(src_color_range),
+                '-color_primaries {}'.format(dst_color_space),
+                '-color_trc {}'.format(dst_color_space),
+                '-colorspace {}'.format(dst_color_space),
             ])
             new_video_path = make_output_file(encode_root, 'mkv')
             result_commands.extend(ffmpeg_cmds(movie.path(), new_video_path, ffmpeg_options))
