@@ -96,6 +96,7 @@ class Track(object):
         return unicode(self._data['codec_id'])
 
 class VideoTrack(Track):
+    YUV420P = 'yuv420p'
     CODEC_H264 = 'h264'
     PROFILE_HIGH = 'High'
     LEVEL_41 = 41
@@ -103,11 +104,11 @@ class VideoTrack(Track):
     FO_PRG = 'progressive'
     FO_INT_TOP = 'tt'
     FO_INT_BOT = 'bb'
-    _KNOWN_FO = set([FO_PRG, FO_INT_BOT, FO_INT_TOP])
 
-    COLOR_SPACE_709_HEIGHT_THRESHOLD = 720
-    CS_BT_709 = 'bt709'
-    _KNOWN_CS = set([CS_BT_709])
+    COLOR_SPACE_709_HEIGHT_THRESHOLD = 720 # TODO remove
+    BT_709 = 'bt709'
+
+    CR_TV = 'tv'
 
     def __init__(self, parent_path, raw_params):
         super(VideoTrack, self).__init__(parent_path, raw_params)
@@ -115,6 +116,7 @@ class VideoTrack(Track):
         self._crf = None
         self._field_order = None
         self._color_space = None
+        self._color_range = None
 
     def probe(self):
         if self._probe is None:
@@ -142,6 +144,9 @@ class VideoTrack(Track):
 
     def level(self):
         return self.probe()['level']
+
+    def pix_fmt(self):
+        return self.probe()['pix_fmt']
 
     def crf(self):
         if self._crf is None:
@@ -263,10 +268,11 @@ def mkvs(path):
 
 # TODO progress bar, estimate, size difference in files
 # TODO support windows cmd window header progress
-def ffmpeg_cmds(src, dst, options):
+def ffmpeg_cmds(src, dst, src_options, dst_options):
     return [
-        u'chcp 65001 >nul && ffmpeg -v error -stats -y -i {src} {options} {dst}'.format(
-            src=quote(src), dst=quote(dst), options=u' '.join(options)),
+        u'chcp 65001 >nul && ffmpeg -v error -stats -y {src_opt} -i {src} {dst_opt} {dst}'.format(
+            src=quote(src), src_opt=u' '.join(src_options),
+            dst=quote(dst), dst_opt=u' '.join(dst_options)),
         u'chcp 866 >nul',
     ]
 
@@ -405,6 +411,7 @@ def main():
             video_track.profile() == VideoTrack.PROFILE_HIGH and \
             video_track.level() == VideoTrack.LEVEL_41
         if args.fv or not encoded_ok and not args.kv:
+            # TODO tune grain for soviet old movies
             chosen_tune = args.ft or ask_to_select(
                 u'Enter tune ID',
                 sorted(TUNES.iterkeys(), key=lambda k: TUNES[k][TUNES_IDX_SORT_KEY]))
@@ -439,41 +446,41 @@ def main():
             if dx > 0 or dy > 0 or dw != video_track.width() or dh != video_track.height():
                 ffmpeg_filters.append('crop={w}:{h}:{x}:{y}'.format(w=dw, h=dh, x=dx, y=dy))
 
+            assert video_track.pix_fmt() == VideoTrack.YUV420P
+
             src_color_space = video_track.color_space()
-            dst_color_space = VideoTrack.CS_BT_709
+            dst_color_space = VideoTrack.BT_709
             if video_track.height() < VideoTrack.COLOR_SPACE_709_HEIGHT_THRESHOLD:
                 # bt601-6-625 PAL
                 # bt601-6-525 NTSC
                 raise Exception('Not implemented')
 
-            if src_color_space != dst_color_space:
+            # TODO comment: "16-235 is a typical NTSC luma range. PAL always uses 0-255 luma range."
+            src_color_range = video_track.color_range()
+
+            if src_color_space != dst_color_space or src_color_range != VideoTrack.CR_TV:
                 # TODO specify input/output color_range
                 # TODO specify each input component separately
                 # TODO The input transfer characteristics, color space, color primaries and color range should be set on the input data
                 # TODO clarify iall=all= format string
                 ffmpeg_filters.append('colorspace=iall={}:all={}'.format(src_color_space, dst_color_space))
 
-            ffmpeg_options = ['-an', '-sn', '-dn']
+            ffmpeg_src_options = ['-color_range {}'.format(src_color_range)]
+            ffmpeg_dst_options = ['-an', '-sn', '-dn']
             if ffmpeg_filters:
-                ffmpeg_options.append('-filter:v {}'.format(','.join(ffmpeg_filters)))
-
-            # TODO specify input color_range
-            # TODO somehow even without output color_range ffmpeg produces limited range (due to space/primaries/trc?)
-            # TODO shouldn't I always use TV color range?
-            # TODO tune grain for soviet old movies
-            src_color_range = video_track.color_range()
-            ffmpeg_options.extend([
-                '-c:v libx264', '-preset veryslow',
+                ffmpeg_dst_options.append('-filter:v {}'.format(','.join(ffmpeg_filters)))
+            ffmpeg_dst_options.extend([
+                '-c:v libx264', '-preset veryslow', '-pix_fmt {}'.format(VideoTrack.YUV420P),
                 '-tune {}'.format(tune_params[TUNES_IDX_REAL_TUNE]),
                 '-profile:v high', '-level:v 4.1', '-crf {}'.format(tune_params[TUNES_IDX_CRF]),
                 '-map_metadata -1', '-map_chapters -1',
-                '-color_range {}'.format(src_color_range),
+                '-color_range {}'.format(VideoTrack.CR_TV),
                 '-color_primaries {}'.format(dst_color_space),
                 '-color_trc {}'.format(dst_color_space),
                 '-colorspace {}'.format(dst_color_space),
             ])
             new_video_path = make_output_file(encode_root, 'mkv')
-            result_commands.extend(ffmpeg_cmds(movie.path(), new_video_path, ffmpeg_options))
+            result_commands.extend(ffmpeg_cmds(movie.path(), new_video_path, ffmpeg_src_options, ffmpeg_dst_options))
             track_sources[video_track.id()] = [new_video_path, 0]
             temporary_files.append(new_video_path)
 
@@ -484,7 +491,7 @@ def main():
                 raise Exception(u'Unknown audio codec {}'.format(track.codecId()))
             if args.dm and (track.codecId() in (AudioTrack.CODEC_AC3, AudioTrack.CODEC_DTS) or track.channels() > 2):
                 wav_path = make_output_file(encode_root, 'wav')
-                result_commands.extend(ffmpeg_cmds(movie.path(), wav_path, [
+                result_commands.extend(ffmpeg_cmds(movie.path(), wav_path, [], [
                     '-dn', '-sn', '-vn',
                     '-map_metadata -1', '-map_chapters -1',
                     '-c:a pcm_f32le', '-ac 2', '-f wav', '-map 0:{}'.format(track.id()),
@@ -534,6 +541,7 @@ def main():
                         mux.append('--track-name {0}:"" --language {0}:{1} --default-track {0}:{2}'.format(track_ids_map[track.id()], track.language(), 'yes' if default else 'no'))
                 elif tracks_flag_no:
                     mux.append(tracks_flag_no)
+            # TODO keep fonts attachments if text subitles are present
             mux.append(u'--no-track-tags --no-attachments --no-buttons --no-global-tags {}'.format(quote(source_file)))
 
         mux.append('--title ""')
