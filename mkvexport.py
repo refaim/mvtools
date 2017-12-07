@@ -478,6 +478,7 @@ def main():
             temporary_files.append(new_video_path)
 
         # TODO recode flac to ac3/aac/wtf
+        # TODO normalize dvd sound, see rutracker for details
         for track in output_tracks[Track.AUD]:
             if track.codecId() not in AudioTrack.KNOWN_CODECS:
                 raise Exception(u'Unknown audio codec {}'.format(track.codecId()))
