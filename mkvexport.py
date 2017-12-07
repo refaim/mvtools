@@ -210,11 +210,13 @@ def mkvs(path):
     elif is_movie(path):
         yield path
 
+# TODO progress bar, estimate, size difference in files
+# TODO support windows cmd window header progress
 def ffmpeg_cmds(src, dst, options):
     return [
-        u'chcp 65001 && ffmpeg -v error -stats -y -i {src} {options} {dst}'.format(
+        u'chcp 65001 >nul && ffmpeg -v error -stats -y -i {src} {options} {dst}'.format(
             src=quote(src), dst=quote(dst), options=u' '.join(options)),
-        u'chcp 866',
+        u'chcp 866 >nul',
     ]
 
 def cmd_string(bytestring):
