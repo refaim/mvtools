@@ -239,7 +239,6 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('sources', type=cmd_string, nargs='+', help='paths to source directories/files')
     parser.add_argument('dst', type=cmd_string, help='path to destination directory')
-    # TODO make list order matter
     parser.add_argument('-al', nargs='*', choices=languages, default=['eng', 'rus'], help='ordered list of audio languages to keep')
     parser.add_argument('-sl', nargs='*', choices=languages, default=[], help='ordered list of subtitles languages to keep')
     parser.add_argument('-dm', default=False, action='store_true', help='downmix multi-channel and/or ac3/dts audio to aac')
@@ -278,7 +277,7 @@ def main():
                 else: new_name = u'{}.mkv'.format(raw_new_name_string)
             movies[os.path.join(os.path.abspath(args.dst), new_name)] = Movie(os.path.abspath(filepath))
 
-    output_track_types = {
+    output_track_langs = {
         Track.VID: ['und'],
         Track.AUD: args.al,
         Track.SUB: args.sl,
@@ -293,9 +292,9 @@ def main():
     global_crop_params = None
     for target_path, movie in sorted(movies.iteritems(), key=lambda t: t[1].path()):
         print(u'=== {} ==='.format(movie.path()))
-        output_tracks = { track_type: [] for track_type in output_track_types }
+        output_tracks = { track_type: [] for track_type in output_track_langs }
         used_tracks = set()
-        for track_type, lang_list in output_track_types.iteritems():
+        for track_type, lang_list in output_track_langs.iteritems():
             for target_lang in lang_list:
                 candidates = { track.id(): track for track in movie.tracks(track_type)
                     if track.id() not in used_tracks and (track.language() == target_lang or 'und' in (target_lang, track.language()))
@@ -329,7 +328,7 @@ def main():
 
         track_sources = {}
         for track_type, track_list in output_tracks.iteritems():
-            track_list.sort(key=lambda t: LANG_ORDER.index(t.language()))
+            track_list.sort(key=lambda t: output_track_langs[track_type].index(t.language()))
             for track in track_list:
                 track_sources[track.id()] = [movie.path(), track.id()]
 
