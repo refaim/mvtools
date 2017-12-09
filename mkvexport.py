@@ -300,6 +300,8 @@ def write_commands(commands, fail_safe=True):
         fobj.write(u'\r\n')
 
 def main():
+    # TODO support temporary directory argument to speed up RW operations
+
     languages = sorted(LANGUAGES.iterkeys())
     parser = argparse.ArgumentParser()
     parser.add_argument('sources', type=cmd_string, nargs='+', help='paths to source directories/files')
@@ -370,6 +372,11 @@ def main():
         used_tracks = set()
         for track_type, lang_list in output_track_langs.iteritems():
             for target_lang in lang_list:
+                # TODO support game of thrones valyrian subtitles
+                # TODO filter forced subtitles by duration
+                # TODO filter forced subtitles by size
+                # TODO filter forced subtitles by title
+                # TODO check subitles duration (for pgs? sub? all?) and filter by duration
                 candidates = { track.id(): track for track in movie.tracks(track_type)
                     if track.id() not in used_tracks and (track.language() == target_lang or 'und' in (target_lang, track.language()))
                 }
@@ -384,7 +391,7 @@ def main():
                 if len(comment_track_ids) == len(candidates) - 1:
                     chosen_track_id = list(set(candidates.keys()) - set(comment_track_ids))[0]
 
-                # TODO choose full or sdh from forced, full and sdh subtitles
+                # TODO choose full or sdh from forced, full and sdh subtitles (by title)
 
                 if args.pp and track_type == Track.SUB:
                     pgs_candidates = [track.id() for track in candidates.itervalues() if track.codecId() == SubtitleTrack.CODEC_PGS]
@@ -511,6 +518,9 @@ def main():
                 track_sources[track.id()] = [m4a_path, 0]
                 temporary_files.extend([wav_path, m4a_path])
 
+        # TODO render ass/ssa to vobsub
+        # TODO assert that fonts only present if subtitles ass/ssa
+        # TODO assert that output subtitles only srt and vobsub
         pgs_tracks = { track.id(): track for track in output_tracks[Track.SUB]
             if track.codecId() == SubtitleTrack.CODEC_PGS }
         if pgs_tracks:
@@ -548,7 +558,6 @@ def main():
                         mux.append('--track-name {0}:"" --language {0}:{1} --default-track {0}:{2}'.format(track_ids_map[track.id()], track.language(), 'yes' if default else 'no'))
                 elif tracks_flag_no:
                     mux.append(tracks_flag_no)
-            # TODO keep fonts attachments if text subitles are present
             mux.append(u'--no-track-tags --no-attachments --no-buttons --no-global-tags {}'.format(quote(source_file)))
 
         mux.append('--title ""')
