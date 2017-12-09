@@ -336,6 +336,16 @@ def write_commands(commands, fail_safe=True):
             fobj.write(u'{}\r\n'.format(result_string))
         fobj.write(u'\r\n')
 
+def read_map_file(path, handle_key, handle_value):
+    result = None
+    if path and os.path.isfile(path):
+        result = {}
+        with codecs.open(path, 'r', 'utf-8') as fobj:
+            for line in fobj:
+                raw_key, raw_val = line.split('=')
+                result[handle_key(raw_key)] = handle_value(raw_val)
+    return result
+
 def main():
     # TODO support temporary directory argument to speed up RW operations
 
@@ -349,6 +359,7 @@ def main():
     parser.add_argument('-fv', default=False, action='store_true', help='recode video')
     parser.add_argument('-ft', help='force tune')
     parser.add_argument('-cr', default=False, action='store_true', help='crop video')
+    parser.add_argument('-cf', type=cmd_string, default=None, help='path to crop map file')
     parser.add_argument('-sc', default=False, action='store_true', help='use same crop values for all files')
 
     parser.add_argument('-al', nargs='*', choices=languages, default=['eng', 'rus'], help='ordered list of audio languages to keep')
@@ -364,16 +375,20 @@ def main():
     # TODO add parametes to ask for file name !!!
 
     args = parser.parse_args()
+    if args.cf and args.sc:
+        raise Exception('Use same crop OR crop map')
 
-    filenames_map = None
-    if args.nf and os.path.exists(args.nf):
-        filenames_map = {}
-        with codecs.open(args.nf, 'r', 'utf-8') as fobj:
-            for line in fobj:
-                k, v = [os.path.normpath(s.strip()).replace(u'.mkv', u'') for s in line.split('=')]
-                filenames_map[k] = v
+    def read_movie_path(path):
+        return os.path.normpath(path.strip()).replace(u'.mkv', u'')
+
+    def read_crop_args(s):
+        return [int(x) for x in s.strip().split(':')]
+
+    filenames_map = read_map_file(args.nf, read_movie_path, read_movie_path)
+    raw_crops_map = read_map_file(args.cf, read_movie_path, read_crop_args)
 
     movies = {}
+    crop_args_map = {}
     for argspath in args.sources:
         for filepath in mkvs(argspath):
             cur_name = os.path.basename(filepath)
@@ -387,7 +402,11 @@ def main():
                 if raw_new_name_string == 'NO': continue
                 elif raw_new_name_string == 'KEEP': new_name = cur_name
                 else: new_name = u'{}.mkv'.format(raw_new_name_string)
-            movies[os.path.join(os.path.abspath(args.dst), new_name)] = Movie(os.path.abspath(filepath))
+            cur_path = os.path.abspath(filepath)
+            new_path = os.path.join(os.path.abspath(args.dst), new_name)
+            if raw_crops_map is not None:
+                crop_args_map[cur_path] = raw_crops_map[os.path.splitext(cur_name)[0]]
+            movies[new_path] = Movie(cur_path)
 
     output_track_langs = {
         Track.VID: ['und'],
@@ -474,11 +493,12 @@ def main():
             if video_track.is_interlaced():
                 ffmpeg_filters.append('yadif=1:-1:0')
 
-            # TODO test crop stuff
             crop_args = None
             if args.cr:
                 if common_crop_args is not None:
                     crop_args = common_crop_args
+                if crop_args_map is not None:
+                    crop_args = crop_args_map[movie.path()]
                 if crop_args is None:
                     os.system('ffmpegyag')
                     while crop_args is None:
@@ -493,6 +513,7 @@ def main():
                 crop_args = [video_track.width(), video_track.height(), 0, 0]
             dw, dh, dx, dy = crop_args
             if not movie_dimensions_correct(dw, dh):
+                print('Adjusting crop by {}x{}'.format(dw % 16, dh % 8))
                 dw, dh, dx, dy = correct_movie_dimensions(dw, dh, dx, dy)
             assert movie_dimensions_correct(dw, dh)
             if dx > 0 or dy > 0 or dw != video_track.width() or dh != video_track.height():
