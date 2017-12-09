@@ -99,6 +99,14 @@ class Track(object):
         return unicode(self._data['codec_id'])
 
 class VideoTrack(Track):
+    PAL = 'not_ffmpeg_const_pal'
+    NTSC = 'not_ffmpeg_const_ntsc'
+    _STANDARDS = {
+        '25/1': PAL,
+        '24000/1001': NTSC,
+        '30000/1001': NTSC,
+    }
+
     YUV420P = 'yuv420p'
     CODEC_H264 = 'h264'
     PROFILE_HIGH = 'High'
@@ -108,48 +116,40 @@ class VideoTrack(Track):
     FO_INT_TOP = 'tt'
     FO_INT_BOT = 'bb'
 
-    COLOR_SPACE_709_HEIGHT_THRESHOLD = 720 # TODO remove
-    BT_709 = 'bt709'
-
-    CR_TV = 'tv'
-
     def __init__(self, parent_path, raw_params):
         super(VideoTrack, self).__init__(parent_path, raw_params)
-        self._probe = None
+        self._probe = self.__probe()
         self._crf = None
         self._field_order = None
-        self._color_space = None
-        self._color_range = None
+        self._colors = Colors(self.width(), self.height(), self.standard(), self._probe)
 
-    def probe(self):
-        if self._probe is None:
-            stdout = process(
-                u'ffprobe -v quiet -print_format json -select_streams v -show_streams {}'.format(
-                    quote(self._parent_path)))
-            self._probe = json.loads(stdout)['streams'][0]
-        return self._probe
+    def __probe(self):
+        stdout = process(
+            u'ffprobe -v quiet -print_format json -select_streams v -show_streams {}'.format(
+                quote(self._parent_path)))
+        return json.loads(stdout)['streams'][0]
 
     def width(self):
-        p = self.probe()
-        assert p['width'] == p['coded_width']
+        p = self._probe
+        assert p['width'] == p['coded_width'] or p['coded_width'] == 0
         return p['width']
 
     def height(self):
-        p = self.probe()
-        assert p['height'] == p['coded_height']
+        p = self._probe
+        assert p['height'] == p['coded_height'] or p['coded_height'] == 0
         return p['height']
 
     def codecId(self):
-        return self.probe()['codec_name']
+        return self._probe['codec_name']
 
     def profile(self):
-        return self.probe()['profile']
+        return self._probe['profile']
 
     def level(self):
-        return self.probe()['level']
+        return self._probe['level']
 
     def pix_fmt(self):
-        return self.probe()['pix_fmt']
+        return self._probe['pix_fmt']
 
     def crf(self):
         if self._crf is None:
@@ -161,33 +161,70 @@ class VideoTrack(Track):
                 self._crf = float(match.groupdict()['crf'])
         return self._crf
 
-    def color_range(self):
-        if self._color_range is None:
-            cr = self.probe().get('color_range')
-            if cr is None and self.color_space() == self.BT_709:
-                cr = self.CR_TV
-            assert cr == self.CR_TV
-            self._color_range = cr
-        return self._color_range
+    def colors(self):
+        return self._colors
 
-    def color_space(self):
-        if self._color_space is None:
-            cs = self.probe().get('color_space')
-            if cs is None and self.height() >= self.COLOR_SPACE_709_HEIGHT_THRESHOLD:
-                cs = self.BT_709
-            assert cs == self.BT_709
-            self._color_space = cs
-        return self._color_space
+    def standard(self):
+        return self._STANDARDS[self._probe['r_frame_rate']]
 
     # TODO what about interleaved?
     def is_interlaced(self):
         if self._field_order is None:
             orders = (self.FO_PRG, self.FO_INT_BOT, self.FO_INT_TOP)
-            fo = self.probe().get('field_order') or \
+            fo = self._probe.get('field_order') or \
                 ask_to_select(u'Specify field order', sorted(orders))
             assert fo in orders
             self._field_order = fo
         return self._field_order in (self.FO_INT_BOT, self.FO_INT_TOP)
+
+class Colors(object):
+    TYPE_ID_SPACE = 'space'
+    TYPE_ID_PRIMARIES = 'primaries'
+    TYPE_ID_TRC = 'trc'
+
+    BT_709 = 'bt709'
+    BT_601_PAL = 'bt470bg'
+    BT_601_NTSC = 'smpte170m'
+
+    RANGE_TV = 'tv'
+
+    def __init__(self, w, h, standard, probe_result):
+        self._width = w
+        self._height = h
+        self._standard = standard
+        self._data = probe_result
+
+    def range(self):
+        result = self._data.get('color_range')
+        if result is None and self._data['pix_fmt'] == VideoTrack.YUV420P:
+            result = self.RANGE_TV
+        return result
+
+    def correct_space(self):
+        result = None
+        if self._height >= 720:
+            result = self.BT_709
+        elif self._standard == VideoTrack.PAL:
+            result = self.BT_601_PAL
+        elif self._standard == VideoTrack.NTSC:
+            result = self.BT_601_NTSC
+        return result
+
+    def _guess_metric(self, metric):
+        result = self._data.get(metric)
+        if result is None:
+            result = self.correct_space()
+        assert result in (self.BT_709, self.BT_601_PAL, self.BT_601_NTSC)
+        return result
+
+    def space(self):
+        return self._guess_metric('color_space')
+
+    def trc(self):
+        return self._guess_metric('color_transfer')
+
+    def primaries(self):
+        return self._guess_metric('color_primaries')
 
 class AudioTrack(Track):
     AAC = 'A_AAC'
@@ -461,26 +498,21 @@ def main():
             if dx > 0 or dy > 0 or dw != video_track.width() or dh != video_track.height():
                 ffmpeg_filters.append('crop={w}:{h}:{x}:{y}'.format(w=dw, h=dh, x=dx, y=dy))
 
+            src_colors = video_track.colors()
             assert video_track.pix_fmt() == VideoTrack.YUV420P
+            assert src_colors.range() == Colors.RANGE_TV
 
-            src_color_space = video_track.color_space()
-            dst_color_space = VideoTrack.BT_709
-            if video_track.height() < VideoTrack.COLOR_SPACE_709_HEIGHT_THRESHOLD:
-                # bt601-6-625 PAL
-                # bt601-6-525 NTSC
+            dst_color_space = src_colors.correct_space()
+            if src_colors.space() != dst_color_space:
                 raise Exception('Not implemented')
-
-            # TODO comment: "16-235 is a typical NTSC luma range. PAL always uses 0-255 luma range."
-            src_color_range = video_track.color_range()
-
-            if src_color_space != dst_color_space or src_color_range != VideoTrack.CR_TV:
                 # TODO specify input/output color_range
                 # TODO specify each input component separately
                 # TODO The input transfer characteristics, color space, color primaries and color range should be set on the input data
                 # TODO clarify iall=all= format string
-                ffmpeg_filters.append('colorspace=iall={}:all={}'.format(src_color_space, dst_color_space))
+                # ffmpeg_filters.append('colorspace=iall={}:all={}'.format(src_color_space, dst_color_space))
 
-            ffmpeg_src_options = ['-color_range {}'.format(src_color_range)]
+            # TODO what about output from ntsc/pal source? will it be ntsc/pal? should it?
+            ffmpeg_src_options = ['-color_range {}'.format(src_colors.range())]
             ffmpeg_dst_options = ['-an', '-sn', '-dn']
             if ffmpeg_filters:
                 ffmpeg_dst_options.append('-filter:v {}'.format(','.join(ffmpeg_filters)))
@@ -489,9 +521,9 @@ def main():
                 '-tune {}'.format(tune_params[TUNES_IDX_REAL_TUNE]),
                 '-profile:v high', '-level:v 4.1', '-crf {}'.format(tune_params[TUNES_IDX_CRF]),
                 '-map_metadata -1', '-map_chapters -1',
-                '-color_range {}'.format(VideoTrack.CR_TV),
+                '-color_range {}'.format(Colors.RANGE_TV), # TODO "16-235 is a typical NTSC luma range. PAL always uses 0-255 luma range."
                 '-color_primaries {}'.format(dst_color_space),
-                '-color_trc {}'.format(dst_color_space),
+                '-color_trc {}'.format('gamma28' if dst_color_space == Colors.BT_601_PAL else dst_color_space),
                 '-colorspace {}'.format(dst_color_space),
             ])
             new_video_path = make_output_file(encode_root, 'mkv')
