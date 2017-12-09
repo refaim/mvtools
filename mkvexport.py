@@ -87,7 +87,10 @@ class Track(object):
         return self._data.get('track_name', '')
 
     def language(self):
-        return unicode(self._data['language'])
+        result = unicode(self._data['language'])
+        if result == 'non':
+            result = 'und'
+        return result
 
     def setLanguage(self, value):
         self._data['language'] = value
