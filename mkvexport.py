@@ -321,8 +321,8 @@ def ffmpeg_cmds(src, dst, src_options, dst_options):
         u'chcp 866 >nul',
     ]
 
-def cmd_string(bytestring):
-    return bytestring.decode(sys.getfilesystemencoding())
+def cmd_path(bytestring):
+    return os.path.expandvars(bytestring.decode(sys.getfilesystemencoding()))
 
 def make_output_file(root, extension):
     return os.path.join(root, u'{}.{}'.format(uuid.uuid4(), extension))
@@ -351,15 +351,16 @@ def main():
 
     languages = sorted(LANGUAGES.iterkeys())
     parser = argparse.ArgumentParser()
-    parser.add_argument('sources', type=cmd_string, nargs='+', help='paths to source directories/files')
-    parser.add_argument('dst', type=cmd_string, help='path to destination directory')
+    parser.add_argument('sources', type=cmd_path, nargs='+', help='paths to source directories/files')
+    parser.add_argument('dst', type=cmd_path, help='path to destination directory')
+    parser.add_argument('--temp', type=cmd_path, help='path to temporary directory')
 
     # TODO add argument groups
     parser.add_argument('-kv', default=False, action='store_true', help='keep source video')
     parser.add_argument('-fv', default=False, action='store_true', help='recode video')
     parser.add_argument('-ft', help='force tune')
     parser.add_argument('-cr', default=False, action='store_true', help='crop video')
-    parser.add_argument('-cf', type=cmd_string, default=None, help='path to crop map file')
+    parser.add_argument('-cf', type=cmd_path, default=None, help='path to crop map file')
     parser.add_argument('-sc', default=False, action='store_true', help='use same crop values for all files')
 
     parser.add_argument('-al', nargs='*', choices=languages, default=['eng', 'rus'], help='ordered list of audio languages to keep')
@@ -370,11 +371,13 @@ def main():
 
     parser.add_argument('-xx', default=False, action='store_true', help='remove original source files')
     parser.add_argument('-eo', default=False, action='store_true', help='remux only if re-encoding')
-    parser.add_argument('-nf', type=cmd_string, default=None, help='path to names map file')
+    parser.add_argument('-nf', type=cmd_path, default=None, help='path to names map file')
 
     # TODO add parametes to ask for file name !!!
 
     args = parser.parse_args()
+    if not args.temp:
+        args.temp = args.dst
     if args.cf and args.sc:
         raise Exception('Use same crop OR crop map')
 
@@ -473,7 +476,6 @@ def main():
 
         result_commands = [u'echo {}'.format(movie.path())]
         temporary_files = []
-        encode_root = os.path.dirname(target_path)
 
         # TODO what if there is crf already?
         video_track = movie.video_track()
@@ -547,7 +549,7 @@ def main():
                 '-color_trc {}'.format('gamma28' if dst_color_space == Colors.BT_601_PAL else dst_color_space),
                 '-colorspace {}'.format(dst_color_space),
             ])
-            new_video_path = make_output_file(encode_root, 'mkv')
+            new_video_path = make_output_file(args.temp, 'mkv')
             result_commands.extend(ffmpeg_cmds(movie.path(), new_video_path, ffmpeg_src_options, ffmpeg_dst_options))
             track_sources[video_track.id()] = [new_video_path, 0]
             temporary_files.append(new_video_path)
@@ -558,14 +560,14 @@ def main():
             if track.codecId() not in AudioTrack.CODEC_IDS:
                 raise Exception('Unhandled audio codec {}'.format(track.codecId()))
             if args.dm and (track.codecId() in (AudioTrack.AC3, AudioTrack.DTS) or track.channels() > 2):
-                wav_path = make_output_file(encode_root, 'wav')
+                wav_path = make_output_file(args.temp, 'wav')
                 result_commands.extend(ffmpeg_cmds(movie.path(), wav_path, [], [
                     '-dn', '-sn', '-vn',
                     '-map_metadata -1', '-map_chapters -1',
                     '-c:a pcm_f32le', '-ac 2', '-f wav', '-map 0:{}'.format(track.id()),
                 ]))
 
-                m4a_path = make_output_file(encode_root, 'm4a')
+                m4a_path = make_output_file(args.temp, 'm4a')
                 qaac_options = ['--tvbr 63', '--quality 2', '--rate keep', '--ignorelength', '--no-delay']
                 encode = u'qaac64 {} {} -o {}'.format(u' '.join(qaac_options), quote(wav_path), quote(m4a_path))
                 result_commands.append(encode)
@@ -578,13 +580,13 @@ def main():
         pgs_tracks = { track.id(): track for track in output_tracks[Track.SUB]
             if track.codecId() == SubtitleTrack.CODEC_PGS }
         if pgs_tracks:
-            sup_files = { track_id: make_output_file(encode_root, 'sup') for track_id in pgs_tracks.iterkeys() }
+            sup_files = { track_id: make_output_file(args.temp, 'sup') for track_id in pgs_tracks.iterkeys() }
             result_commands.append(u'mkvextract tracks {} {}'.format(
                 quote(movie.path()),
                 u' '.join(u'{}:{}'.format(track_id, quote(sup_file)) for track_id, sup_file in sup_files.iteritems())
             ))
             for track_id, sup_file in sup_files.iteritems():
-                idx_file = make_output_file(encode_root, 'idx')
+                idx_file = make_output_file(args.temp, 'idx')
                 result_commands.append(u'call bdsup2sub -l {} -o {} {}'.format(
                     LANGUAGES[pgs_tracks[track_id].language()][LANGUAGES_IDX_SUB_LANG],
                     quote(idx_file), quote(sup_file)))
