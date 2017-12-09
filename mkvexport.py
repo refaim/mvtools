@@ -493,7 +493,7 @@ def main():
             # TODO check out rutracker manuals for dvd rip filters and stuff
             ffmpeg_filters = []
             if video_track.is_interlaced():
-                ffmpeg_filters.append('yadif=1:-1:0')
+                ffmpeg_filters.append('yadif=1:-1:1')
 
             crop_args = None
             if args.cr:
