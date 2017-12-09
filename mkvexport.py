@@ -502,7 +502,8 @@ def main():
         # TODO recode flac to ac3/aac/wtf
         # TODO normalize dvd sound, see rutracker for details
         for track in output_tracks[Track.AUD]:
-            assert track.codecId() in AudioTrack.CODEC_IDS
+            if track.codecId() not in AudioTrack.CODEC_IDS:
+                raise Exception('Unhandled audio codec {}'.format(track.codecId()))
             if args.dm and (track.codecId() in (AudioTrack.AC3, AudioTrack.DTS) or track.channels() > 2):
                 wav_path = make_output_file(encode_root, 'wav')
                 result_commands.extend(ffmpeg_cmds(movie.path(), wav_path, [], [
