@@ -393,6 +393,7 @@ def main():
 
     parser.add_argument('-xx', default=False, action='store_true', help='remove original source files')
     parser.add_argument('-eo', default=False, action='store_true', help='remux only if re-encoding')
+    # TODO check name conflicts
     parser.add_argument('-nf', type=cmd_path, default=None, help='path to names map file')
 
     # TODO add parametes to ask for file name !!!
@@ -613,6 +614,7 @@ def main():
                 temporary_files.extend([sup_file, idx_file, u'{}.sub'.format(os.path.splitext(idx_file)[0])])
 
         mux = ['mkvmerge']
+        # TODO mux to temp nam in temp directory then move to target directory
         mux.extend(['--output', quote(target_path)])
         mux.extend(['--no-track-tags', '--no-global-tags', '--disable-track-statistics-tags'])
 
