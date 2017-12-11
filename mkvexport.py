@@ -109,6 +109,9 @@ class Track(object):
             self._duration = (int(value['hh']) * 60 + int(value['mm'])) * 60 + float(value['ss'])
         return self._duration
 
+    def is_forced(self):
+        return bool(self._ffm_data['disposition']['forced'])
+
 class VideoTrack(Track):
     PAL = 'not_ffmpeg_const_pal'
     NTSC = 'not_ffmpeg_const_ntsc'
@@ -248,7 +251,7 @@ class Movie(object):
 
     def __init__(self, path):
         self._path = path
-        self._mkv_tracks = None
+        self._tracks_by_type = None
 
     def path(self):
         return self._path
@@ -278,19 +281,36 @@ class Movie(object):
         return tracks
 
     def _get_tracks(self):
-        if self._mkv_tracks is None:
+        if self._tracks_by_type is None:
             data_mkvmerge = self._mkvmerge_identify()
             data_ffprobe = self._ffprobe()
             assert len(data_mkvmerge) == len(data_ffprobe)
-            track_objects = {}
+
+            tracks_data = {}
             for track_id in xrange(len(data_mkvmerge)):
                 track_type = data_mkvmerge[track_id]['type']
-                track = Movie.TRACK_CLASSES[track_type](self._path, data_mkvmerge[track_id], data_ffprobe[track_id])
-                track_objects.setdefault(track_type, [])
-                track_objects[track_type].append(track)
-            self._mkv_tracks = track_objects
-            assert len(self._mkv_tracks[Track.VID]) == 1
-        return self._mkv_tracks
+                tracks_data.setdefault(track_type, {})[track_id] = [data_mkvmerge[track_id], data_ffprobe[track_id]]
+            assert len(tracks_data[Track.VID]) == 1
+
+            for tracks_of_type in tracks_data.itervalues():
+                frame_lengths = {}
+                for track_id, track_data in tracks_of_type.iteritems():
+                    frame_lengths[track_id] = int(track_data[1]['tags']['NUMBER_OF_FRAMES-eng'])
+
+                max_length = max(frame_lengths.itervalues())
+                forced_track_threshold = max_length / 100.0 * 20.0
+                for track_id, track_length in frame_lengths.iteritems():
+                    if (max_length - track_length) > forced_track_threshold:
+                        tracks_of_type[track_id][1]['disposition']['forced'] = True
+
+            self._tracks_by_type = {}
+            for track_type, tracks_of_type in tracks_data.iteritems():
+                self._tracks_by_type.setdefault(track_type, [])
+                for track_id, track_data in tracks_of_type.iteritems():
+                    track = Movie.TRACK_CLASSES[track_type](self._path, track_data[0], track_data[1])
+                    self._tracks_by_type[track_type].append(track)
+
+        return self._tracks_by_type
 
     def tracks(self, track_type):
         return self._get_tracks()[track_type]
@@ -458,9 +478,6 @@ def main():
                     if abs(track.duration() - reference_duration) > duration_threshold: continue
                     if track.language() not in (target_lang, 'und') and target_lang != 'und': continue
                     if any(s in track.name().lower() for s in [u'comment', u'коммент']): continue
-                    if track_type == Track.SUB:
-                        # TODO support forced subtitles
-                        if any(s in track.name().lower() for s in [u'forced', u'форсир']): continue
                     candidates[track.id()] = track
                 if not candidates:
                     raise Exception('{} {} not found'.format(track_type, target_lang))
@@ -627,7 +644,12 @@ def main():
                         mux.append('{} {}'.format(tracks_flags_yes, ','.join(str(track_ids_map[track.id()]) for track in cur_file_tracks)))
                     for track in cur_file_tracks:
                         default = track.id() == output_tracks[track_type][0].id()
-                        mux.append('--track-name {0}:"" --language {0}:{1} --default-track {0}:{2}'.format(track_ids_map[track.id()], track.language(), 'yes' if default else 'no'))
+                        file_track_id = track_ids_map[track.id()]
+                        mux.append('--track-name {0}:""'.format(file_track_id))
+                        mux.append('--language {0}:{1}'.format(file_track_id, track.language()))
+                        mux.append('--default-track {0}:{1}'.format(file_track_id, 'yes' if default else 'no'))
+                        if track.is_forced():
+                            mux.append('--forced-track {0}:yes'.format(file_track_id))
                 elif tracks_flag_no:
                     mux.append(tracks_flag_no)
             mux.append(u'--no-track-tags --no-attachments --no-buttons --no-global-tags {}'.format(quote(source_file)))
