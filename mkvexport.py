@@ -182,10 +182,6 @@ class VideoTrack(Track):
         return self._field_order in (self.FO_INT_BOT, self.FO_INT_TOP)
 
 class Colors(object):
-    TYPE_ID_SPACE = 'space'
-    TYPE_ID_PRIMARIES = 'primaries'
-    TYPE_ID_TRC = 'trc'
-
     BT_709 = 'bt709'
     BT_601_PAL = 'bt470bg'
     BT_601_NTSC = 'smpte170m'
@@ -554,7 +550,6 @@ def main():
                 # TODO clarify iall=all= format string
                 # ffmpeg_filters.append('colorspace=iall={}:all={}'.format(src_color_space, dst_color_space))
 
-            # TODO what about output from ntsc/pal source? will it be ntsc/pal? should it?
             ffmpeg_src_options = ['-color_range {}'.format(src_colors.range())]
             ffmpeg_dst_options = ['-an', '-sn', '-dn']
             if ffmpeg_filters:
@@ -614,7 +609,7 @@ def main():
                 temporary_files.extend([sup_file, idx_file, u'{}.sub'.format(os.path.splitext(idx_file)[0])])
 
         mux = ['mkvmerge']
-        # TODO mux to temp nam in temp directory then move to target directory
+        # TODO mux to temp name in temp directory then move to target directory
         mux.extend(['--output', quote(target_path)])
         mux.extend(['--no-track-tags', '--no-global-tags', '--disable-track-statistics-tags'])
 
