@@ -451,28 +451,25 @@ def main():
         print(u'=== {} ==='.format(movie.path()))
         output_tracks = { track_type: [] for track_type in output_track_langs }
         used_tracks = set()
+        reference_duration = movie.video_track().duration()
+        duration_threshold = reference_duration / 100.0 * 20.0
         for track_type, lang_list in output_track_langs.iteritems():
             for target_lang in lang_list:
-                # TODO support game of thrones valyrian subtitles
-                # TODO filter forced subtitles by duration
-                # TODO filter forced subtitles by size
-                # TODO filter forced subtitles by title
-                # TODO check subitles duration (for pgs? sub? all?) and filter by duration
-                candidates = { track.id(): track for track in movie.tracks(track_type)
-                    if track.id() not in used_tracks and (track.language() == target_lang or 'und' in (target_lang, track.language()))
-                }
+                candidates = {}
+                for track in movie.tracks(track_type):
+                    if track.id() in used_tracks: continue
+                    if abs(track.duration() - reference_duration) > duration_threshold: continue
+                    if track.language() not in (target_lang, 'und') and target_lang != 'und': continue
+                    if any(s in track.name().lower() for s in [u'comment', u'коммент']): continue
+                    if track_type == Track.SUB:
+                        # TODO support forced subtitles
+                        if any(s in track.name().lower() for s in [u'forced', u'форсир']): continue
+                    candidates[track.id()] = track
                 if not candidates:
                     raise Exception('{} {} not found'.format(track_type, target_lang))
 
                 chosen_track_id = None
                 if len(candidates) == 1: chosen_track_id = list(candidates.keys())[0]
-
-                comment_track_ids = [track_id for track_id, track
-                    in candidates.iteritems() if any(s in track.name().lower() for s in [u'comment', u'коммент'])]
-                if len(comment_track_ids) == len(candidates) - 1:
-                    chosen_track_id = list(set(candidates.keys()) - set(comment_track_ids))[0]
-
-                # TODO choose full or sdh from forced, full and sdh subtitles (by title)
 
                 if args.pp and track_type == Track.SUB:
                     pgs_candidates = [track.id() for track in candidates.itervalues() if track.codecId() == SubtitleTrack.CODEC_PGS]
