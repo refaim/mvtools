@@ -73,30 +73,41 @@ class Track(object):
         SUB: ('--subtitle-tracks', '-S'),
     }
 
-    def __init__(self, parent_path, raw_params):
+    def __init__(self, parent_path, mmg_data, ffm_data):
         self._parent_path = parent_path
-        self._data = raw_params
+        self._mmg_data = mmg_data
+        self._ffm_data = ffm_data
+        self._duration = None
 
     def id(self):
-        return self._data['id']
+        return self._mmg_data['id']
 
     def type(self):
-        return self._data['type']
+        return self._mmg_data['type']
 
     def name(self):
-        return self._data.get('track_name', '')
+        return self._mmg_data.get('track_name', '')
 
     def language(self):
-        result = unicode(self._data['language'])
+        result = unicode(self._mmg_data['language'])
         if result == 'non':
             result = 'und'
         return result
 
     def setLanguage(self, value):
-        self._data['language'] = value
+        self._mmg_data['language'] = value
 
     def codecId(self):
-        return unicode(self._data['codec_id'])
+        return unicode(self._mmg_data['codec_id'])
+
+    _DURATION_REGEXP = re.compile(r'(?P<hh>\d+):(?P<mm>\d+):(?P<ss>[\d\.]+)')
+
+    def duration(self):
+        if self._duration is None:
+            match = self._DURATION_REGEXP.match(self._ffm_data['tags']['DURATION-eng'])
+            value = match.groupdict()
+            self._duration = (int(value['hh']) * 60 + int(value['mm'])) * 60 + float(value['ss'])
+        return self._duration
 
 class VideoTrack(Track):
     PAL = 'not_ffmpeg_const_pal'
@@ -116,40 +127,33 @@ class VideoTrack(Track):
     FO_INT_TOP = 'tt'
     FO_INT_BOT = 'bb'
 
-    def __init__(self, parent_path, raw_params):
-        super(VideoTrack, self).__init__(parent_path, raw_params)
-        self._probe = self.__probe()
+    def __init__(self, parent_path, mmg_data, ffm_data):
+        super(VideoTrack, self).__init__(parent_path, mmg_data, ffm_data)
         self._crf = None
         self._field_order = None
-        self._colors = Colors(self.width(), self.height(), self.standard(), self._probe)
-
-    def __probe(self):
-        stdout = process(
-            u'ffprobe -v quiet -print_format json -select_streams v -show_streams {}'.format(
-                quote(self._parent_path)))
-        return json.loads(stdout)['streams'][0]
+        self._colors = Colors(self.width(), self.height(), self.standard(), self._ffm_data)
 
     def width(self):
-        p = self._probe
+        p = self._ffm_data
         assert p['width'] == p['coded_width'] or p['coded_width'] == 0
         return p['width']
 
     def height(self):
-        p = self._probe
+        p = self._ffm_data
         assert p['height'] == p['coded_height'] or p['coded_height'] == 0
         return p['height']
 
     def codecId(self):
-        return self._probe['codec_name']
+        return self._ffm_data['codec_name']
 
     def profile(self):
-        return self._probe['profile']
+        return self._ffm_data['profile']
 
     def level(self):
-        return self._probe['level']
+        return self._ffm_data['level']
 
     def pix_fmt(self):
-        return self._probe['pix_fmt']
+        return self._ffm_data['pix_fmt']
 
     def crf(self):
         if self._crf is None:
@@ -165,13 +169,13 @@ class VideoTrack(Track):
         return self._colors
 
     def standard(self):
-        return self._STANDARDS[self._probe['r_frame_rate']]
+        return self._STANDARDS[self._ffm_data['r_frame_rate']]
 
     # TODO what about interleaved?
     def is_interlaced(self):
         if self._field_order is None:
             orders = (self.FO_PRG, self.FO_INT_BOT, self.FO_INT_TOP)
-            fo = self._probe.get('field_order') or \
+            fo = self._ffm_data.get('field_order') or \
                 ask_to_select(u'Specify field order', sorted(orders))
             assert fo in orders
             self._field_order = fo
@@ -188,15 +192,15 @@ class Colors(object):
 
     RANGE_TV = 'tv'
 
-    def __init__(self, w, h, standard, probe_result):
+    def __init__(self, w, h, standard, ffm_data):
         self._width = w
         self._height = h
         self._standard = standard
-        self._data = probe_result
+        self._ffm_data = ffm_data
 
     def range(self):
-        result = self._data.get('color_range')
-        if result is None and self._data['pix_fmt'] == VideoTrack.YUV420P:
+        result = self._ffm_data.get('color_range')
+        if result is None and self._ffm_data['pix_fmt'] == VideoTrack.YUV420P:
             result = self.RANGE_TV
         return result
 
@@ -211,7 +215,7 @@ class Colors(object):
         return result
 
     def _guess_metric(self, metric):
-        result = self._data.get(metric)
+        result = self._ffm_data.get(metric)
         if result is None:
             result = self.correct_space()
         assert result in (self.BT_709, self.BT_601_PAL, self.BT_601_NTSC)
@@ -253,23 +257,41 @@ class Movie(object):
     def path(self):
         return self._path
 
+    def _mkvmerge_identify(self):
+        tracks = {}
+        raw_strings = (line for line in process([u'mkvmerge', u'--identify-verbose', self._path]).splitlines() if line.startswith('Track'))
+        for line in raw_strings:
+            match = re.match(r'^Track ID (?P<id>\d+): (?P<type>[a-z]+).+$', line)
+            gd = match.groupdict()
+            raw_params = { 'id': int(gd['id']), 'type': gd['type'] }
+            for raw_string in re.match(r'^.+?\[(.+?)\].*$', line).group(1).split():
+                k, v = raw_string.split(':')
+                if isinstance(v, str):
+                    v = v.decode('utf-8').replace('\\s', ' ')
+                raw_params[k] = v
+            tracks[raw_params['id']] = raw_params
+        return tracks
+
+    def _ffprobe(self):
+        tracks = {}
+        stdout = process(
+            u'ffprobe -v quiet -print_format json -show_streams {}'.format(
+                quote(self._path)))
+        for stream in json.loads(stdout)['streams']:
+            tracks[stream['index']] = stream
+        return tracks
+
     def _get_tracks(self):
         if self._mkv_tracks is None:
+            data_mkvmerge = self._mkvmerge_identify()
+            data_ffprobe = self._ffprobe()
+            assert len(data_mkvmerge) == len(data_ffprobe)
             track_objects = {}
-            # TODO do not use mkvmerge, use only ffprobe
-            raw_strings = (line for line in process([u'mkvmerge', u'--identify-verbose', self._path]).splitlines() if line.startswith('Track'))
-            for line in raw_strings:
-                match = re.match(r'^Track ID (?P<id>\d+): (?P<type>[a-z]+).+$', line)
-                gd = match.groupdict()
-                raw_params = { 'id': int(gd['id']), 'type': gd['type'] }
-                for raw_string in re.match(r'^.+?\[(.+?)\].*$', line).group(1).split():
-                    k, v = raw_string.split(':')
-                    if isinstance(v, str):
-                        v = v.decode('utf-8').replace('\\s', ' ')
-                    raw_params[k] = v
-                track = Movie.TRACK_CLASSES[raw_params['type']](self._path, raw_params)
-                track_objects.setdefault(track.type(), [])
-                track_objects[track.type()].append(track)
+            for track_id in xrange(len(data_mkvmerge)):
+                track_type = data_mkvmerge[track_id]['type']
+                track = Movie.TRACK_CLASSES[track_type](self._path, data_mkvmerge[track_id], data_ffprobe[track_id])
+                track_objects.setdefault(track_type, [])
+                track_objects[track_type].append(track)
             self._mkv_tracks = track_objects
             assert len(self._mkv_tracks[Track.VID]) == 1
         return self._mkv_tracks
