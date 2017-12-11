@@ -97,7 +97,7 @@ class Track(object):
     def setLanguage(self, value):
         self._mmg_data['language'] = value
 
-    def codecId(self):
+    def codec_id(self):
         return unicode(self._mmg_data['codec_id'])
 
     _DURATION_REGEXP = re.compile(r'(?P<hh>\d+):(?P<mm>\d+):(?P<ss>[\d\.]+)')
@@ -146,7 +146,7 @@ class VideoTrack(Track):
         assert p['height'] == p['coded_height'] or p['coded_height'] == 0
         return p['height']
 
-    def codecId(self):
+    def codec_id(self):
         return self._ffm_data['codec_name']
 
     def profile(self):
@@ -485,13 +485,13 @@ def main():
                 chosen_track_id = None
                 if len(candidates) == 1: chosen_track_id = list(candidates.keys())[0]
 
-                if args.pp and track_type == Track.SUB:
-                    pgs_candidates = [track.id() for track in candidates.itervalues() if track.codecId() == SubtitleTrack.CODEC_PGS]
+                if chosen_track_id is None and args.pp and track_type == Track.SUB:
+                    pgs_candidates = [track.id() for track in candidates.itervalues() if track.codec_id() == SubtitleTrack.CODEC_PGS]
                     if len(pgs_candidates) == 1:
                         chosen_track_id = pgs_candidates[0]
 
                 if chosen_track_id not in candidates:
-                    candidates_strings = { t.id(): u'{} {} {}'.format(t.language(), t.codecId(), t.name())
+                    candidates_strings = { t.id(): u'{} {} {}'.format(t.language(), t.codec_id(), t.name())
                         for t in sorted(candidates.itervalues(), key=lambda t: t.id()) }
                     chosen_track_id = ask_to_select(u'Enter track ID', candidates_strings,
                         header=u'--- {}, {} ---'.format(track_type.capitalize(), target_lang.upper()))
@@ -512,7 +512,7 @@ def main():
 
         # TODO what if there is crf already?
         video_track = movie.video_track()
-        encoded_ok = video_track.codecId() == VideoTrack.CODEC_H264 and \
+        encoded_ok = video_track.codec_id() == VideoTrack.CODEC_H264 and \
             video_track.crf() is not None and \
             video_track.profile() == VideoTrack.PROFILE_HIGH and \
             video_track.level() == VideoTrack.LEVEL_41
@@ -589,9 +589,9 @@ def main():
         # TODO recode flac to ac3/aac/wtf
         # TODO normalize dvd sound, see rutracker for details
         for track in output_tracks[Track.AUD]:
-            if track.codecId() not in AudioTrack.CODEC_IDS:
-                raise Exception('Unhandled audio codec {}'.format(track.codecId()))
-            if args.dm and (track.codecId() in (AudioTrack.AC3, AudioTrack.DTS) or track.channels() > 2):
+            if track.codec_id() not in AudioTrack.CODEC_IDS:
+                raise Exception('Unhandled audio codec {}'.format(track.codec_id()))
+            if args.dm and (track.codec_id() in (AudioTrack.AC3, AudioTrack.DTS) or track.channels() > 2):
                 wav_path = make_output_file(args.temp, 'wav')
                 result_commands.extend(ffmpeg_cmds(movie.path(), wav_path, [], [
                     '-dn', '-sn', '-vn',
@@ -610,7 +610,7 @@ def main():
         # TODO assert that fonts only present if subtitles ass/ssa
         # TODO assert that output subtitles only srt and vobsub
         pgs_tracks = { track.id(): track for track in output_tracks[Track.SUB]
-            if track.codecId() == SubtitleTrack.CODEC_PGS }
+            if track.codec_id() == SubtitleTrack.CODEC_PGS }
         if pgs_tracks:
             sup_files = { track_id: make_output_file(args.temp, 'sup') for track_id in pgs_tracks.iterkeys() }
             result_commands.append(u'mkvextract tracks {} {}'.format(
