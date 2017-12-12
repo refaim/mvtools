@@ -116,8 +116,10 @@ class VideoTrack(Track):
     PAL = 'not_ffmpeg_const_pal'
     NTSC = 'not_ffmpeg_const_ntsc'
     _STANDARDS = {
-        '25/1': PAL,
+        '20327/813': PAL,
+        '20877/835': PAL,
         '24000/1001': NTSC,
+        '25/1': PAL,
         '30000/1001': NTSC,
     }
 
