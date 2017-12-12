@@ -685,9 +685,10 @@ def main():
                 track_sources[track_id] = [idx_file, 0]
                 temporary_files.extend([sup_file, idx_file, u'{}.sub'.format(os.path.splitext(idx_file)[0])])
 
+        mux_path = make_output_file(args.temp, 'mkv')
+
         mux = ['mkvmerge']
-        # TODO mux to temp name in temp directory then move to target directory
-        mux.extend(['--output', quote(target_path)])
+        mux.extend(['--output', quote(mux_path)])
         mux.extend(['--no-track-tags', '--no-global-tags', '--disable-track-statistics-tags'])
 
         track_ids_by_files = {}
@@ -725,6 +726,7 @@ def main():
 
         if len(source_file_ids) > 1 or not args.eo:
             result_commands.append(u' '.join(mux))
+        result_commands.append(u'move {} {}'.format(quote(mux_path), quote(target_path)))
 
         if args.xx:
             temporary_files.append(movie.path())
