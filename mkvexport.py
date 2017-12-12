@@ -294,16 +294,19 @@ class Movie(object):
                 tracks_data.setdefault(track_type, {})[track_id] = [data_mkvmerge[track_id], data_ffprobe[track_id]]
             assert len(tracks_data[Track.VID]) == 1
 
-            for tracks_of_type in tracks_data.itervalues():
-                frame_lengths = {}
-                for track_id, track_data in tracks_of_type.iteritems():
-                    frame_lengths[track_id] = int(track_data[1]['tags']['NUMBER_OF_FRAMES-eng'])
-
+            frame_lengths = {}
+            for track_id, track_data in tracks_data[Track.SUB].iteritems():
+                track_length = track_data[1]['tags'].get('NUMBER_OF_FRAMES-eng', None)
+                if track_length is None:
+                    frame_lengths = None
+                    break
+                frame_lengths[track_id] = int(track_length)
+            if frame_lengths:
                 max_length = max(frame_lengths.itervalues())
                 forced_track_threshold = max_length / 100.0 * 20.0
                 for track_id, track_length in frame_lengths.iteritems():
                     if (max_length - track_length) > forced_track_threshold:
-                        tracks_of_type[track_id][1]['disposition']['forced'] = True
+                        tracks_data[Track.SUB][track_id][1]['disposition']['forced'] = True
 
             self._tracks_by_type = {}
             for track_type, tracks_of_type in tracks_data.iteritems():
@@ -406,7 +409,8 @@ def main():
     parser.add_argument('-al', nargs='*', choices=languages, default=['eng', 'rus'], help='ordered list of audio languages to keep')
     parser.add_argument('-dm', default=False, action='store_true', help='downmix multi-channel audio to stereo')
 
-    parser.add_argument('-sl', nargs='*', choices=languages, default=[], help='ordered list of subtitles languages to keep')
+    parser.add_argument('-sl', nargs='*', choices=languages, default=[], help='ordered list of full or sdh subtitle languages to keep')
+    parser.add_argument('-fl', nargs='*', choices=languages, default=[], help='ordered list of forced subtitle languages to keep')
     parser.add_argument('-pp', default=False, action='store_true', help='prefer pgs subtitles')
 
     parser.add_argument('-xx', default=False, action='store_true', help='remove original source files')
@@ -452,10 +456,11 @@ def main():
                 crop_args_map[cur_path] = raw_crops_map[os.path.splitext(cur_name)[0]]
             movies[new_path] = Movie(cur_path)
 
-    output_track_langs = {
-        Track.VID: ['und'],
-        Track.AUD: args.al,
-        Track.SUB: args.sl,
+    output_track_specs = {
+        (Track.VID, False): ['und'],
+        (Track.AUD, False): args.al,
+        (Track.SUB, False): args.sl,
+        (Track.SUB, True): args.fl,
     }
 
     try:
@@ -468,15 +473,18 @@ def main():
     common_crop_args = None
     for target_path, movie in sorted(movies.iteritems(), key=lambda t: t[1].path()):
         print(u'=== {} ==='.format(movie.path()))
-        output_tracks = { track_type: [] for track_type in output_track_langs }
+        output_tracks = {}
+        for (track_type, _) in output_track_specs.iterkeys():
+            output_tracks[track_type] = []
         used_tracks = set()
         reference_duration = movie.video_track().duration()
         duration_threshold = reference_duration / 100.0 * 20.0
-        for track_type, lang_list in output_track_langs.iteritems():
+        for (track_type, search_forced), lang_list in output_track_specs.iteritems():
             for target_lang in lang_list:
                 candidates = {}
                 for track in movie.tracks(track_type):
                     if track.id() in used_tracks: continue
+                    if track.is_forced() != search_forced: continue
                     if abs(track.duration() - reference_duration) > duration_threshold: continue
                     if track.language() not in (target_lang, 'und') and target_lang != 'und': continue
                     if any(s in track.name().lower() for s in [u'comment', u'коммент']): continue
@@ -492,11 +500,13 @@ def main():
                     if len(pgs_candidates) == 1:
                         chosen_track_id = pgs_candidates[0]
 
+                # TODO output track ID and track number in this track type list
                 if chosen_track_id not in candidates:
                     candidates_strings = { t.id(): u'{} {} {}'.format(t.language(), t.codec_id(), t.name())
                         for t in sorted(candidates.itervalues(), key=lambda t: t.id()) }
                     chosen_track_id = ask_to_select(u'Enter track ID', candidates_strings,
-                        header=u'--- {}, {} ---'.format(track_type.capitalize(), target_lang.upper()))
+                        header=u'--- {}, {}, {} ---'.format(track_type.capitalize(),
+                            target_lang.upper(), 'Forced' if search_forced else 'Full'))
 
                 used_tracks.add(chosen_track_id)
                 chosen_track = candidates[chosen_track_id]
@@ -505,7 +515,8 @@ def main():
 
         track_sources = {}
         for track_type, track_list in output_tracks.iteritems():
-            track_list.sort(key=lambda t: output_track_langs[track_type].index(t.language()))
+            # TODO use is_forced
+            track_list.sort(key=lambda t: output_track_specs[(t.type(), False)].index(t.language()))
             for track in track_list:
                 track_sources[track.id()] = [movie.path(), track.id()]
 
