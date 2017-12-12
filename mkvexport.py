@@ -100,6 +100,9 @@ class Track(object):
     def codec_id(self):
         return unicode(self._mmg_data['codec_id'])
 
+    def codec_name(self):
+        return self._ffm_data['codec_name']
+
     _DURATION_REGEXP = re.compile(r'(?P<hh>\d+):(?P<mm>\d+):(?P<ss>[\d\.]+)')
 
     def duration(self):
@@ -233,13 +236,44 @@ class Colors(object):
 
 class AudioTrack(Track):
     AAC = 'A_AAC'
+    AMS = 'A_MS/ACM'
     AC3 = 'A_AC3'
     DTS = 'A_DTS'
     MP3 = 'A_MPEG/L3'
-    CODEC_IDS = (AAC, AC3, DTS, MP3)
+    CODEC_IDS = (AAC, AMS, AC3, DTS, MP3)
 
     def channels(self):
-        return int(self._data['audio_channels'])
+        return int(self._ffm_data['channels'])
+
+    def sample_rate(self):
+        return int(self._ffm_data['sample_rate'])
+
+    def is_pcm(self):
+        return self.codec_id() in (self.AMS,)
+
+class WavFormat(object):
+    FMT_SIGNED = 's'
+    FMT_UNSIGNED = 'u'
+    FMT_FLOAT = 'f'
+
+    ENDIAN_LITTLE = 'le'
+    ENDIAN_BIG = 'be'
+
+    def __init__(self, codec_name):
+        match = re.match(r'^pcm_(?P<f>s|u|f)(?P<b>16|32)(?P<e>le|be)', codec_name)
+        value = match.groupdict()
+        self._format = value['f']
+        self._bits = int(value['b'])
+        self._endianness = value['e']
+
+    def format(self):
+        return self._format
+
+    def bits(self):
+        return self._bits
+
+    def endianness(self):
+        return self._endianness
 
 class SubtitleTrack(Track):
     CODEC_PGS = 'S_HDMV/PGS'
@@ -601,21 +635,32 @@ def main():
 
         # TODO recode flac to ac3/aac/wtf
         # TODO normalize dvd sound, see rutracker for details
+        codecs_to_recode = (AudioTrack.AMS,)
+        downmix_codecs = (AudioTrack.AC3, AudioTrack.AMS, AudioTrack.DTS)
         for track in output_tracks[Track.AUD]:
-            # TODO support extracting PCM (see Bruce Almighty) with ffmpeg and compressing wav with qaac tvbr 91 -R <...>
             if track.codec_id() not in AudioTrack.CODEC_IDS:
                 raise Exception('Unhandled audio codec {}'.format(track.codec_id()))
-            if args.dm and (track.codec_id() in (AudioTrack.AC3, AudioTrack.DTS) or track.channels() > 2):
+            recode = track.codec_id() in codecs_to_recode
+            recode = recode or args.dm and (track.codec_id() in downmix_codecs or track.channels() > 2)
+            if recode:
                 wav_path = make_output_file(args.temp, 'wav')
-                result_commands.extend(ffmpeg_cmds(movie.path(), wav_path, [], [
-                    '-dn', '-sn', '-vn',
-                    '-map_metadata -1', '-map_chapters -1',
-                    '-c:a pcm_f32le', '-ac 2', '-f wav', '-map 0:{}'.format(track.id()),
-                ]))
+                wav_format = WavFormat(track.codec_name() if track.is_pcm() else 'pcm_f32le')
+                ffm_codec = 'copy' if track.is_pcm() else 'pcm_{}{}{}'.format(wav_format.format(), wav_format.bits(), wav_format.endianness())
+                ffmpeg_options = ['-dn', '-sn', '-vn', '-map_metadata -1', '-map_chapters -1',
+                    '-c:a {}'.format(ffm_codec), '-rf64 auto']
+                if args.dm:
+                    ffmpeg_options.append('-ac 2')
+                ffmpeg_options.extend(['-f wav', '-map 0:{}'.format(track.id())])
+                result_commands.extend(ffmpeg_cmds(movie.path(), wav_path, [], ffmpeg_options))
 
                 m4a_path = make_output_file(args.temp, 'm4a')
-                # TODO use -R and stuff instead of --ignorelength
-                qaac_options = ['--tvbr 63', '--quality 2', '--rate keep', '--ignorelength', '--no-delay']
+                qaac_options = [
+                    '--tvbr {}'.format(63 if args.dm else 91), '--quality 2',
+                    '--rate keep', '--no-delay',
+                    '--raw', '--raw-channels {}'.format(2 if args.dm else track.channels()),
+                    '--raw-rate {}'.format(track.sample_rate()),
+                    '--raw-format {}{}{}'.format(wav_format.format(), wav_format.bits(), wav_format.endianness()[0])
+                ]
                 encode = u'qaac64 {} {} -o {}'.format(u' '.join(qaac_options), quote(wav_path), quote(m4a_path))
                 result_commands.append(encode)
                 track_sources[track.id()] = [m4a_path, 0]
