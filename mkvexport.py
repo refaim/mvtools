@@ -591,6 +591,7 @@ def main():
         # TODO recode flac to ac3/aac/wtf
         # TODO normalize dvd sound, see rutracker for details
         for track in output_tracks[Track.AUD]:
+            # TODO support extracting PCM (see Bruce Almighty) with ffmpeg and compressing wav with qaac tvbr 91 -R <...>
             if track.codec_id() not in AudioTrack.CODEC_IDS:
                 raise Exception('Unhandled audio codec {}'.format(track.codec_id()))
             if args.dm and (track.codec_id() in (AudioTrack.AC3, AudioTrack.DTS) or track.channels() > 2):
@@ -602,6 +603,7 @@ def main():
                 ]))
 
                 m4a_path = make_output_file(args.temp, 'm4a')
+                # TODO use -R and stuff instead of --ignorelength
                 qaac_options = ['--tvbr 63', '--quality 2', '--rate keep', '--ignorelength', '--no-delay']
                 encode = u'qaac64 {} {} -o {}'.format(u' '.join(qaac_options), quote(wav_path), quote(m4a_path))
                 result_commands.append(encode)
