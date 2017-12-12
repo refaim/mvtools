@@ -115,6 +115,9 @@ class Track(object):
     def is_forced(self):
         return bool(self._ffm_data['disposition']['forced'])
 
+    def is_default(self):
+        return bool(self._ffm_data['disposition']['default'])
+
 class VideoTrack(Track):
     PAL = 'not_ffmpeg_const_pal'
     NTSC = 'not_ffmpeg_const_ntsc'
@@ -357,6 +360,9 @@ class Movie(object):
     def video_track(self):
         return self.tracks(Track.VID)[0]
 
+    def track_index_in_type(self, track):
+        return list(self.tracks(track.type())).index(track) + 1
+
 def movie_dimensions_correct(w, h):
     return w % 16 == h % 8 == 0
 
@@ -365,7 +371,7 @@ def correct_movie_dimensions(w, h, x, y):
     dh = h % 8
     return (w - dw, h - dh, x + int(math.ceil(dw * 0.5)), y + int(math.ceil(dh * 0.5)))
 
-def ask_to_select(prompt, values, header=None):
+def ask_to_select(prompt, values, movie_path=None, header=None):
     values_dict = values if isinstance(values, dict) else { i: v for i, v in enumerate(values) }
     chosen_id = None
     while chosen_id not in values_dict:
@@ -373,7 +379,12 @@ def ask_to_select(prompt, values, header=None):
             print(header)
         for i, v in sorted(values_dict.iteritems()):
             print(u'{} {}'.format(i, v))
-        chosen_id = try_int(raw_input(u'{}: '.format(prompt)))
+        # TODO hide P - preview when no movie available
+        response = raw_input(u'{} (P - preview): '.format(prompt)).strip()
+        if movie_path is not None and response.lower() == 'p':
+            os.system('mplayer {} >nul 2>&1'.format(quote(movie_path)))
+        else:
+            chosen_id = try_int(response)
     return chosen_id if isinstance(values, dict) else values_dict[chosen_id]
 
 def is_movie(filepath):
@@ -518,7 +529,7 @@ def main():
                 candidates = {}
                 for track in movie.tracks(track_type):
                     if track.id() in used_tracks: continue
-                    # if track.is_forced() != search_forced: continue
+                    if track.is_forced() != search_forced: continue
                     if abs(track.duration() - reference_duration) > duration_threshold: continue
                     if track.language() not in (target_lang, 'und') and target_lang != 'und': continue
                     if any(s in track.name().lower() for s in [u'comment', u'коммент']): continue
@@ -534,23 +545,35 @@ def main():
                     if len(pgs_candidates) == 1:
                         chosen_track_id = pgs_candidates[0]
 
-                # TODO output track ID and track number in this track type list
                 if chosen_track_id not in candidates:
-                    candidates_strings = { t.id(): u'{} {} {}'.format(t.language(), t.codec_id(), t.name())
-                        for t in sorted(candidates.itervalues(), key=lambda t: t.id()) }
-                    chosen_track_id = ask_to_select(u'Enter track ID', candidates_strings,
-                        header=u'--- {}, {}, {} ---'.format(track_type.capitalize(),
-                            target_lang.upper(), 'Forced' if search_forced else 'Full'))
+                    candidates_by_index = {}
+                    candidates_strings = {}
+                    for t in sorted(candidates.itervalues(), key=lambda t: t.id()):
+                        strings = [u'(ID {})'.format(t.id()), t.language(), t.codec_id()]
+                        if t.name():
+                            strings.append(t.name())
+                        if t.is_default():
+                            strings.append(u'(default)')
+                        track_index = movie.track_index_in_type(t)
+                        candidates_strings[track_index] = u' '.join(strings)
+                        candidates_by_index[track_index] = t.id()
+                    header = u'--- {}, {}, {} ---'.format(
+                        track_type.capitalize(), target_lang.upper(), 'Forced' if search_forced else 'Full')
+                    chosen_track_index = ask_to_select(u'Enter track index', candidates_strings, movie.path(), header=header)
+                    chosen_track_id = candidates_by_index[chosen_track_index]
 
                 used_tracks.add(chosen_track_id)
                 chosen_track = candidates[chosen_track_id]
                 chosen_track.set_language(target_lang)
                 output_tracks[track_type].append(chosen_track)
 
+        def track_sort_key(t):
+            lng_idx = output_track_specs[(t.type(), t.is_forced())].index(t.language())
+            return lng_idx + 1000 * int(t.is_forced())
+
         track_sources = {}
         for track_type, track_list in output_tracks.iteritems():
-            # TODO use is_forced
-            track_list.sort(key=lambda t: output_track_specs[(t.type(), False)].index(t.language()))
+            track_list.sort(key=track_sort_key)
             for track in track_list:
                 track_sources[track.id()] = [movie.path(), track.id()]
 
@@ -567,7 +590,8 @@ def main():
             # TODO tune grain for soviet old movies
             chosen_tune = args.ft or ask_to_select(
                 u'Enter tune ID',
-                sorted(TUNES.iterkeys(), key=lambda k: TUNES[k][TUNES_IDX_SORT_KEY]))
+                sorted(TUNES.iterkeys(), key=lambda k: TUNES[k][TUNES_IDX_SORT_KEY]),
+                movie.path())
             tune_params = TUNES[chosen_tune]
 
             # TODO check out rutracker manuals for dvd rip filters and stuff
