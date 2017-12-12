@@ -432,7 +432,7 @@ def main():
     raw_crops_map = read_map_file(args.cf, read_movie_path, read_crop_args)
 
     movies = {}
-    crop_args_map = {}
+    crop_args_map = None if raw_crops_map is None else {}
     for argspath in args.sources:
         for filepath in mkvs(argspath):
             cur_name = os.path.basename(filepath)
