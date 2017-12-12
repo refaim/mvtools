@@ -518,7 +518,7 @@ def main():
                 candidates = {}
                 for track in movie.tracks(track_type):
                     if track.id() in used_tracks: continue
-                    if track.is_forced() != search_forced: continue
+                    # if track.is_forced() != search_forced: continue
                     if abs(track.duration() - reference_duration) > duration_threshold: continue
                     if track.language() not in (target_lang, 'und') and target_lang != 'und': continue
                     if any(s in track.name().lower() for s in [u'comment', u'коммент']): continue
