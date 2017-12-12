@@ -94,7 +94,7 @@ class Track(object):
             result = 'und'
         return result
 
-    def setLanguage(self, value):
+    def set_language(self, value):
         self._mmg_data['language'] = value
 
     def codec_id(self):
@@ -500,7 +500,7 @@ def main():
 
                 used_tracks.add(chosen_track_id)
                 chosen_track = candidates[chosen_track_id]
-                chosen_track.setLanguage(target_lang)
+                chosen_track.set_language(target_lang)
                 output_tracks[track_type].append(chosen_track)
 
         track_sources = {}
