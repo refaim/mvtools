@@ -32,6 +32,10 @@ LANGUAGES = {
     'jpn': ('jp',),
 }
 
+def safe_print(s, *args, **kwargs):
+    assert isinstance(s, unicode)
+    print(s.encode(sys.stdout.encoding, errors='ignore'), *args, **kwargs)
+
 def try_int(value):
     try:
         return int(value)
@@ -383,7 +387,7 @@ def ask_to_select(prompt, values, movie_path=None, header=None):
         if header is not None:
             print(header)
         for i, v in sorted(values_dict.iteritems()):
-            print(u'{} {}'.format(i, v))
+            safe_print(u'{} {}'.format(i, v))
         # TODO hide P - preview when no movie available
         response = raw_input(u'{} (P - preview): '.format(prompt)).strip()
         if movie_path is not None and response.lower() == 'p':
@@ -526,7 +530,7 @@ def main():
     # TODO catch some of my exceptions, report skipped file, ask for action, log skipped file
     common_crop_args = None
     for target_path, movie in sorted(movies.iteritems(), key=lambda t: t[1].path()):
-        print(u'=== {} ==='.format(movie.path()))
+        safe_print(u'=== {} ==='.format(movie.path()))
         output_tracks = {}
         for (track_type, _) in output_track_specs.iterkeys():
             output_tracks[track_type] = []
