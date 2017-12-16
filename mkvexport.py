@@ -758,9 +758,7 @@ def main():
 
         if len(source_file_ids) > 1 or not args.eo:
             result_commands.append(u' '.join(mux))
-        result_commands.append(u'robocopy {} {} {} /MOVE'.format(
-            quote(os.path.dirname(mux_path)), quote(os.path.dirname(target_path)),
-            quote(os.path.basename(target_path))))
+        result_commands.append(u'move {} {}'.format(quote(mux_path), quote(target_path)))
 
         if args.xx:
             temporary_files.append(movie.path())
