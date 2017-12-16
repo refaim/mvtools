@@ -239,11 +239,12 @@ class Colors(object):
 
 class AudioTrack(Track):
     AAC = 'A_AAC'
-    AMS = 'A_MS/ACM'
     AC3 = 'A_AC3'
+    AMS = 'A_MS/ACM'
     DTS = 'A_DTS'
+    EAC3 = 'A_EAC3'
     MP3 = 'A_MPEG/L3'
-    CODEC_IDS = (AAC, AMS, AC3, DTS, MP3)
+    CODEC_IDS = (AAC, AMS, AC3, DTS, EAC3, MP3)
 
     def channels(self):
         return int(self._ffm_data['channels'])
@@ -658,9 +659,10 @@ def main():
             temporary_files.append(new_video_path)
 
         # TODO recode flac to ac3/aac/wtf
+        # TODO downmix 5.1+ to 5.1?
         # TODO normalize dvd sound, see rutracker for details
         codecs_to_recode = (AudioTrack.AMS,)
-        downmix_codecs = (AudioTrack.AC3, AudioTrack.AMS, AudioTrack.DTS)
+        downmix_codecs = (AudioTrack.AC3, AudioTrack.AMS, AudioTrack.DTS, AudioTrack.EAC3)
         for track in output_tracks[Track.AUD]:
             if track.codec_id() not in AudioTrack.CODEC_IDS:
                 raise Exception('Unhandled audio codec {}'.format(track.codec_id()))
