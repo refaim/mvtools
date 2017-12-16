@@ -337,7 +337,7 @@ class Movie(object):
             assert len(tracks_data[Track.VID]) == 1
 
             frame_lengths = {}
-            for track_id, track_data in tracks_data[Track.SUB].iteritems():
+            for track_id, track_data in tracks_data.get(Track.SUB, {}).iteritems():
                 track_length = track_data[1]['tags'].get('NUMBER_OF_FRAMES-eng', None)
                 if track_length is None:
                     frame_lengths = None
