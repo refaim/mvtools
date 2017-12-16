@@ -460,6 +460,7 @@ def main():
     parser.add_argument('-dm', default=False, action='store_true', help='downmix multi-channel audio to stereo')
 
     parser.add_argument('-sl', nargs='*', choices=languages, default=[], help='ordered list of full or sdh subtitle languages to keep')
+    # Add option to make forced subtitles optional
     parser.add_argument('-fl', nargs='*', choices=languages, default=[], help='ordered list of forced subtitle languages to keep')
     parser.add_argument('-pp', default=False, action='store_true', help='prefer pgs subtitles')
 
@@ -530,6 +531,7 @@ def main():
         reference_duration = movie.video_track().duration() or 0
         duration_threshold = reference_duration / 100.0 * 20.0
         for (track_type, search_forced), lang_list in output_track_specs.iteritems():
+            forced_string = 'Forced' if search_forced else 'Full'
             for target_lang in lang_list:
                 candidates = {}
                 for track in movie.tracks(track_type):
@@ -540,7 +542,7 @@ def main():
                     if any(s in track.name().lower() for s in [u'comment', u'коммент']): continue
                     candidates[track.id()] = track
                 if not candidates:
-                    raise Exception('{} {} not found'.format(track_type, target_lang))
+                    raise Exception('{} {} {} not found'.format(forced_string, track_type, target_lang))
 
                 chosen_track_id = None
                 if len(candidates) == 1: chosen_track_id = list(candidates.keys())[0]
@@ -563,7 +565,7 @@ def main():
                         candidates_strings[track_index] = u' '.join(strings)
                         candidates_by_index[track_index] = t.id()
                     header = u'--- {}, {}, {} ---'.format(
-                        track_type.capitalize(), target_lang.upper(), 'Forced' if search_forced else 'Full')
+                        track_type.capitalize(), target_lang.upper(), forced_string)
                     chosen_track_index = ask_to_select(u'Enter track index', candidates_strings, movie.path(), header=header)
                     chosen_track_id = candidates_by_index[chosen_track_index]
 
