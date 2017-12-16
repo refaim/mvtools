@@ -115,7 +115,8 @@ class Track(object):
         return self._duration
 
     def is_forced(self):
-        return bool(self._ffm_data['disposition']['forced'])
+        return bool(self._ffm_data['disposition']['forced']) or \
+            any(s in self.name().lower() for s in [u'forced', u'форсир'])
 
     def is_default(self):
         return bool(self._ffm_data['disposition']['default'])
