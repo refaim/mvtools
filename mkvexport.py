@@ -415,7 +415,7 @@ def ffmpeg_cmds(src, dst, src_options, dst_options):
     ]
 
 def cmd_path(bytestring):
-    return os.path.expandvars(bytestring.decode(sys.getfilesystemencoding()))
+    return os.path.abspath(os.path.expandvars(bytestring.decode(sys.getfilesystemencoding())))
 
 def make_output_file(root, extension):
     return os.path.join(root, u'{}.{}'.format(uuid.uuid4(), extension))
