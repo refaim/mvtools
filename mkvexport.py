@@ -420,6 +420,9 @@ def cmd_path(bytestring):
 def make_output_file(root, extension):
     return os.path.join(root, u'{}.{}'.format(uuid.uuid4(), extension))
 
+def make_delete_command(filepath):
+    return u'if exist {path} del /q {path}'.format(path=quote(filepath))
+
 def write_commands(commands, fail_safe=True):
     with codecs.open(MUX_SCRIPT, 'a', 'cp866') as fobj:
         for command in commands:
@@ -585,7 +588,7 @@ def main():
                 track_sources[track.id()] = [movie.path(), track.id()]
 
         result_commands = [u'echo {}'.format(movie.path())]
-        temporary_files = []
+        mux_temporary_files = []
 
         # TODO what if there is crf already?
         video_track = movie.video_track()
@@ -662,7 +665,7 @@ def main():
             new_video_path = make_output_file(args.temp, 'mkv')
             result_commands.extend(ffmpeg_cmds(movie.path(), new_video_path, ffmpeg_src_options, ffmpeg_dst_options))
             track_sources[video_track.id()] = [new_video_path, 0]
-            temporary_files.append(new_video_path)
+            mux_temporary_files.append(new_video_path)
 
         # TODO recode flac to ac3/aac/wtf
         # TODO downmix 5.1+ to 5.1?
@@ -695,8 +698,9 @@ def main():
                 ]
                 encode = u'qaac64 {} {} -o {}'.format(u' '.join(qaac_options), quote(wav_path), quote(m4a_path))
                 result_commands.append(encode)
+                result_commands.append(make_delete_command(wav_path))
+                mux_temporary_files.append(m4a_path)
                 track_sources[track.id()] = [m4a_path, 0]
-                temporary_files.extend([wav_path, m4a_path])
 
         # TODO render ass/ssa to vobsub
         # TODO assert that fonts only present if subtitles ass/ssa
@@ -711,11 +715,13 @@ def main():
             ))
             for track_id, sup_file in sup_files.iteritems():
                 idx_file = make_output_file(args.temp, 'idx')
+                sub_file = u'{}.sub'.format(os.path.splitext(idx_file)[0])
                 result_commands.append(u'call bdsup2sub -l {} -o {} {}'.format(
                     LANGUAGES[pgs_tracks[track_id].language()][LANGUAGES_IDX_SUB_LANG],
                     quote(idx_file), quote(sup_file)))
                 track_sources[track_id] = [idx_file, 0]
-                temporary_files.extend([sup_file, idx_file, u'{}.sub'.format(os.path.splitext(idx_file)[0])])
+                result_commands.append(make_delete_command(sup_file))
+                mux_temporary_files.extend([idx_file, sub_file])
 
         mux_path = make_output_file(args.temp, 'mkv')
 
@@ -758,13 +764,11 @@ def main():
 
         if len(source_file_ids) > 1 or not args.eo:
             result_commands.append(u' '.join(mux))
+        for path in sorted(set(mux_temporary_files)):
+            result_commands.append(make_delete_command(path))
         result_commands.append(u'move {} {}'.format(quote(mux_path), quote(target_path)))
-
         if args.xx:
-            temporary_files.append(movie.path())
-        for path in sorted(set(temporary_files)):
-            # TODO remove temporary file just when its not needed anymore
-            result_commands.append(u'if exist {path} del /q {path}'.format(path=quote(path)))
+            result_commands.append(make_delete_command(movie.path()))
 
         write_commands(result_commands)
 
