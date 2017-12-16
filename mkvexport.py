@@ -345,7 +345,7 @@ class Movie(object):
                 frame_lengths[track_id] = int(track_length)
             if frame_lengths:
                 max_length = max(frame_lengths.itervalues())
-                forced_track_threshold = max_length / 100.0 * 20.0
+                forced_track_threshold = max_length / 100.0 * 50.0
                 for track_id, track_length in frame_lengths.iteritems():
                     if (max_length - track_length) > forced_track_threshold:
                         tracks_data[Track.SUB][track_id][1]['disposition']['forced'] = True
