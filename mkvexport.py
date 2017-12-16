@@ -315,11 +315,12 @@ class Movie(object):
 
     def _ffprobe(self):
         tracks = {}
-        stdout = process(
-            u'ffprobe -v quiet -print_format json -show_streams {}'.format(
-                quote(self._path)))
-        for stream in json.loads(stdout)['streams']:
-            tracks[stream['index']] = stream
+        for stream_specifier in ('a', 'V', 's'):
+            stdout = process(
+                u'ffprobe -v quiet -print_format json -show_streams -select_streams {} {}'.format(
+                    stream_specifier, quote(self._path)))
+            for stream in json.loads(stdout)['streams']:
+                tracks[stream['index']] = stream
         return tracks
 
     def _get_tracks(self):
