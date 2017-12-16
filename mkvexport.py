@@ -107,9 +107,11 @@ class Track(object):
 
     def duration(self):
         if self._duration is None:
-            match = self._DURATION_REGEXP.match(self._ffm_data['tags']['DURATION-eng'])
-            value = match.groupdict()
-            self._duration = (int(value['hh']) * 60 + int(value['mm'])) * 60 + float(value['ss'])
+            duration_string = self._ffm_data['tags'].get('DURATION-eng')
+            if duration_string:
+                match = self._DURATION_REGEXP.match(duration_string)
+                value = match.groupdict()
+                self._duration = (int(value['hh']) * 60 + int(value['mm'])) * 60 + float(value['ss'])
         return self._duration
 
     def is_forced(self):
@@ -523,7 +525,7 @@ def main():
         for (track_type, _) in output_track_specs.iterkeys():
             output_tracks[track_type] = []
         used_tracks = set()
-        reference_duration = movie.video_track().duration()
+        reference_duration = movie.video_track().duration() or 0
         duration_threshold = reference_duration / 100.0 * 20.0
         for (track_type, search_forced), lang_list in output_track_specs.iteritems():
             for target_lang in lang_list:
@@ -531,7 +533,7 @@ def main():
                 for track in movie.tracks(track_type):
                     if track.id() in used_tracks: continue
                     if track.is_forced() != search_forced: continue
-                    if abs(track.duration() - reference_duration) > duration_threshold: continue
+                    if not track.is_forced() and abs((track.duration() or 0) - reference_duration) > duration_threshold: continue
                     if track.language() not in (target_lang, 'und') and target_lang != 'und': continue
                     if any(s in track.name().lower() for s in [u'comment', u'коммент']): continue
                     candidates[track.id()] = track
