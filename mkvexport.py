@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import argparse
 import codecs
+import functools
 import json
 import locale
 import math
@@ -248,7 +249,7 @@ class AudioTrack(Track):
     DTS = 'dts'
     MP2 = 'mp2'
     MP3 = 'mp3'
-    CODEC_IDS = (AAC, AC3, DTS, MP2, MP3)
+    CODEC_IDS = set([AAC, AC3, DTS, MP2, MP3])
 
     def channels(self):
         return int(self._ffm_data['channels'])
@@ -286,7 +287,8 @@ class WavFormat(object):
         return self._endianness
 
 class SubtitleTrack(Track):
-    CODEC_PGS = 'S_HDMV/PGS'
+    PGS = 'hdmv_pgs_subtitle'
+    CODEC_IDS = set([PGS])
 
 class Movie(object):
     TRACK_CLASSES = {
@@ -417,7 +419,7 @@ def cmd_path(bytestring):
     return os.path.abspath(os.path.expandvars(bytestring.decode(sys.getfilesystemencoding())))
 
 def make_output_file(root, extension):
-    return os.path.join(root, u'{}.{}'.format(uuid.uuid4(), extension))
+    return os.path.join(root, u'{}.{}'.format(uuid.uuid4(), extension.lstrip('.')))
 
 def make_delete_command(filepath):
     return u'if exist {path} del /q {path}'.format(path=quote(filepath))
@@ -465,7 +467,6 @@ def main():
     parser.add_argument('-sl', nargs='*', choices=languages, default=[], help='ordered list of full or sdh subtitle languages to keep')
     # Add option to make forced subtitles optional
     parser.add_argument('-fl', nargs='*', choices=languages, default=[], help='ordered list of forced subtitle languages to keep')
-    parser.add_argument('-pp', default=False, action='store_true', help='prefer pgs subtitles')
 
     parser.add_argument('-xx', default=False, action='store_true', help='remove original source files')
     parser.add_argument('-eo', default=False, action='store_true', help='remux only if re-encoding')
@@ -479,6 +480,8 @@ def main():
         args.temp = args.dst
     if args.cf and args.sc:
         raise Exception('Use same crop OR crop map')
+
+    make_temp_file = functools.partial(make_output_file, args.temp)
 
     def read_movie_path(path):
         return os.path.normpath(path.strip()).replace(u'.mkv', u'')
@@ -662,7 +665,7 @@ def main():
                 '-color_trc {}'.format('gamma28' if dst_color_space == Colors.BT_601_PAL else dst_color_space),
                 '-colorspace {}'.format(dst_color_space),
             ])
-            new_video_path = make_output_file(args.temp, 'mkv')
+            new_video_path = make_temp_file('.mkv')
             result_commands.extend(ffmpeg_cmds(movie.path(), new_video_path, ffmpeg_src_options, ffmpeg_dst_options))
             track_sources[video_track.id()] = [new_video_path, 0]
             mux_temporary_files.append(new_video_path)
@@ -679,7 +682,7 @@ def main():
             recode = recode or args.dm and (track.codec_id() in downmix_codecs or track.channels() > 2)
             if recode:
                 # TODO do not exceed current bitrate
-                wav_path = make_output_file(args.temp, 'wav')
+                wav_path = make_temp_file('.wav')
                 wav_format = WavFormat(track.codec_id() if track.is_pcm() else 'pcm_f32le')
                 ffm_codec = 'copy' if track.is_pcm() else 'pcm_{}{}{}'.format(wav_format.format(), wav_format.bits(), wav_format.endianness())
                 ffmpeg_options = ['-dn', '-sn', '-vn', '-map_metadata -1', '-map_chapters -1',
@@ -689,7 +692,7 @@ def main():
                 ffmpeg_options.extend(['-f wav', '-map 0:{}'.format(track.id())])
                 result_commands.extend(ffmpeg_cmds(movie.path(), wav_path, [], ffmpeg_options))
 
-                m4a_path = make_output_file(args.temp, 'm4a')
+                m4a_path = make_temp_file('.m4a')
                 qaac_options = [
                     '--tvbr {}'.format(63 if args.dm else 91), '--quality 2',
                     '--rate keep', '--no-delay',
@@ -705,23 +708,19 @@ def main():
 
         # TODO render ass/ssa to vobsub
         # TODO assert that fonts only present if subtitles ass/ssa
-        # TODO assert that output subtitles only srt and vobsub
-        pgs_tracks = { track.id(): track for track in output_tracks[Track.SUB]
-            if track.codec_id() == SubtitleTrack.CODEC_PGS }
-        if pgs_tracks:
-            sup_files = { track_id: make_output_file(args.temp, 'sup') for track_id in pgs_tracks.iterkeys() }
-            # TODO mkvextract only from mkvs
-            result_commands.append(u'mkvextract tracks {} {}'.format(
-                quote(movie.path()),
-                u' '.join(u'{}:{}'.format(track_id, quote(sup_file)) for track_id, sup_file in sup_files.iteritems())
-            ))
-            for track_id, sup_file in sup_files.iteritems():
-                idx_file = make_output_file(args.temp, 'idx')
+        for track in output_tracks[Track.SUB]:
+            if track.codec_id() not in SubtitleTrack.CODEC_IDS:
+                raise Exception('Unhandled subtitle codec {}'.format(track.codec_id()))
+            if track.codec_id() == SubtitleTrack.PGS:
+                sup_file = make_temp_file('.sup')
+                result_commands.extend(ffmpeg_cmds(
+                    movie.path(), sup_file, '', ['-map 0:{}'.format(track.id()), '-c:s copy']))
+                idx_file = make_temp_file('.idx')
                 sub_file = u'{}.sub'.format(os.path.splitext(idx_file)[0])
                 result_commands.append(u'call bdsup2sub -l {} -o {} {}'.format(
-                    LANGUAGES[pgs_tracks[track_id].language()][LANGUAGES_IDX_SUB_LANG],
+                    LANGUAGES[track.language()][LANGUAGES_IDX_SUB_LANG],
                     quote(idx_file), quote(sup_file)))
-                track_sources[track_id] = [idx_file, 0]
+                track_sources[track.id()] = [idx_file, 0]
                 result_commands.append(make_delete_command(sup_file))
                 mux_temporary_files.extend([idx_file, sub_file])
 
