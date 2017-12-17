@@ -88,7 +88,7 @@ class Track(object):
         return self._ffm_data.setdefault('tags', {})
 
     def id(self):
-        return self._ffm_data['index'] + 1
+        return self._ffm_data['index']
 
     def type(self):
         return self._ffm_data['codec_type']
