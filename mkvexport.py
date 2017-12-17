@@ -246,8 +246,9 @@ class AudioTrack(Track):
     AAC = 'aac'
     AC3 = 'ac3'
     DTS = 'dts'
+    MP2 = 'mp2'
     MP3 = 'mp3'
-    CODEC_IDS = (AAC, AC3, DTS, MP3)
+    CODEC_IDS = (AAC, AC3, DTS, MP2, MP3)
 
     def channels(self):
         return int(self._ffm_data['channels'])
@@ -668,15 +669,16 @@ def main():
 
         # TODO recode flac to ac3/aac/wtf
         # TODO downmix 5.1+ to 5.1?
-        # TODO normalize dvd sound, see rutracker for details
-        codecs_to_recode = (AudioTrack.AMS,)
-        downmix_codecs = (AudioTrack.AC3, AudioTrack.AMS, AudioTrack.DTS, AudioTrack.EAC3)
+        # TODO normalize dvd sound with eac3to
+        codecs_to_recode = (AudioTrack.MP2,)
+        downmix_codecs = (AudioTrack.AC3, AudioTrack.DTS, AudioTrack.MP2)
         for track in output_tracks[Track.AUD]:
             if track.codec_id() not in AudioTrack.CODEC_IDS:
                 raise Exception('Unhandled audio codec {}'.format(track.codec_id()))
             recode = track.codec_id() in codecs_to_recode
             recode = recode or args.dm and (track.codec_id() in downmix_codecs or track.channels() > 2)
             if recode:
+                # TODO do not exceed current bitrate
                 wav_path = make_output_file(args.temp, 'wav')
                 wav_format = WavFormat(track.codec_id() if track.is_pcm() else 'pcm_f32le')
                 ffm_codec = 'copy' if track.is_pcm() else 'pcm_{}{}{}'.format(wav_format.format(), wav_format.bits(), wav_format.endianness())
