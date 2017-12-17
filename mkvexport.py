@@ -69,7 +69,7 @@ def process(command):
 class Track(object):
     AUD = 'audio'
     VID = 'video'
-    SUB = 'subtitles'
+    SUB = 'subtitle'
 
     TYPE_FLAGS = {
         VID: (None, '-D'),
@@ -77,41 +77,40 @@ class Track(object):
         SUB: ('--subtitle-tracks', '-S'),
     }
 
-    def __init__(self, parent_path, mmg_data, ffm_data):
+    def __init__(self, parent_path, ffm_data):
         self._parent_path = parent_path
-        self._mmg_data = mmg_data
         self._ffm_data = ffm_data
         self._duration = None
 
+    def _tags(self):
+        return self._ffm_data.setdefault('tags', {})
+
     def id(self):
-        return self._mmg_data['id']
+        return self._ffm_data['index'] + 1
 
     def type(self):
-        return self._mmg_data['type']
+        return self._ffm_data['codec_type']
+
+    def codec_id(self):
+        return self._ffm_data['codec_name']
 
     def name(self):
-        return self._mmg_data.get('track_name', '')
+        return self._tags().get('title', '')
 
     def language(self):
-        result = unicode(self._mmg_data['language'])
-        if result == 'non':
+        result = self._tags().get('language')
+        if result in [None, 'non']:
             result = 'und'
         return result
 
     def set_language(self, value):
-        self._mmg_data['language'] = value
-
-    def codec_id(self):
-        return unicode(self._mmg_data['codec_id'])
-
-    def codec_name(self):
-        return self._ffm_data['codec_name']
+        self._tags()['language'] = value
 
     _DURATION_REGEXP = re.compile(r'(?P<hh>\d+):(?P<mm>\d+):(?P<ss>[\d\.]+)')
 
     def duration(self):
         if self._duration is None:
-            duration_string = self._ffm_data['tags'].get('DURATION-eng')
+            duration_string = self._tags().get('DURATION-eng')
             if duration_string:
                 match = self._DURATION_REGEXP.match(duration_string)
                 value = match.groupdict()
@@ -145,8 +144,8 @@ class VideoTrack(Track):
     FO_INT_TOP = 'tt'
     FO_INT_BOT = 'bb'
 
-    def __init__(self, parent_path, mmg_data, ffm_data):
-        super(VideoTrack, self).__init__(parent_path, mmg_data, ffm_data)
+    def __init__(self, parent_path, ffm_data):
+        super(VideoTrack, self).__init__(parent_path, ffm_data)
         self._crf = None
         self._field_order = None
         self._colors = Colors(self.width(), self.height(), self.standard(), self._ffm_data)
@@ -160,9 +159,6 @@ class VideoTrack(Track):
         p = self._ffm_data
         assert p['height'] == p['coded_height'] or p['coded_height'] == 0
         return p['height']
-
-    def codec_id(self):
-        return self._ffm_data['codec_name']
 
     def profile(self):
         return self._ffm_data['profile']
@@ -245,13 +241,11 @@ class Colors(object):
         return self._guess_metric('color_primaries')
 
 class AudioTrack(Track):
-    AAC = 'A_AAC'
-    AC3 = 'A_AC3'
-    AMS = 'A_MS/ACM'
-    DTS = 'A_DTS'
-    EAC3 = 'A_EAC3'
-    MP3 = 'A_MPEG/L3'
-    CODEC_IDS = (AAC, AMS, AC3, DTS, EAC3, MP3)
+    AAC = 'aac'
+    AC3 = 'ac3'
+    DTS = 'dts'
+    MP3 = 'mp3'
+    CODEC_IDS = (AAC, AC3, DTS, MP3)
 
     def channels(self):
         return int(self._ffm_data['channels'])
@@ -260,7 +254,9 @@ class AudioTrack(Track):
         return int(self._ffm_data['sample_rate'])
 
     def is_pcm(self):
-        return self.codec_id() in (self.AMS,)
+        # TODO
+        # return self.codec_id() in (self.AMS,)
+        return False
 
 class WavFormat(object):
     FMT_SIGNED = 's'
@@ -270,8 +266,8 @@ class WavFormat(object):
     ENDIAN_LITTLE = 'le'
     ENDIAN_BIG = 'be'
 
-    def __init__(self, codec_name):
-        match = re.match(r'^pcm_(?P<f>s|u|f)(?P<b>16|32)(?P<e>le|be)', codec_name)
+    def __init__(self, codec_id):
+        match = re.match(r'^pcm_(?P<f>s|u|f)(?P<b>16|32)(?P<e>le|be)', codec_id)
         value = match.groupdict()
         self._format = value['f']
         self._bits = int(value['b'])
@@ -303,21 +299,6 @@ class Movie(object):
     def path(self):
         return self._path
 
-    def _mkvmerge_identify(self):
-        tracks = {}
-        raw_strings = (line for line in process([u'mkvmerge', u'--identify-verbose', self._path]).splitlines() if line.startswith('Track'))
-        for line in raw_strings:
-            match = re.match(r'^Track ID (?P<id>\d+): (?P<type>[a-z]+).+$', line)
-            gd = match.groupdict()
-            raw_params = { 'id': int(gd['id']), 'type': gd['type'] }
-            for raw_string in re.match(r'^.+?\[(.+?)\].*$', line).group(1).split():
-                k, v = raw_string.split(':')
-                if isinstance(v, str):
-                    v = v.decode('utf-8').replace('\\s', ' ')
-                raw_params[k] = v
-            tracks[raw_params['id']] = raw_params
-        return tracks
-
     def _ffprobe(self):
         tracks = {}
         for stream_specifier in ('a', 'V', 's'):
@@ -330,19 +311,15 @@ class Movie(object):
 
     def _get_tracks(self):
         if self._tracks_by_type is None:
-            data_mkvmerge = self._mkvmerge_identify()
-            data_ffprobe = self._ffprobe()
-            assert len(data_mkvmerge) == len(data_ffprobe)
-
+            ffprobe_data = self._ffprobe()
             tracks_data = {}
-            for track_id in xrange(len(data_mkvmerge)):
-                track_type = data_mkvmerge[track_id]['type']
-                tracks_data.setdefault(track_type, {})[track_id] = [data_mkvmerge[track_id], data_ffprobe[track_id]]
+            for track_id, track in ffprobe_data.iteritems():
+                tracks_data.setdefault(track['codec_type'], {})[track_id] = track
             assert len(tracks_data[Track.VID]) == 1
 
             frame_lengths = {}
             for track_id, track_data in tracks_data.get(Track.SUB, {}).iteritems():
-                track_length = track_data[1]['tags'].get('NUMBER_OF_FRAMES-eng', None)
+                track_length = track_data.get('tags', {}).get('NUMBER_OF_FRAMES-eng', None)
                 if track_length is None:
                     frame_lengths = None
                     break
@@ -352,13 +329,13 @@ class Movie(object):
                 forced_track_threshold = max_length / 100.0 * 50.0
                 for track_id, track_length in frame_lengths.iteritems():
                     if (max_length - track_length) > forced_track_threshold:
-                        tracks_data[Track.SUB][track_id][1]['disposition']['forced'] = True
+                        tracks_data[Track.SUB][track_id]['disposition']['forced'] = True
 
             self._tracks_by_type = {}
             for track_type, tracks_of_type in tracks_data.iteritems():
                 self._tracks_by_type.setdefault(track_type, [])
                 for track_id, track_data in tracks_of_type.iteritems():
-                    track = Movie.TRACK_CLASSES[track_type](self._path, track_data[0], track_data[1])
+                    track = Movie.TRACK_CLASSES[track_type](self._path, track_data)
                     self._tracks_by_type[track_type].append(track)
 
         return self._tracks_by_type
@@ -683,7 +660,7 @@ def main():
             recode = recode or args.dm and (track.codec_id() in downmix_codecs or track.channels() > 2)
             if recode:
                 wav_path = make_output_file(args.temp, 'wav')
-                wav_format = WavFormat(track.codec_name() if track.is_pcm() else 'pcm_f32le')
+                wav_format = WavFormat(track.codec_id() if track.is_pcm() else 'pcm_f32le')
                 ffm_codec = 'copy' if track.is_pcm() else 'pcm_{}{}{}'.format(wav_format.format(), wav_format.bits(), wav_format.endianness())
                 ffmpeg_options = ['-dn', '-sn', '-vn', '-map_metadata -1', '-map_chapters -1',
                     '-c:a {}'.format(ffm_codec), '-rf64 auto']
@@ -713,6 +690,7 @@ def main():
             if track.codec_id() == SubtitleTrack.CODEC_PGS }
         if pgs_tracks:
             sup_files = { track_id: make_output_file(args.temp, 'sup') for track_id in pgs_tracks.iterkeys() }
+            # TODO mkvextract only from mkvs
             result_commands.append(u'mkvextract tracks {} {}'.format(
                 quote(movie.path()),
                 u' '.join(u'{}:{}'.format(track_id, quote(sup_file)) for track_id, sup_file in sup_files.iteritems())
