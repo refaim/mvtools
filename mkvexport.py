@@ -5,6 +5,7 @@ from __future__ import print_function
 import argparse
 import codecs
 import json
+import locale
 import math
 import os
 import re
@@ -54,7 +55,7 @@ def quote(path):
     return character + path + character
 
 def process(command):
-    cmd_encoding = 'cp1251' if is_windows() else 'utf-8'
+    cmd_encoding = locale.getpreferredencoding()
     if isinstance(command, list):
         result_command = [arg.encode(cmd_encoding) for arg in command]
     else:
