@@ -389,14 +389,15 @@ def ask_to_select(prompt, values, movie_path=None, header=None):
     return chosen_id if isinstance(values, dict) else values_dict[chosen_id]
 
 def is_movie(filepath):
-    return os.path.isfile(filepath) and filepath.lower().endswith('.mkv')
+    return os.path.isfile(filepath) and os.path.splitext(filepath.lower())[1] in ('.mkv', '.mpg')
 
 def mkvs(path):
     if os.path.isdir(path):
         for root, dirs, files in os.walk(path):
             for filename in sorted(files):
-                if filename.lower().endswith('.mkv'):
-                    yield os.path.join(root, filename)
+                filepath = os.path.join(root, filename)
+                if is_movie(filepath):
+                    yield filepath
     elif is_movie(path):
         yield path
 
