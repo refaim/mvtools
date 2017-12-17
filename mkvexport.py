@@ -673,8 +673,8 @@ def main():
         # TODO recode flac to ac3/aac/wtf
         # TODO downmix 5.1+ to 5.1?
         # TODO normalize dvd sound with eac3to
-        codecs_to_recode = (AudioTrack.MP2,)
-        downmix_codecs = (AudioTrack.AC3, AudioTrack.DTS, AudioTrack.MP2)
+        codecs_to_recode = set([AudioTrack.MP2])
+        downmix_codecs = codecs_to_recode | set([AudioTrack.AC3, AudioTrack.DTS])
         for track in output_tracks[Track.AUD]:
             if track.codec_id() not in AudioTrack.CODEC_IDS:
                 raise Exception('Unhandled audio codec {}'.format(track.codec_id()))
