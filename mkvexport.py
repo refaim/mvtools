@@ -553,10 +553,7 @@ def main():
                 chosen_track_id = None
                 if len(candidates) == 1: chosen_track_id = list(candidates.keys())[0]
 
-                if chosen_track_id is None and args.pp and track_type == Track.SUB:
-                    pgs_candidates = [track.id() for track in candidates.itervalues() if track.codec_id() == SubtitleTrack.CODEC_PGS]
-                    if len(pgs_candidates) == 1:
-                        chosen_track_id = pgs_candidates[0]
+                # TODO audio: prefer DVO|MVO to AVO (but not if AVO Goblin)
 
                 if chosen_track_id not in candidates:
                     candidates_by_index = {}
