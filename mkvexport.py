@@ -358,7 +358,13 @@ def correct_movie_dimensions(w, h, x, y):
     dh = h % 8
     return (w - dw, h - dh, x + int(math.ceil(dw * 0.5)), y + int(math.ceil(dh * 0.5)))
 
+ACTIONS_IDX_TEXT = 0
+ACTIONS_IDX_ENABLED = 1
+ACTIONS_IDX_FUNC = 1
 def ask_to_select(prompt, values, movie_path=None, header=None):
+    actions = {
+        'p': ('preview', movie_path and os.path.isfile(movie_path), lambda p: os.system('mplayer {} >nul 2>&1'.format(quote(p)))),
+    }
     values_dict = values if isinstance(values, dict) else { i: v for i, v in enumerate(values) }
     chosen_id = None
     while chosen_id not in values_dict:
@@ -366,10 +372,18 @@ def ask_to_select(prompt, values, movie_path=None, header=None):
             print(header)
         for i, v in sorted(values_dict.iteritems()):
             safe_print(u'{} {}'.format(i, v))
-        # TODO hide P - preview when no movie available
-        response = raw_input(u'{} (P - preview): '.format(prompt)).strip()
-        if movie_path is not None and response.lower() == 'p':
-            os.system('mplayer {} >nul 2>&1'.format(quote(movie_path)))
+
+        hint_strings = [u'{} {}'.format(key.upper(), text)
+            for key, (text, enabled, _) in sorted(actions.iteritems()) if enabled]
+        prompt_strings = [prompt]
+        if hint_strings:
+            prompt_strings.append('({})'.format(u', '.join(hint_strings)))
+        final_prompt = u'{}: '.format(u' '.join(prompt_strings))
+
+        response = raw_input(final_prompt).strip().lower()
+        action = actions.get(response)
+        if action and action[ACTIONS_IDX_ENABLED]:
+            action[ACTIONS_IDX_FUNC](movie_path)
         else:
             chosen_id = try_int(response)
     return chosen_id if isinstance(values, dict) else values_dict[chosen_id]
