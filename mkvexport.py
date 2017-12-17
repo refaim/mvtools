@@ -426,6 +426,7 @@ def write_commands(commands, fail_safe=True):
             result_string = command.strip()
             if fail_safe:
                 result_string = u'{} || exit /b 1'.format(command)
+            # TODO Операция «Ы» и другие приключения Шурика.mkv
             fobj.write(u'{}\r\n'.format(result_string))
         fobj.write(u'\r\n')
 
