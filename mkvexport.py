@@ -87,9 +87,10 @@ class Track(object):
         SUB: ('--subtitle-tracks', '-S'),
     }
 
-    def __init__(self, parent_path, ffm_data):
+    def __init__(self, parent_path, ffm_data, codec_names):
         self._parent_path = parent_path
         self._ffm_data = ffm_data
+        self._codec_names = codec_names
         self._duration = None
 
     def _tags(self):
@@ -103,6 +104,9 @@ class Track(object):
 
     def codec_id(self):
         return self._ffm_data['codec_name']
+
+    def codec_name(self):
+        return self._codec_names[self.codec_id()]
 
     def name(self):
         return self._tags().get('title', '')
@@ -157,7 +161,7 @@ class VideoTrack(Track):
     FO_INT_BOT = 'bb'
 
     def __init__(self, parent_path, ffm_data):
-        super(VideoTrack, self).__init__(parent_path, ffm_data)
+        super(VideoTrack, self).__init__(parent_path, ffm_data, {})
         self._crf = None
         self._field_order = None
         self._colors = Colors(self.width(), self.height(), self.standard(), self._ffm_data)
@@ -269,6 +273,9 @@ class AudioTrack(Track):
         MP3: 'mp3'
     }
 
+    def __init__(self, parent_path, ffm_data):
+        super(AudioTrack, self).__init__(parent_path, ffm_data, self.CODEC_NAMES)
+
     def codec_id(self):
         profile = self._ffm_data.get('profile')
         result = self._ffm_data['codec_name']
@@ -319,6 +326,9 @@ class SubtitleTrack(Track):
         SRT: 'srt',
         PGS: 'pgs',
     }
+
+    def __init__(self, parent_path, ffm_data):
+        super(SubtitleTrack, self).__init__(parent_path, ffm_data, self.CODEC_NAMES)
 
 class MediaFile(object):
     pass # TODO
@@ -600,7 +610,7 @@ def main():
                     candidates_by_index = {}
                     candidates_strings = {}
                     for t in sorted(candidates.itervalues(), key=lambda t: t.id()):
-                        strings = [u'(ID {})'.format(t.id()), t.language(), t.codec_id()]
+                        strings = [u'(ID {})'.format(t.id()), t.language(), t.codec_name()]
                         if t.name():
                             strings.append(t.name())
                         if t.is_default():
