@@ -289,7 +289,8 @@ class WavFormat(object):
 
 class SubtitleTrack(Track):
     PGS = 'hdmv_pgs_subtitle'
-    CODEC_IDS = set([PGS])
+    SRT = 'subrip'
+    CODEC_IDS = set([PGS, SRT])
 
 class Movie(object):
     TRACK_CLASSES = {
@@ -704,8 +705,9 @@ def main():
                 mux_temporary_files.append(m4a_path)
                 track_sources[track.id()] = [m4a_path, 0]
 
-        # TODO render ass/ssa to vobsub
         # TODO assert that fonts only present if subtitles ass/ssa
+        # TODO support external srt subtitles
+        # TODO support ass to srt convertation
         for track in output_tracks[Track.SUB]:
             if track.codec_id() not in SubtitleTrack.CODEC_IDS:
                 raise Exception('Unhandled subtitle codec {}'.format(track.codec_id()))
