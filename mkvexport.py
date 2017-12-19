@@ -456,6 +456,8 @@ def main():
     parser.add_argument('dst', type=cmd_path, help='path to destination directory')
     parser.add_argument('--temp', type=cmd_path, help='path to temporary directory')
 
+    # TODO add special "all" language value
+
     # TODO add argument groups
     parser.add_argument('-kv', default=False, action='store_true', help='keep source video')
     parser.add_argument('-fv', default=False, action='store_true', help='recode video') # TODO rename
@@ -673,18 +675,16 @@ def main():
             mux_temporary_files.append(new_video_path)
 
         # TODO differ DTS from DTS-HD and vice-versa
-        # TODO recode flac to ac3/aac/wtf
-        # TODO downmix 5.1+ to 5.1?
         # TODO normalize dvd sound with eac3to
         codecs_to_recode = set([AudioTrack.MP2])
         downmix_codecs = codecs_to_recode | set([AudioTrack.AC3, AudioTrack.DTS])
         for track in output_tracks[Track.AUD]:
             if track.codec_id() not in AudioTrack.CODEC_IDS:
                 raise Exception('Unhandled audio codec {}'.format(track.codec_id()))
+            assert track.channels() <= 6
             recode = args.af or track.codec_id() in codecs_to_recode
             recode = recode or args.dm and (track.codec_id() in downmix_codecs or track.channels() > 2)
             if recode:
-                # TODO do not exceed current bitrate
                 wav_path = make_temp_file('.wav')
                 wav_format = WavFormat(track.codec_id() if track.is_pcm() else 'pcm_f32le')
                 ffm_codec = 'copy' if track.is_pcm() else 'pcm_{}{}{}'.format(wav_format.format(), wav_format.bits(), wav_format.endianness())
