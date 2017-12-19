@@ -439,7 +439,9 @@ def write_commands(commands, fail_safe=True):
 
 def read_map_file(path, handle_key, handle_value):
     result = None
-    if path and os.path.isfile(path):
+    if path is not None:
+        if not os.path.isfile(path):
+            raise Exception(u'Could not open file "{}"'.format(path))
         result = {}
         with codecs.open(path, 'r', 'utf-8') as fobj:
             for line in fobj:
