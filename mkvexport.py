@@ -469,8 +469,8 @@ def main():
     parser.add_argument('-dm', default=False, action='store_true', help='downmix multi-channel audio to stereo')
 
     parser.add_argument('-sl', nargs='*', choices=languages, default=[], help='ordered list of full or sdh subtitle languages to keep')
-    # Add option to make forced subtitles optional
     parser.add_argument('-fl', nargs='*', choices=languages, default=[], help='ordered list of forced subtitle languages to keep')
+    parser.add_argument('-fo', default=False, action='store_true', help='make forced subtitles optional')
 
     parser.add_argument('-xx', default=False, action='store_true', help='remove original source files')
     parser.add_argument('-eo', default=False, action='store_true', help='remux only if re-encoding')
@@ -552,6 +552,7 @@ def main():
                     if any(s in track.name().lower() for s in [u'comment', u'коммент']): continue
                     candidates[track.id()] = track
                 if not candidates:
+                    if search_forced and args.fo: continue
                     raise Exception('{} {} {} not found'.format(forced_string, track_type, target_lang))
 
                 chosen_track_id = None
