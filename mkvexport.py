@@ -253,12 +253,28 @@ class Colors(object):
         return self._guess_metric('color_primaries')
 
 class AudioTrack(Track):
-    AAC = 'aac'
+    AAC = 'aac_lc'
     AC3 = 'ac3'
-    DTS = 'dts'
+    DTS = 'dts_dts'
+    DTS_HD = 'dts_dts_hd_ma'
     MP2 = 'mp2'
     MP3 = 'mp3'
-    CODEC_IDS = set([AAC, AC3, DTS, MP2, MP3])
+
+    CODEC_NAMES = {
+        AAC: 'aac',
+        AC3: 'ac3',
+        DTS: 'dts',
+        DTS_HD: 'dts_hd_ma',
+        MP2: 'mp2',
+        MP3: 'mp3'
+    }
+
+    def codec_id(self):
+        profile = self._ffm_data.get('profile')
+        result = self._ffm_data['codec_name']
+        if profile:
+            result += '_{}'.format(profile.replace('-', '_').replace(' ', '_'))
+        return result.lower()
 
     def channels(self):
         return int(self._ffm_data['channels'])
@@ -686,12 +702,11 @@ def main():
             track_sources[video_track.id()] = [new_video_path, 0]
             mux_temporary_files.append(new_video_path)
 
-        # TODO differ DTS from DTS-HD and vice-versa
         # TODO normalize dvd sound with eac3to
         codecs_to_recode = set([AudioTrack.MP2])
-        downmix_codecs = codecs_to_recode | set([AudioTrack.AC3, AudioTrack.DTS])
+        downmix_codecs = codecs_to_recode | set([AudioTrack.AC3, AudioTrack.DTS, AudioTrack.DTS_HD])
         for track in output_tracks[Track.AUD]:
-            if track.codec_id() not in AudioTrack.CODEC_IDS:
+            if track.codec_id() not in AudioTrack.CODEC_NAMES:
                 raise Exception('Unhandled audio codec {}'.format(track.codec_id()))
             assert track.channels() <= 6
             recode = args.ar or track.codec_id() in codecs_to_recode
