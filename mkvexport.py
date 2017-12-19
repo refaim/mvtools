@@ -425,7 +425,7 @@ def make_output_file(root, extension):
     return os.path.join(root, u'{}.{}'.format(uuid.uuid4(), extension.lstrip('.')))
 
 def make_delete_command(filepath):
-    return u'if exist {path} del /q {path}'.format(path=quote(filepath))
+    return u'del /q {path}'.format(path=quote(filepath))
 
 def write_commands(commands, fail_safe=True):
     with codecs.open(MUX_SCRIPT, 'a', 'cp866') as fobj:
