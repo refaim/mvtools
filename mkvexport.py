@@ -458,8 +458,6 @@ def read_map_file(path, handle_key, handle_value):
     return result
 
 def main():
-    # TODO support temporary directory argument to speed up RW operations
-
     languages = sorted(LANGUAGES.iterkeys())
     parser = argparse.ArgumentParser()
     parser.add_argument('sources', type=cmd_path, nargs='+', help='paths to source directories/files')
@@ -469,18 +467,19 @@ def main():
     # TODO add special "all" language value
 
     # TODO add argument groups
-    parser.add_argument('-kv', default=False, action='store_true', help='keep source video')
-    parser.add_argument('-fv', default=False, action='store_true', help='recode video') # TODO rename
-    parser.add_argument('-ft', help='force tune')
+    parser.add_argument('-vk', default=False, action='store_true', help='keep source video')
+    parser.add_argument('-vr', default=False, action='store_true', help='recode video')
+    parser.add_argument('-vt', help='force tune')
+
     parser.add_argument('-cr', default=False, action='store_true', help='crop video')
     parser.add_argument('-cf', type=cmd_path, default=None, help='path to crop map file')
     parser.add_argument('-sc', default=False, action='store_true', help='use same crop values for all files')
 
     parser.add_argument('-al', nargs='*', choices=languages, default=['eng', 'rus'], help='ordered list of audio languages to keep')
-    parser.add_argument('-af', default=False, action='store_true', help='recode audio')
+    parser.add_argument('-ar', default=False, action='store_true', help='recode audio')
     parser.add_argument('-dm', default=False, action='store_true', help='downmix multi-channel audio to stereo')
 
-    parser.add_argument('-sl', nargs='*', choices=languages, default=[], help='ordered list of full or sdh subtitle languages to keep')
+    parser.add_argument('-sl', nargs='*', choices=languages, default=[], help='ordered list of full subtitle languages to keep')
     parser.add_argument('-fl', nargs='*', choices=languages, default=[], help='ordered list of forced subtitle languages to keep')
     parser.add_argument('-fo', default=False, action='store_true', help='make forced subtitles optional')
 
@@ -495,7 +494,7 @@ def main():
     if not args.temp:
         args.temp = args.dst
     if args.cf and args.sc:
-        raise Exception('Use same crop OR crop map')
+        raise Exception('Use "-sc" OR "-cf"')
 
     make_temp_file = functools.partial(make_output_file, args.temp)
 
@@ -557,6 +556,8 @@ def main():
             forced_string = 'Forced' if search_forced else 'Full'
             for target_lang in lang_list:
                 candidates = {}
+                # TODO show tracks from all source media files
+                # TODO print track file name if tracks from multiple files are present
                 for track in movie.tracks(track_type):
                     if track.id() in used_tracks: continue
                     if track.is_forced() != search_forced: continue
@@ -615,8 +616,8 @@ def main():
             video_track.crf() is not None and \
             video_track.profile() == VideoTrack.PROFILE_HIGH and \
             video_track.level() == VideoTrack.LEVEL_41
-        if args.fv or not encoded_ok and not args.kv:
-            chosen_tune = args.ft or ask_to_select(
+        if args.vr or not encoded_ok and not args.vk:
+            chosen_tune = args.vt or ask_to_select(
                 u'Enter tune ID',
                 sorted(TUNES.iterkeys(), key=lambda k: TUNES[k][TUNES_IDX_SORT_KEY]),
                 movie.path())
@@ -693,7 +694,7 @@ def main():
             if track.codec_id() not in AudioTrack.CODEC_IDS:
                 raise Exception('Unhandled audio codec {}'.format(track.codec_id()))
             assert track.channels() <= 6
-            recode = args.af or track.codec_id() in codecs_to_recode
+            recode = args.ar or track.codec_id() in codecs_to_recode
             recode = recode or args.dm and (track.codec_id() in downmix_codecs or track.channels() > 2)
             if recode:
                 wav_path = make_temp_file('.wav')
@@ -723,11 +724,13 @@ def main():
         # TODO assert that fonts only present if subtitles ass/ssa
         # TODO support external srt subtitles
         # TODO support ass to srt convertation
+        # TODO support external subtitle charset detection & re-encoding to utf-8
         for track in output_tracks[Track.SUB]:
             if track.codec_id() not in SubtitleTrack.CODEC_IDS:
                 raise Exception('Unhandled subtitle codec {}'.format(track.codec_id()))
             if track.codec_id() == SubtitleTrack.PGS:
                 sup_file = make_temp_file('.sup')
+                # TODO use track.source_path() or smth similar instead of movie.path() here and in all other places
                 result_commands.extend(ffmpeg_cmds(
                     movie.path(), sup_file, '', ['-map 0:{}'.format(track.id()), '-c:s copy']))
                 idx_file = make_temp_file('.idx')
@@ -782,6 +785,7 @@ def main():
             result_commands.append(u' '.join(mux))
         for path in sorted(set(mux_temporary_files)):
             result_commands.append(make_delete_command(path))
+        # TODO use robocopy or dism to fully utilize 1gbps connection
         result_commands.append(u'copy /z {} {}'.format(quote(mux_path), quote(target_path)))
         result_commands.append(make_delete_command(mux_path))
         if args.xx:
@@ -789,7 +793,7 @@ def main():
 
         write_commands(result_commands)
 
-        # TODO add this to batch files
+        # TODO add this to batch files (mkdir creates intermediate directories automatically)
         try:
             os.makedirs(os.path.dirname(target_path))
         except:
