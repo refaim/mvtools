@@ -135,6 +135,7 @@ class VideoTrack(Track):
         '20877/835': PAL,
         '24000/1001': NTSC,
         '25/1': PAL,
+        '2997/125': NTSC,
         '30000/1001': NTSC,
     }
 
