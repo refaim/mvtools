@@ -289,10 +289,29 @@ class AudioTrack(Track):
     def sample_rate(self):
         return int(self._ffm_data['sample_rate'])
 
+    def bits_per_raw_sample(self):
+        result = try_int(self._ffm_data.get('bits_per_raw_sample', ''))
+        if result is None:
+            sample_format = self._ffm_data.get('sample_fmt', '')
+            match = re.search(r'(\d+)', sample_format)
+            if match:
+                result = try_int(match.group(1))
+        if result not in (8, 16, 24, 32):
+            result = None
+        return result
+
     def is_pcm(self):
         # TODO
         # return self.codec_id() in (self.AMS,)
         return False
+
+    def pcm_codec_id(self):
+        if self.is_pcm():
+            return self.codec_id()
+        bit_depth = self.bits_per_raw_sample()
+        if bit_depth:
+            return 'pcm_s{}le'.format(bit_depth)
+        return None
 
 class WavFormat(object):
     FMT_SIGNED = 's'
@@ -729,8 +748,7 @@ def main():
             recode = recode or args.dm and (track.codec_id() in downmix_codecs or track.channels() > 2)
             if recode:
                 wav_path = make_temp_file('.wav')
-                # TODO use source track bits per sample (s24le, s16le)
-                wav_format = WavFormat(track.codec_id() if track.is_pcm() else 'pcm_s24le')
+                wav_format = WavFormat(track.pcm_codec_id())
                 ffm_codec = 'copy' if track.is_pcm() else 'pcm_{}{}{}'.format(wav_format.format(), wav_format.bits(), wav_format.endianness())
                 ffmpeg_options = ['-dn', '-sn', '-vn', '-map_metadata -1', '-map_chapters -1',
                     '-c:a {}'.format(ffm_codec), '-rf64 auto']
