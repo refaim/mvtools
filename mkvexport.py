@@ -34,6 +34,14 @@ LANGUAGES = {
     'jpn': ('jp',),
 }
 
+MOVIE_EXTENSIONS = set([
+    '.mkv',
+    '.mpg',
+])
+MEDIA_EXTENSIONS = MOVIE_EXTENSIONS | set([
+    '.srt',
+])
+
 def safe_print(s, *args, **kwargs):
     assert isinstance(s, unicode)
     print(s.encode(sys.stdout.encoding, errors='ignore'), *args, **kwargs)
@@ -396,7 +404,7 @@ def ask_to_select(prompt, values, movie_path=None, header=None):
     return chosen_id if isinstance(values, dict) else values_dict[chosen_id]
 
 def is_movie(filepath):
-    return os.path.isfile(filepath) and os.path.splitext(filepath.lower())[1] in ('.mkv', '.mpg')
+    return os.path.isfile(filepath) and os.path.splitext(filepath.lower())[1] in MOVIE_EXTENSIONS
 
 def mkvs(path):
     if os.path.isdir(path):
@@ -492,6 +500,7 @@ def main():
     make_temp_file = functools.partial(make_output_file, args.temp)
 
     def read_movie_path(path):
+        # TODO use MOVIE_EXTENSIONS
         return os.path.normpath(path.strip()).replace(u'.mkv', u'')
 
     def read_crop_args(s):
