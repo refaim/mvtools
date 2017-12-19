@@ -296,7 +296,7 @@ class WavFormat(object):
     ENDIAN_BIG = 'be'
 
     def __init__(self, codec_id):
-        match = re.match(r'^pcm_(?P<f>s|u|f)(?P<b>16|32)(?P<e>le|be)', codec_id)
+        match = re.match(r'^pcm_(?P<f>s|u|f)(?P<b>16|24|32)(?P<e>le|be)', codec_id)
         value = match.groupdict()
         self._format = value['f']
         self._bits = int(value['b'])
@@ -713,7 +713,8 @@ def main():
             recode = recode or args.dm and (track.codec_id() in downmix_codecs or track.channels() > 2)
             if recode:
                 wav_path = make_temp_file('.wav')
-                wav_format = WavFormat(track.codec_id() if track.is_pcm() else 'pcm_f32le')
+                # TODO use source track bits per sample (s24le, s16le)
+                wav_format = WavFormat(track.codec_id() if track.is_pcm() else 'pcm_s24le')
                 ffm_codec = 'copy' if track.is_pcm() else 'pcm_{}{}{}'.format(wav_format.format(), wav_format.bits(), wav_format.endianness())
                 ffmpeg_options = ['-dn', '-sn', '-vn', '-map_metadata -1', '-map_chapters -1',
                     '-c:a {}'.format(ffm_codec), '-rf64 auto']
