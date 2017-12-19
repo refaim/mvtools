@@ -771,7 +771,8 @@ def main():
             result_commands.append(u' '.join(mux))
         for path in sorted(set(mux_temporary_files)):
             result_commands.append(make_delete_command(path))
-        result_commands.append(u'move {} {}'.format(quote(mux_path), quote(target_path)))
+        result_commands.append(u'copy /z {} {}'.format(quote(mux_path), quote(target_path)))
+        result_commands.append(make_delete_command(mux_path))
         if args.xx:
             result_commands.append(make_delete_command(movie.path()))
 
