@@ -288,6 +288,7 @@ class WavFormat(object):
         return self._endianness
 
 class SubtitleTrack(Track):
+    # TODO use strings "srt", "pgs" etc for formats
     PGS = 'hdmv_pgs_subtitle'
     SRT = 'subrip'
     CODEC_IDS = set([PGS, SRT])
@@ -592,6 +593,7 @@ def main():
         result_commands = [u'echo {}'.format(movie.path())]
         mux_temporary_files = []
 
+        # TODO support 2pass encoding
         # TODO what if there is crf already?
         video_track = movie.video_track()
         encoded_ok = video_track.codec_id() == VideoTrack.CODEC_H264 and \
@@ -599,7 +601,6 @@ def main():
             video_track.profile() == VideoTrack.PROFILE_HIGH and \
             video_track.level() == VideoTrack.LEVEL_41
         if args.fv or not encoded_ok and not args.kv:
-            # TODO tune grain for soviet old movies
             chosen_tune = args.ft or ask_to_select(
                 u'Enter tune ID',
                 sorted(TUNES.iterkeys(), key=lambda k: TUNES[k][TUNES_IDX_SORT_KEY]),
@@ -669,6 +670,7 @@ def main():
             track_sources[video_track.id()] = [new_video_path, 0]
             mux_temporary_files.append(new_video_path)
 
+        # TODO differ DTS from DTS-HD and vice-versa
         # TODO recode flac to ac3/aac/wtf
         # TODO downmix 5.1+ to 5.1?
         # TODO normalize dvd sound with eac3to
