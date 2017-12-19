@@ -312,12 +312,18 @@ class WavFormat(object):
         return self._endianness
 
 class SubtitleTrack(Track):
-    # TODO use strings "srt", "pgs" etc for formats
     PGS = 'hdmv_pgs_subtitle'
     SRT = 'subrip'
-    CODEC_IDS = set([PGS, SRT])
 
-class Movie(object):
+    CODEC_NAMES = {
+        SRT: 'srt',
+        PGS: 'pgs',
+    }
+
+class MediaFile(object):
+    pass # TODO
+
+class Movie(MediaFile):
     TRACK_CLASSES = {
         Track.AUD: AudioTrack,
         Track.VID: VideoTrack,
@@ -742,7 +748,7 @@ def main():
         # TODO support ass to srt convertation
         # TODO support external subtitle charset detection & re-encoding to utf-8
         for track in output_tracks[Track.SUB]:
-            if track.codec_id() not in SubtitleTrack.CODEC_IDS:
+            if track.codec_id() not in SubtitleTrack.CODEC_NAMES:
                 raise Exception('Unhandled subtitle codec {}'.format(track.codec_id()))
             if track.codec_id() == SubtitleTrack.PGS:
                 sup_file = make_temp_file('.sup')
