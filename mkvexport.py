@@ -458,13 +458,14 @@ def main():
 
     # TODO add argument groups
     parser.add_argument('-kv', default=False, action='store_true', help='keep source video')
-    parser.add_argument('-fv', default=False, action='store_true', help='recode video')
+    parser.add_argument('-fv', default=False, action='store_true', help='recode video') # TODO rename
     parser.add_argument('-ft', help='force tune')
     parser.add_argument('-cr', default=False, action='store_true', help='crop video')
     parser.add_argument('-cf', type=cmd_path, default=None, help='path to crop map file')
     parser.add_argument('-sc', default=False, action='store_true', help='use same crop values for all files')
 
     parser.add_argument('-al', nargs='*', choices=languages, default=['eng', 'rus'], help='ordered list of audio languages to keep')
+    parser.add_argument('-af', default=False, action='store_true', help='recode audio')
     parser.add_argument('-dm', default=False, action='store_true', help='downmix multi-channel audio to stereo')
 
     parser.add_argument('-sl', nargs='*', choices=languages, default=[], help='ordered list of full or sdh subtitle languages to keep')
@@ -679,7 +680,7 @@ def main():
         for track in output_tracks[Track.AUD]:
             if track.codec_id() not in AudioTrack.CODEC_IDS:
                 raise Exception('Unhandled audio codec {}'.format(track.codec_id()))
-            recode = track.codec_id() in codecs_to_recode
+            recode = args.af or track.codec_id() in codecs_to_recode
             recode = recode or args.dm and (track.codec_id() in downmix_codecs or track.channels() > 2)
             if recode:
                 # TODO do not exceed current bitrate
