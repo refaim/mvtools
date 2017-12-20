@@ -286,57 +286,6 @@ class AudioTrack(Track):
     def channels(self):
         return int(self._ffm_data['channels'])
 
-    def sample_rate(self):
-        return int(self._ffm_data['sample_rate'])
-
-    def bits_per_raw_sample(self):
-        result = try_int(self._ffm_data.get('bits_per_raw_sample', ''))
-        if result is None:
-            sample_format = self._ffm_data.get('sample_fmt', '')
-            match = re.search(r'(\d+)', sample_format)
-            if match:
-                result = try_int(match.group(1))
-        if result not in (8, 16, 24, 32):
-            result = None
-        return result
-
-    def is_pcm(self):
-        # TODO
-        # return self.codec_id() in (self.AMS,)
-        return False
-
-    def pcm_codec_id(self):
-        if self.is_pcm():
-            return self.codec_id()
-        bit_depth = self.bits_per_raw_sample()
-        if bit_depth:
-            return 'pcm_s{}le'.format(bit_depth)
-        return None
-
-class WavFormat(object):
-    FMT_SIGNED = 's'
-    FMT_UNSIGNED = 'u'
-    FMT_FLOAT = 'f'
-
-    ENDIAN_LITTLE = 'le'
-    ENDIAN_BIG = 'be'
-
-    def __init__(self, codec_id):
-        match = re.match(r'^pcm_(?P<f>s|u|f)(?P<b>16|24|32)(?P<e>le|be)', codec_id)
-        value = match.groupdict()
-        self._format = value['f']
-        self._bits = int(value['b'])
-        self._endianness = value['e']
-
-    def format(self):
-        return self._format
-
-    def bits(self):
-        return self._bits
-
-    def endianness(self):
-        return self._endianness
-
 class SubtitleTrack(Track):
     PGS = 'hdmv_pgs_subtitle'
     SRT = 'subrip'
@@ -748,23 +697,14 @@ def main():
             recode = recode or args.dm and (track.codec_id() in downmix_codecs or track.channels() > 2)
             if recode:
                 wav_path = make_temp_file('.wav')
-                wav_format = WavFormat(track.pcm_codec_id())
-                ffm_codec = 'copy' if track.is_pcm() else 'pcm_{}{}{}'.format(wav_format.format(), wav_format.bits(), wav_format.endianness())
-                ffmpeg_options = ['-dn', '-sn', '-vn', '-map_metadata -1', '-map_chapters -1',
-                    '-c:a {}'.format(ffm_codec), '-rf64 auto']
+                ffmpeg_options = ['-dn', '-sn', '-vn', '-map_metadata -1', '-map_chapters -1', '-rf64 auto']
                 if args.dm:
                     ffmpeg_options.append('-ac 2')
                 ffmpeg_options.extend(['-f wav', '-map 0:{}'.format(track.id())])
                 result_commands.extend(ffmpeg_cmds(movie.path(), wav_path, [], ffmpeg_options))
 
                 m4a_path = make_temp_file('.m4a')
-                qaac_options = [
-                    '--tvbr {}'.format(63 if args.dm else 91), '--quality 2',
-                    '--rate keep', '--no-delay',
-                    '--raw', '--raw-channels {}'.format(2 if args.dm else track.channels()),
-                    '--raw-rate {}'.format(track.sample_rate()),
-                    '--raw-format {}{}{}'.format(wav_format.format(), wav_format.bits(), wav_format.endianness()[0])
-                ]
+                qaac_options = ['--tvbr {}'.format(63 if args.dm else 91), '--quality 2', '--rate keep', '--no-delay']
                 encode = u'qaac64 {} {} -o {}'.format(u' '.join(qaac_options), quote(wav_path), quote(m4a_path))
                 result_commands.append(encode)
                 result_commands.append(make_delete_command(wav_path))
