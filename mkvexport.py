@@ -93,6 +93,9 @@ class Track(object):
         self._codec_names = codec_names
         self._duration = None
 
+    def source_file(self):
+        return self._parent_path
+
     def _tags(self):
         return self._ffm_data.setdefault('tags', {})
 
@@ -287,10 +290,12 @@ class AudioTrack(Track):
         return int(self._ffm_data['channels'])
 
 class SubtitleTrack(Track):
+    ASS = 'ass'
     PGS = 'hdmv_pgs_subtitle'
     SRT = 'subrip'
 
     CODEC_NAMES = {
+        ASS: 'ass',
         SRT: 'srt',
         PGS: 'pgs',
     }
@@ -426,6 +431,13 @@ def ffmpeg_cmds(src, dst, src_options, dst_options):
         u'chcp 866 >nul',
     ]
 
+def ffmpeg_extract_cmds(src, dst, track_id, src_options=None, dst_options=None):
+    if src_options is None: src_options = []
+    if dst_options is None: dst_options = []
+    return ffmpeg_cmds(src, dst,
+        [] + src_options,
+        ['-map_metadata -1', '-map_chapters -1', '-map 0:{}'.format(track_id)] + dst_options)
+
 def cmd_path(bytestring):
     return os.path.abspath(os.path.expandvars(bytestring.decode(sys.getfilesystemencoding())))
 
@@ -442,7 +454,7 @@ def write_commands(commands, fail_safe=True):
             if fail_safe:
                 result_string = u'{} || exit /b 1'.format(command)
             # TODO Операция «Ы» и другие приключения Шурика.mkv
-            fobj.write(u'{}\r\n'.format(result_string))
+            fobj.write(u'{}\r\n'.format(result_string.replace(u'  ', u' ')))
         fobj.write(u'\r\n')
 
 def read_map_file(path, handle_key, handle_value):
@@ -524,6 +536,7 @@ def main():
                 elif raw_new_name_string == 'KEEP': new_name = cur_name
                 else: new_name = u'{}.mkv'.format(raw_new_name_string)
             cur_path = os.path.abspath(filepath)
+            # TODO new_name MUST be .mkv !!!!!!!!!!!!!!!!!!!
             new_path = os.path.join(os.path.abspath(args.dst), new_name)
             if raw_crops_map is not None:
                 crop_args_map[cur_path] = raw_crops_map[os.path.splitext(cur_name)[0]]
@@ -697,11 +710,11 @@ def main():
             recode = recode or args.dm and (track.codec_id() in downmix_codecs or track.channels() > 2)
             if recode:
                 wav_path = make_temp_file('.wav')
-                ffmpeg_options = ['-dn', '-sn', '-vn', '-map_metadata -1', '-map_chapters -1', '-rf64 auto']
+                ffmpeg_options = ['-f wav', '-rf64 auto']
                 if args.dm:
                     ffmpeg_options.append('-ac 2')
-                ffmpeg_options.extend(['-f wav', '-map 0:{}'.format(track.id())])
-                result_commands.extend(ffmpeg_cmds(movie.path(), wav_path, [], ffmpeg_options))
+                result_commands.extend(
+                    ffmpeg_extract_cmds(track.source_file(), wav_path, track.id(), [], ffmpeg_options))
 
                 m4a_path = make_temp_file('.m4a')
                 qaac_options = ['--tvbr {}'.format(63 if args.dm else 91), '--quality 2', '--rate keep', '--no-delay']
@@ -713,16 +726,20 @@ def main():
 
         # TODO assert that fonts only present if subtitles ass/ssa
         # TODO support external srt subtitles
-        # TODO support ass to srt convertation
         # TODO support external subtitle charset detection & re-encoding to utf-8
         for track in output_tracks[Track.SUB]:
             if track.codec_id() not in SubtitleTrack.CODEC_NAMES:
                 raise Exception('Unhandled subtitle codec {}'.format(track.codec_id()))
-            if track.codec_id() == SubtitleTrack.PGS:
+            if track.codec_id() == SubtitleTrack.ASS:
+                srt_file = make_temp_file('.srt')
+                result_commands.extend(ffmpeg_extract_cmds(track.source_file(), srt_file, track.id(), [], ['-c:s text']))
+                track_sources[track.id()] = [srt_file, 0]
+                mux_temporary_files.append(srt_file)
+            elif track.codec_id() == SubtitleTrack.PGS:
                 sup_file = make_temp_file('.sup')
                 # TODO use track.source_path() or smth similar instead of movie.path() here and in all other places
                 result_commands.extend(ffmpeg_cmds(
-                    movie.path(), sup_file, '', ['-map 0:{}'.format(track.id()), '-c:s copy']))
+                    track.source_file(), sup_file, '', ['-map 0:{}'.format(track.id()), '-c:s copy']))
                 idx_file = make_temp_file('.idx')
                 sub_file = u'{}.sub'.format(os.path.splitext(idx_file)[0])
                 result_commands.append(u'call bdsup2sub -l {} -o {} {}'.format(
