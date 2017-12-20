@@ -536,8 +536,7 @@ def main():
                 elif raw_new_name_string == 'KEEP': new_name = cur_name
                 else: new_name = u'{}.mkv'.format(raw_new_name_string)
             cur_path = os.path.abspath(filepath)
-            # TODO new_name MUST be .mkv !!!!!!!!!!!!!!!!!!!
-            new_path = os.path.join(os.path.abspath(args.dst), new_name)
+            new_path = os.path.join(os.path.abspath(args.dst), os.path.splitext(new_name)[0] + '.mkv')
             if raw_crops_map is not None:
                 crop_args_map[cur_path] = raw_crops_map[os.path.splitext(cur_name)[0]]
             movies[new_path] = Movie(cur_path)
