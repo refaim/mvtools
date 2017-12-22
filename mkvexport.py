@@ -482,6 +482,7 @@ def main():
     parser.add_argument('-vk', default=False, action='store_true', help='keep source video')
     parser.add_argument('-vr', default=False, action='store_true', help='recode video')
     parser.add_argument('-vt', help='force tune')
+    parser.add_argument('-va', default=None, choices=['16:9'], help='set video display aspect ratio')
 
     parser.add_argument('-cr', default=False, action='store_true', help='crop video')
     parser.add_argument('-cf', type=cmd_path, default=None, help='path to crop map file')
@@ -665,6 +666,9 @@ def main():
             assert movie_dimensions_correct(dw, dh)
             if dx > 0 or dy > 0 or dw != video_track.width() or dh != video_track.height():
                 ffmpeg_filters.append('crop={w}:{h}:{x}:{y}'.format(w=dw, h=dh, x=dx, y=dy))
+
+            if args.va:
+                ffmpeg_filters.append('setdar=dar={}'.format(args.va))
 
             src_colors = video_track.colors()
             assert video_track.pix_fmt() == VideoTrack.YUV420P
