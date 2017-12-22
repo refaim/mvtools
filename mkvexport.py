@@ -734,6 +734,7 @@ def main():
             if track.codec_id() not in SubtitleTrack.CODEC_NAMES:
                 raise Exception('Unhandled subtitle codec {}'.format(track.codec_id()))
             if track.codec_id() == SubtitleTrack.ASS:
+                # TODO do not mux zero-size result .srt file !!!
                 srt_file = make_temp_file('.srt')
                 result_commands.extend(ffmpeg_extract_cmds(track.source_file(), srt_file, track.id(), [], ['-c:s text']))
                 track_sources[track.id()] = [srt_file, 0]
@@ -799,6 +800,7 @@ def main():
         result_commands.append(u'copy /z {} {}'.format(quote(mux_path), quote(target_path)))
         result_commands.append(make_delete_command(mux_path))
         if args.xx:
+            # TODO all media files
             result_commands.append(make_delete_command(movie.path()))
 
         write_commands(result_commands)
