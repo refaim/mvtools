@@ -35,6 +35,7 @@ LANGUAGES = {
 }
 
 MOVIE_EXTENSIONS = set([
+    '.avi',
     '.mkv',
     '.mpg',
 ])
@@ -151,6 +152,7 @@ class VideoTrack(Track):
         '24000/1001': NTSC,
         '25/1': PAL,
         '2997/125': NTSC,
+        '29976/1199': PAL,
         '30000/1001': NTSC,
     }
 
