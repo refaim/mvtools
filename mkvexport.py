@@ -704,13 +704,22 @@ def main():
             track_sources[video_track.id()] = [new_video_path, 0]
             mux_temporary_files.append(new_video_path)
 
-        # TODO normalize dvd sound with eac3to
+        codecs_to_normalize = set([AudioTrack.AC3])
         codecs_to_recode = set([AudioTrack.MP2])
         downmix_codecs = codecs_to_recode | set([AudioTrack.AC3, AudioTrack.DTS, AudioTrack.DTS_HD])
         for track in output_tracks[Track.AUD]:
             if track.codec_id() not in AudioTrack.CODEC_NAMES:
                 raise Exception('Unhandled audio codec {}'.format(track.codec_id()))
             assert track.channels() <= 6
+            if track.codec_id() in codecs_to_normalize:
+                src_ac3_path = make_temp_file('.ac3')
+                dst_ac3_path = make_temp_file('.ac3')
+                result_commands.extend(
+                    ffmpeg_extract_cmds(track.source_file(), src_ac3_path, track.id(), [], ['-c:a copy']))
+                result_commands.append('call eac3to {} {}'.format(quote(src_ac3_path), quote(dst_ac3_path)))
+                result_commands.append(make_delete_command(src_ac3_path))
+                track_sources[track.id()] = [dst_ac3_path, 0]
+                mux_temporary_files.append(dst_ac3_path)
             recode = args.ar or track.codec_id() in codecs_to_recode
             recode = recode or args.dm and (track.codec_id() in downmix_codecs or track.channels() > 2)
             if recode:
@@ -718,8 +727,8 @@ def main():
                 ffmpeg_options = ['-f wav', '-rf64 auto']
                 if args.dm:
                     ffmpeg_options.append('-ac 2')
-                result_commands.extend(
-                    ffmpeg_extract_cmds(track.source_file(), wav_path, track.id(), [], ffmpeg_options))
+                track_file, track_id = track_sources[track.id()]
+                result_commands.extend(ffmpeg_extract_cmds(track_file, wav_path, track_id, [], ffmpeg_options))
 
                 m4a_path = make_temp_file('.m4a')
                 qaac_options = ['--tvbr {}'.format(63 if args.dm else 91), '--quality 2', '--rate keep', '--no-delay']
