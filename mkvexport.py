@@ -139,6 +139,9 @@ class Track(object):
         return bool(self._ffm_data['disposition']['forced']) or \
             any(s in self.name().lower() for s in [u'forced', u'форсир'])
 
+    def set_forced(self, value):
+        self._ffm_data['disposition']['forced'] = True
+
     def is_default(self):
         return bool(self._ffm_data['disposition']['default'])
 
@@ -546,6 +549,7 @@ def main():
                 crop_args_map[cur_path] = raw_crops_map[os.path.splitext(cur_name)[0]]
             movies[new_path] = Movie(cur_path)
 
+    # TODO ignore container-set forced flag if it is on single video or audio track (clear it when parsing?)
     output_track_specs = {
         (Track.VID, False): ['und'],
         (Track.AUD, False): args.al,
@@ -611,6 +615,7 @@ def main():
                 used_tracks.add(chosen_track_id)
                 chosen_track = candidates[chosen_track_id]
                 chosen_track.set_language(target_lang)
+                chosen_track.set_forced(search_forced)
                 output_tracks[track_type].append(chosen_track)
 
         def track_sort_key(t):
