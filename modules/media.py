@@ -142,4 +142,5 @@ class Movie(object):
         return self._main_path
 
     def reference_duration(self):
-        return any(track.duration() for track in self.tracks(Track.VID)) or None
+        durations = [track.duration() for track in self.tracks(Track.VID)]
+        return durations[0] or None
