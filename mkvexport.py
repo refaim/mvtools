@@ -63,7 +63,10 @@ def ask_to_select(prompt, values, movie_path=None, header=None):
             prompt_strings.append('({})'.format(u', '.join(hint_strings)))
         final_prompt = u'{}: '.format(u' '.join(prompt_strings))
 
-        response = raw_input(final_prompt).strip().lower()
+        try:
+            response = raw_input(final_prompt).strip().lower()
+        except EOFError:
+            raise KeyboardInterrupt()
         action = actions.get(response)
         if action and action[ACTIONS_IDX_ENABLED]:
             action[ACTIONS_IDX_FUNC](movie_path)
@@ -493,4 +496,7 @@ def main():
     return 0
 
 if __name__ == '__main__':
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        platform.print_string(u'Interrupted by user')
