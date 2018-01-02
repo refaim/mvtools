@@ -91,17 +91,17 @@ def find_movies(path):
         fileset -= videopaths
 
         for videopath in videopaths:
-            group = set([videopath])
+            group = [videopath]
             videoname, _ = os.path.splitext(videopath)
             for filepath in fileset:
                 filename, _ = os.path.splitext(filepath)
                 if filename.startswith(videoname):
-                    group.add(filepath)
+                    group.append(filepath)
             media_groups.append(group)
-            fileset -= group
+            fileset -= set(group)
 
     for group in media_groups:
-        yield media.Movie(media.File(filepath, i + 1) for i, filepath in enumerate(group))
+        yield media.Movie(group)
 
 def read_map_file(path, handle_key, handle_value):
     result = None
@@ -181,7 +181,7 @@ def main():
             new_path = os.path.join(os.path.abspath(args.dst), os.path.splitext(new_name)[0] + '.mkv')
             if raw_crops_map is not None:
                 crop_args_map[movie_object.main_path()] = raw_crops_map[os.path.splitext(cur_name)[0]]
-            movies[new_path] = movie_object # TODO do it lazy-style
+            movies[new_path] = movie_object
 
     output_track_specs = {
         (Track.VID, False): ['und'],

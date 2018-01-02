@@ -31,13 +31,9 @@ class File(object):
         '.wmv': (Track.VID, Track.AUD, Track.SUB),
     }
 
-    def __init__(self, file_path, file_id):
+    def __init__(self, file_path):
         self._path = file_path
-        self._id = file_id
         self._tracks_by_type = None
-
-    def id(self):
-        return self._id
 
     def path(self):
         return self._path
@@ -65,24 +61,26 @@ class Movie(object):
     RE_SUB_CAPTIONS_NUM = re.compile(r', (?P<num>\d+) caption')
 
     @staticmethod
-    def sort_key(prefix, media_file):
+    def sort_key(prefix, path):
         result = []
-        for cluster in media_file.path()[len(prefix):].split():
+        for cluster in path[len(prefix):].split():
             if cluster.isdigit():
                 cluster = cluster.zfill(2)
             result.append(cluster)
         return u' '.join(result)
 
-    def __init__(self, media_files):
-        media_files = list(media_files)
-        sort_prefix = os.path.commonprefix([f.path() for f in media_files])
-        sort_key = functools.partial(self.sort_key, sort_prefix)
-        self._media_files = list(sorted(media_files, key=sort_key))
+    def __init__(self, media_paths):
+        self._media_paths = list(media_paths)
+        self._media_files = None
+        self._main_path = self._media_paths[0]
+
+    def _parse_media(self):
+        sort_prefix = os.path.commonprefix([path for path in self._media_paths])
+        self._media_paths.sort(key=functools.partial(self.sort_key, sort_prefix))
+        self._media_files = [File(path) for path in self._media_paths]
         assert len(list(self.tracks(Track.VID))) >= 1
-        # TODO assert video tracks length
         self._set_languages()
-        self._clear_wrong_forced_flags()
-        self._set_forced_flag()
+        self._set_forced()
         self._set_crf()
 
     def _single_file_tracks(self, track_type):
@@ -111,12 +109,11 @@ class Movie(object):
                     track.set_language(new_lang)
                 track.set_encoding(track.encoding() or lang.norm_encoding(encoding_data['encoding']))
 
-    def _clear_wrong_forced_flags(self):
+    def _set_forced(self):
         for track_type in (Track.AUD, Track.VID):
             for track in self.tracks(track_type):
                 track.set_forced(False)
 
-    def _set_forced_flag(self):
         metrics = ((lambda t: t.frames_len(), 50.0), (lambda t: t.num_captions(), 50.0))
         for value_getter, threshold_percentage in metrics:
             max_value = misc.safe_unsigned_max(value_getter(track) for track in self.tracks(Track.SUB))
@@ -132,6 +129,8 @@ class Movie(object):
                 track.set_crf(ffmpeg.detect_crf(track.source_file()))
 
     def tracks(self, track_type):
+        if self._media_files is None:
+            self._parse_media()
         for media_file in self._media_files:
             for track in media_file.tracks(track_type):
                 yield track
@@ -140,7 +139,7 @@ class Movie(object):
         return list(self.tracks(track.type())).index(track) + 1
 
     def main_path(self):
-        return min(track.source_file() for track in self.tracks(Track.VID))
+        return self._main_path
 
     def reference_duration(self):
         return any(track.duration() for track in self.tracks(Track.VID)) or None
