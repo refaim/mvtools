@@ -1,3 +1,6 @@
+import functools
+import os
+
 import ffmpeg
 import lang
 import platform
@@ -57,8 +60,20 @@ class File(object):
         return self._get_tracks()[track_type]
 
 class Movie(object):
+    @staticmethod
+    def sort_key(prefix, media_file):
+        result = []
+        for cluster in media_file.path()[len(prefix):].split():
+            if cluster.isdigit():
+                cluster = cluster.zfill(2)
+            result.append(cluster)
+        return u' '.join(result)
+
     def __init__(self, media_files):
-        self._media_files = list(sorted(media_files))
+        media_files = list(media_files)
+        sort_prefix = os.path.commonprefix([f.path() for f in media_files])
+        sort_key = functools.partial(self.sort_key, sort_prefix)
+        self._media_files = list(sorted(media_files, key=sort_key))
         assert len(list(self.tracks(Track.VID))) >= 1
         # TODO assert video tracks length
         self._set_languages()

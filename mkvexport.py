@@ -53,8 +53,9 @@ def ask_to_select(prompt, values, movie_path=None, header=None):
     while chosen_id not in values_dict:
         if header is not None:
             platform.print_string(header)
+        value_fmt = u'{:>%d} {}' % max(len(str(i)) for i in values_dict.iterkeys())
         for i, v in sorted(values_dict.iteritems()):
-            platform.print_string(u'{} {}'.format(i, v))
+            platform.print_string(value_fmt.format(i, v))
 
         hint_strings = [u'{} {}'.format(key.upper(), text)
             for key, (text, enabled, _) in sorted(actions.iteritems()) if enabled]
@@ -238,17 +239,16 @@ def main():
 
                     candidates_by_index = {}
                     candidate_strings = {}
-                    # TODO beautify output if not from_single_file
-                    # TODO print audio channels number
-                    # TODO sort by file names
                     for track in sorted(candidates.itervalues(), key=lambda t: t.qualified_id()):
                         strings = [u'(ID {})'.format(track.id()), track.language(), track.codec_name()]
+                        if track_type == Track.AUD:
+                            strings.append('{}ch'.format(track.channels()))
                         if track.name():
                             strings.append(track.name())
                         if track.is_default():
                             strings.append(u'(default)')
                         if not from_single_file:
-                            strings.append(u'"' + os.path.basename(track.source_file()) + u'"')
+                            strings.append(u'[{}]'.format(os.path.basename(track.source_file())))
                         track_index = movie.track_index_in_type(track)
                         candidate_strings[track_index] = u' '.join(strings)
                         candidates_by_index[track_index] = track.qualified_id()
