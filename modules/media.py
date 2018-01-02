@@ -98,14 +98,16 @@ class Movie(object):
         for track_type in (Track.AUD, Track.SUB):
             for track in self._single_file_tracks(track_type):
                 if track.language() == 'und':
-                    track.set_language(lang.guess(track.source_file()))
+                    guessed = lang.guess(track.source_file())
+                    if len(guessed) == 1:
+                        track.set_language(guessed[0])
 
         for track in self._single_file_tracks(Track.SUB):
             if not track.is_binary() and (track.language() == 'und' or track.encoding() is None):
                 encoding_data = platform.detect_encoding(track.source_file())
                 assert encoding_data['confidence'] >= 0.8
                 new_lang = lang.norm_lang(encoding_data['language'] or 'und')
-                if new_lang:
+                if new_lang != 'und':
                     track.set_language(new_lang)
                 track.set_encoding(track.encoding() or lang.norm_encoding(encoding_data['encoding']))
 
