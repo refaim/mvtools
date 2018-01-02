@@ -315,7 +315,7 @@ def main():
                 crop_args = [video_track.width(), video_track.height(), 0, 0]
             dw, dh, dx, dy = crop_args
             if not VideoTrack.dimensions_correct(dw, dh):
-                platform.print_string('Adjusting crop by {}x{}'.format(dw % 16, dh % 8))
+                platform.print_string(u'Adjusting crop by {}x{}'.format(dw % 16, dh % 8))
                 dw, dh, dx, dy = VideoTrack.correct_dimensions(dw, dh, dx, dy)
             assert VideoTrack.dimensions_correct(dw, dh)
             if dx > 0 or dy > 0 or dw != video_track.width() or dh != video_track.height():
