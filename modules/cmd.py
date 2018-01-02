@@ -1,6 +1,5 @@
 import codecs
 import os
-import re
 import sys
 
 import platform

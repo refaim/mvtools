@@ -70,10 +70,11 @@ class Movie(object):
     def _set_languages(self):
         for media_file in self._media_files:
             for track_type in (Track.AUD, Track.SUB):
+                type_tracks = list(media_file.tracks(track_type))
                 file_tracks = []
                 for file_track_type in (Track.AUD, Track.VID, Track.SUB):
                     file_tracks.extend(media_file.tracks(file_track_type))
-                if len(file_tracks) == 1:
+                if len(file_tracks) == len(type_tracks) == 1:
                     track = file_tracks[0]
                     track.set_language(lang.guess_language(track.source_file()))
 
