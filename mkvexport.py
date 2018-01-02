@@ -804,7 +804,11 @@ def main():
                             mux.append('--forced-track {0}:yes'.format(file_track_id))
                 elif tracks_flag_no:
                     mux.append(tracks_flag_no)
-            mux.append(u'--no-track-tags --no-attachments --no-buttons --no-global-tags {}'.format(quote(source_file)))
+            file_flags = ['--no-track-tags', '--no-attachments', '--no-buttons', '--no-global-tags']
+            # TODO actually search for chapters !!!!!!!!!
+            if source_file != movie.path():
+                file_flags.append('--no-chapters')
+            mux.append(u'{} {}'.format(u' '.join(file_flags), quote(source_file)))
 
         mux.append('--title ""')
 
