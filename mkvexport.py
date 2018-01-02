@@ -141,8 +141,7 @@ def main():
         raise Exception('Use "-sc" OR "-cf"')
 
     def read_movie_path(path):
-        # TODO use MOVIE_EXTENSIONS
-        return os.path.normpath(path.strip()).replace(u'.mkv', u'')
+        return os.path.splitext(os.path.normpath(path.strip()))[0]
 
     def read_crop_args(s):
         return [int(x) for x in s.strip().split(':')]
