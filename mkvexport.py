@@ -369,7 +369,7 @@ class Movie(MediaFile):
         return self._tracks_by_type
 
     def tracks(self, track_type):
-        return self._get_tracks()[track_type]
+        return self._get_tracks().get(track_type, [])
 
     def video_track(self):
         return self.tracks(Track.VID)[0]
