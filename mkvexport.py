@@ -128,7 +128,6 @@ def main():
     parser.add_argument('-fl', nargs='*', choices=languages, default=[], help='ordered list of forced subtitle languages to keep')
     parser.add_argument('-fo', default=False, action='store_true', help='make forced subtitles optional')
 
-    parser.add_argument('-xx', default=False, action='store_true', help='remove original source files')
     parser.add_argument('-eo', default=False, action='store_true', help='remux only if re-encoding')
     # TODO check name conflicts
     parser.add_argument('-nf', type=cmd.argparse_path, default=None, help='path to names map file')
@@ -459,10 +458,6 @@ def main():
         # TODO use robocopy or dism to fully utilize 1gbps connection
         result_commands.append(cmd.copy_file_command(mux_path, target_path))
         result_commands.append(cmd.del_files_command(mux_path))
-        # TODO support !!!!!!!!!!!!!!!!!!
-        # if args.xx:
-        #     # TODO all media files
-        #     result_commands.append(cmd.del_files_command(movie.path()))
 
         cmd.write_batch(MUX_SCRIPT, result_commands)
 
