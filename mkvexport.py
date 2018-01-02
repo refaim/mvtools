@@ -495,7 +495,7 @@ def main():
     parser.add_argument('-cf', type=cmd_path, default=None, help='path to crop map file')
     parser.add_argument('-sc', default=False, action='store_true', help='use same crop values for all files')
 
-    parser.add_argument('-al', nargs='*', choices=languages, default=['eng', 'rus'], help='ordered list of audio languages to keep')
+    parser.add_argument('-al', nargs='*', choices=languages, default=[], help='ordered list of audio languages to keep')
     parser.add_argument('-ar', default=False, action='store_true', help='recode audio')
     parser.add_argument('-dm', default=False, action='store_true', help='downmix multi-channel audio to stereo')
 
