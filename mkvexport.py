@@ -240,7 +240,7 @@ class Colors(object):
 
     def correct_space(self):
         result = None
-        if self._height >= 720:
+        if self._height >= 700:
             result = self.BT_709
         elif self._standard == VideoTrack.PAL:
             result = self.BT_601_PAL
