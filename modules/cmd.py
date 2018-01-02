@@ -1,5 +1,6 @@
 import codecs
 import os
+import re
 import sys
 
 import platform
@@ -35,5 +36,5 @@ def write_batch(filepath, commands):
     with codecs.open(filepath, 'a', 'cp866') as fobj:
         for command in commands:
             result_string = u'{} || exit /b 1'.format(command.strip())
-            fobj.write(u'{}\r\n'.format(result_string.replace(u'  ', u' ')))
+            fobj.write(u'{}\r\n'.format(result_string))
         fobj.write(u'\r\n')

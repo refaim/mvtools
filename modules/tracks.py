@@ -29,6 +29,9 @@ class Track(object):
     def id(self):
         return self._ffm_data['index']
 
+    def qualified_id(self):
+        return (self.source_file(), self.id())
+
     def type(self):
         return self._ffm_data['codec_type']
 
@@ -238,8 +241,8 @@ class SubtitleTrack(Track):
 
     CODEC_NAMES = {
         ASS: 'ass',
-        SRT: 'srt',
         PGS: 'pgs',
+        SRT: 'srt',
     }
 
     def __init__(self, parent_path, ffm_data):

@@ -5,7 +5,6 @@ import codecs
 import os
 import shutil
 import sys
-import uuid
 
 from modules import cmd
 from modules import ffmpeg
@@ -72,22 +71,38 @@ def ask_to_select(prompt, values, movie_path=None, header=None):
             chosen_id = try_int(response)
     return chosen_id if isinstance(values, dict) else values_dict[chosen_id]
 
-def video_containers(path):
-    def filter_paths(filepaths):
-        for filepath in filepaths:
-            if Track.VID in media.FILE_EXTENSIONS.get(platform.file_ext(filepath), []):
-                yield os.path.abspath(filepath)
-
-    data = []
+# TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! if pass single path then external subtitles will be ignored
+def find_movies(path):
+    filepaths = []
     if os.path.isfile(path):
-        data.append(path)
+        filepaths.append(os.path.abspath(path))
     elif os.path.isdir(path):
         for root, dirs, files in os.walk(path):
-            for filename in sorted(files):
-                data.append(os.path.join(root, filename))
+            for filename in files:
+                filepaths.append(os.path.abspath(os.path.join(root, filename)))
 
-    for filepath in filter_paths(data):
-        yield filepath
+    media_by_folder = {}
+    for filepath in filepaths:
+        if platform.file_ext(filepath) in media.File.EXTENSIONS:
+            media_by_folder.setdefault(os.path.dirname(filepath), set()).add(filepath)
+
+    media_groups = []
+    for fileset in media_by_folder.itervalues():
+        videopaths = set({ fp for fp in fileset if Track.VID in media.File.EXTENSIONS.get(platform.file_ext(fp), []) })
+        fileset -= videopaths
+
+        for videopath in videopaths:
+            group = set([videopath])
+            videoname, _ = os.path.splitext(videopath)
+            for filepath in fileset:
+                filename, _ = os.path.splitext(filepath)
+                if filename.startswith(videoname):
+                    group.add(filepath)
+            media_groups.append(group)
+            fileset -= group
+
+    for group in media_groups:
+        yield media.Movie(media.File(filepath, i + 1) for i, filepath in enumerate(group))
 
 def read_map_file(path, handle_key, handle_value):
     result = None
@@ -152,11 +167,10 @@ def main():
     movies = {}
     crop_args_map = None if raw_crops_map is None else {}
     for argspath in args.sources:
-        # TODO loop over containers is wrong :( !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        for container_path in video_containers(argspath):
-            cur_name = os.path.basename(container_path)
+        for movie_object in find_movies(argspath):
+            cur_name = os.path.basename(movie_object.main_path())
             if os.path.isdir(argspath):
-                cur_name = os.path.relpath(container_path, argspath)
+                cur_name = os.path.relpath(movie_object.main_path(), argspath)
             cur_name = os.path.normpath(cur_name)
             new_name = cur_name
             if filenames_map is not None:
@@ -167,10 +181,8 @@ def main():
                 else: new_name = u'{}.mkv'.format(raw_new_name_string)
             new_path = os.path.join(os.path.abspath(args.dst), os.path.splitext(new_name)[0] + '.mkv')
             if raw_crops_map is not None:
-                crop_args_map[container_path] = raw_crops_map[os.path.splitext(cur_name)[0]]
-            # TODO find satellites !!!!!!!!!!!!!
-            media_paths = [container_path]
-            movies[new_path] = media.Movie([media.File(path, uuid.uuid4()) for path in media_paths])
+                crop_args_map[movie_object.main_path()] = raw_crops_map[os.path.splitext(cur_name)[0]]
+            movies[new_path] = movie_object
 
     # TODO ignore container-set forced flag if it is on single video or audio track (clear it when parsing?)
     output_track_specs = {
@@ -188,8 +200,8 @@ def main():
 
     # TODO catch some of my exceptions, report skipped file, ask for action, log skipped file
     common_crop_args = None
-    for target_path, movie in sorted(movies.iteritems(), key=lambda m: m[1].sort_path()):
-        platform.print_string(u'=== {} ==='.format(movie.sort_path()))
+    for target_path, movie in sorted(movies.iteritems(), key=lambda m: m[1].main_path()):
+        platform.print_string(u'=== {} ==='.format(movie.main_path()))
         output_tracks = {}
         for (track_type, _) in output_track_specs.iterkeys():
             output_tracks[track_type] = []
@@ -200,15 +212,13 @@ def main():
             forced_string = 'Forced' if search_forced else 'Full'
             for target_lang in lang_list:
                 candidates = {}
-                # TODO show tracks from all source media files
-                # TODO print track file name if tracks from multiple files are present
                 for track in movie.tracks(track_type):
-                    if track.id() in used_tracks: continue
+                    if track.qualified_id() in used_tracks: continue
                     if track.is_forced() != search_forced: continue
                     if not track.is_forced() and abs((track.duration() or 0) - reference_duration) > duration_threshold: continue
                     if track.language() not in (target_lang, 'und') and target_lang != 'und': continue
                     if any(s in track.name().lower() for s in [u'comment', u'коммент']): continue
-                    candidates[track.id()] = track
+                    candidates[track.qualified_id()] = track
                 if not candidates:
                     if search_forced and args.fo: continue
                     raise Exception('{} {} {} not found'.format(forced_string, track_type, target_lang))
@@ -219,21 +229,29 @@ def main():
                 # TODO audio: prefer DVO|MVO to AVO (but not if AVO Goblin)
 
                 if chosen_track_id not in candidates:
+                    candidate_filepaths = set(track.source_file() for track in candidates.itervalues())
+                    from_single_file = len(candidate_filepaths) == 1
+                    preview_path = list(candidate_filepaths)[0] if from_single_file else None
+
                     candidates_by_index = {}
-                    candidates_strings = {}
-                    for t in sorted(candidates.itervalues(), key=lambda t: t.id()):
-                        strings = [u'(ID {})'.format(t.id()), t.language(), t.codec_name()]
-                        if t.name():
-                            strings.append(t.name())
-                        if t.is_default():
+                    candidate_strings = {}
+                    # TODO beautify output if not from_single_file
+                    # TODO print audio channels number
+                    # TODO sort by file names
+                    for track in sorted(candidates.itervalues(), key=lambda t: t.qualified_id()):
+                        strings = [u'(ID {})'.format(track.id()), track.language(), track.codec_name()]
+                        if track.name():
+                            strings.append(track.name())
+                        if track.is_default():
                             strings.append(u'(default)')
-                        track_index = movie.track_index_in_type(t)
-                        candidates_strings[track_index] = u' '.join(strings)
-                        candidates_by_index[track_index] = t.id()
+                        if not from_single_file:
+                            strings.append(u'"' + os.path.basename(track.source_file()) + u'"')
+                        track_index = movie.track_index_in_type(track)
+                        candidate_strings[track_index] = u' '.join(strings)
+                        candidates_by_index[track_index] = track.qualified_id()
                     header = u'--- {}, {}, {} ---'.format(
                         track_type.capitalize(), target_lang.upper(), forced_string)
-                    # TODO pass track source files !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                    chosen_track_index = ask_to_select(u'Enter track index', candidates_strings, movie.path(), header=header)
+                    chosen_track_index = ask_to_select(u'Enter track index', candidate_strings, preview_path, header=header)
                     chosen_track_id = candidates_by_index[chosen_track_index]
 
                 used_tracks.add(chosen_track_id)
@@ -253,9 +271,9 @@ def main():
         for track_type, track_list in output_tracks.iteritems():
             track_list.sort(key=track_sort_key)
             for track in track_list:
-                track_sources[track.id()] = [track.source_file(), track.id()]
+                track_sources[track.qualified_id()] = [track.source_file(), track.id()]
 
-        result_commands = [u'echo {}'.format(movie.sort_path())]
+        result_commands = [u'echo {}'.format(movie.main_path())]
         mux_temporary_files = []
 
         # TODO support 2pass encoding
@@ -338,32 +356,34 @@ def main():
             new_video_path = platform.make_temporary_file('.mkv')
             result_commands.extend(
                 ffmpeg.cmds_convert(video_track.source_file(), ffmpeg_src_options, new_video_path, ffmpeg_dst_options))
-            track_sources[video_track.id()] = [new_video_path, 0]
+            track_sources[video_track.qualified_id()] = [new_video_path, 0]
             mux_temporary_files.append(new_video_path)
 
         # TODO volume normalization when downmix|recode, see
         # TODO https://github.com/mdhiggins/sickbeard_mp4_automator/issues/219 and
         # TODO https://github.com/slhck/ffmpeg-normalize/
-        codecs_to_normalize = set([AudioTrack.AC3])
         codecs_to_recode = set([AudioTrack.MP2])
         downmix_codecs = codecs_to_recode | set([AudioTrack.AAC_HE, AudioTrack.AC3, AudioTrack.DTS, AudioTrack.DTS_HD])
         for track in output_tracks[Track.AUD]:
             if track.codec_id() not in AudioTrack.CODEC_NAMES:
                 raise Exception('Unhandled audio codec {}'.format(track.codec_id()))
             assert track.channels() <= 6
-            if track.codec_id() in codecs_to_normalize:
+
+            if track.codec_id() == AudioTrack.AC3:
                 # TODO change of fps AND video recode|normalize will lead to a/v desync
-                src_ac3_path = platform.make_temporary_file('.ac3')
-                dst_ac3_path = platform.make_temporary_file('.ac3')
-                result_commands.extend(
-                    ffmpeg.cmds_extract_track(track.source_file(), src_ac3_path, track.id(), [], ['-c:a copy']))
+                src_ac3_path = track.source_file()
+                if platform.file_ext(track.source_file()) != '.ac3':
+                    src_ac3_path = platform.make_temporary_file('.ac3')
+                    result_commands.extend(ffmpeg.cmds_extract_track(track.source_file(), src_ac3_path, track.id(), [], ['-c:a copy']))
                 # TODO use commercial decoders?
                 # TODO specify path to log file
-                result_commands.append(u'call eac3to {} {}'.format(
-                    cmd.quote(src_ac3_path), cmd.quote(dst_ac3_path)))
-                result_commands.append(cmd.del_files_command(src_ac3_path))
-                track_sources[track.id()] = [dst_ac3_path, 0]
+                dst_ac3_path = platform.make_temporary_file('.ac3')
+                result_commands.append(u'call eac3to {} {}'.format(cmd.quote(src_ac3_path), cmd.quote(dst_ac3_path)))
+                if src_ac3_path != track.source_file():
+                    result_commands.append(cmd.del_files_command(src_ac3_path))
+                track_sources[track.qualified_id()] = [dst_ac3_path, 0]
                 mux_temporary_files.append(dst_ac3_path)
+
             recode = args.ar or track.codec_id() in codecs_to_recode
             recode = recode or args.dm and (track.codec_id() in downmix_codecs or track.channels() > 2)
             if recode:
@@ -371,7 +391,7 @@ def main():
                 ffmpeg_options = ['-f wav', '-rf64 auto']
                 if args.dm:
                     ffmpeg_options.append('-ac 2')
-                track_file, track_id = track_sources[track.id()]
+                track_file, track_id = track_sources[track.qualified_id()]
                 result_commands.extend(
                     ffmpeg.cmds_extract_track(track_file, wav_path, track_id, [], ffmpeg_options))
 
@@ -381,7 +401,7 @@ def main():
                 result_commands.append(encode)
                 result_commands.append(cmd.del_files_command(wav_path))
                 mux_temporary_files.append(m4a_path)
-                track_sources[track.id()] = [m4a_path, 0]
+                track_sources[track.qualified_id()] = [m4a_path, 0]
 
         # TODO assert that fonts only present if subtitles ass/ssa
         # TODO support external srt subtitles
@@ -393,19 +413,22 @@ def main():
                 # TODO do not mux zero-size result .srt file !!!
                 srt_file = platform.make_temporary_file('.srt')
                 result_commands.extend(ffmpeg.cmds_extract_track(track.source_file(), srt_file, track.id(), [], ['-c:s text']))
-                track_sources[track.id()] = [srt_file, 0]
+                track_sources[track.qualified_id()] = [srt_file, 0]
                 mux_temporary_files.append(srt_file)
             elif track.codec_id() == SubtitleTrack.PGS:
-                sup_file = platform.make_temporary_file('.sup')
-                result_commands.extend(ffmpeg.cmds_convert(
-                    track.source_file(), [], sup_file, ['-map 0:{}'.format(track.id()), '-c:s copy']))
+                sup_file = track.source_file()
+                if platform.file_ext(track.source_file()) != '.sup':
+                    sup_file = platform.make_temporary_file('.sup')
+                    result_commands.extend(ffmpeg.cmds_convert(
+                        track.source_file(), [], sup_file, ['-map 0:{}'.format(track.id()), '-c:s copy']))
                 idx_file = platform.make_temporary_file('.idx')
                 sub_file = u'{}.sub'.format(os.path.splitext(idx_file)[0])
                 result_commands.append(u'call bdsup2sub -l {} -o {} {}'.format(
                     LANGUAGES[track.language()][LANGUAGES_IDX_SUB_LANG],
                     cmd.quote(idx_file), cmd.quote(sup_file)))
-                track_sources[track.id()] = [idx_file, 0]
-                result_commands.append(cmd.del_files_command(sup_file))
+                track_sources[track.qualified_id()] = [idx_file, 0]
+                if sup_file != track.source_file():
+                    result_commands.append(cmd.del_files_command(sup_file))
                 mux_temporary_files.extend([idx_file, sub_file])
 
         mux_path = platform.make_temporary_file('.mkv')
@@ -415,20 +438,21 @@ def main():
         mux.extend(['--no-track-tags', '--no-global-tags', '--disable-track-statistics-tags'])
 
         track_ids_by_files = {}
-        for movie_track_id, (source_file, source_file_track_id) in track_sources.iteritems():
-            track_ids_by_files.setdefault(source_file, {})[movie_track_id] = source_file_track_id
+        for qualified_id, (source_file, source_file_track_id) in track_sources.iteritems():
+            track_ids_by_files.setdefault(source_file, {})[qualified_id] = source_file_track_id
 
+        # TODO specify external subtitles text encoding !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         source_file_ids = {}
         for i, (source_file, track_ids_map) in enumerate(track_ids_by_files.iteritems()):
             source_file_ids[source_file] = i
             for track_type, (tracks_flags_yes, tracks_flag_no) in Track.TYPE_FLAGS.iteritems():
-                cur_file_tracks = [track for track in output_tracks[track_type] if track.id() in track_ids_map]
+                cur_file_tracks = [track for track in output_tracks[track_type] if track.qualified_id() in track_ids_map]
                 if cur_file_tracks:
                     if tracks_flags_yes:
-                        mux.append('{} {}'.format(tracks_flags_yes, ','.join(str(track_ids_map[track.id()]) for track in cur_file_tracks)))
+                        mux.append('{} {}'.format(tracks_flags_yes, ','.join(str(track_ids_map[track.qualified_id()]) for track in cur_file_tracks)))
                     for track in cur_file_tracks:
-                        default = track.id() == output_tracks[track_type][0].id()
-                        file_track_id = track_ids_map[track.id()]
+                        default = track.qualified_id() == output_tracks[track_type][0].qualified_id()
+                        file_track_id = track_ids_map[track.qualified_id()]
                         mux.append('--track-name {0}:""'.format(file_track_id))
                         mux.append('--language {0}:{1}'.format(file_track_id, track.language()))
                         mux.append('--default-track {0}:{1}'.format(file_track_id, 'yes' if default else 'no'))
@@ -447,7 +471,7 @@ def main():
         track_order = []
         for track_type in [Track.VID, Track.AUD, Track.SUB]:
             for track in output_tracks[track_type]:
-                source_file, source_file_track_id = track_sources[track.id()]
+                source_file, source_file_track_id = track_sources[track.qualified_id()]
                 track_order.append('{}:{}'.format(source_file_ids[source_file], source_file_track_id))
         mux.append('--track-order {}'.format(','.join(track_order)))
 
