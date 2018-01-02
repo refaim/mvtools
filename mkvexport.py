@@ -262,7 +262,8 @@ class Colors(object):
         return self._guess_metric('color_primaries')
 
 class AudioTrack(Track):
-    AAC = 'aac_lc'
+    AAC_HE = 'aac_he_aac'
+    AAC_LC = 'aac_lc'
     AC3 = 'ac3'
     DTS = 'dts_dts'
     DTS_HD = 'dts_dts_hd_ma'
@@ -270,7 +271,8 @@ class AudioTrack(Track):
     MP3 = 'mp3'
 
     CODEC_NAMES = {
-        AAC: 'aac',
+        AAC_HE: 'aac_he',
+        AAC_LC: 'aac_lc',
         AC3: 'ac3',
         DTS: 'dts',
         DTS_HD: 'dts_hd_ma',
@@ -704,19 +706,25 @@ def main():
             track_sources[video_track.id()] = [new_video_path, 0]
             mux_temporary_files.append(new_video_path)
 
+        # TODO volume normalization when downmix|recode, see
+        # TODO https://github.com/mdhiggins/sickbeard_mp4_automator/issues/219 and
+        # TODO https://github.com/slhck/ffmpeg-normalize/
         codecs_to_normalize = set([AudioTrack.AC3])
         codecs_to_recode = set([AudioTrack.MP2])
-        downmix_codecs = codecs_to_recode | set([AudioTrack.AC3, AudioTrack.DTS, AudioTrack.DTS_HD])
+        downmix_codecs = codecs_to_recode | set([AudioTrack.AAC_HE, AudioTrack.AC3, AudioTrack.DTS, AudioTrack.DTS_HD])
         for track in output_tracks[Track.AUD]:
             if track.codec_id() not in AudioTrack.CODEC_NAMES:
                 raise Exception('Unhandled audio codec {}'.format(track.codec_id()))
             assert track.channels() <= 6
             if track.codec_id() in codecs_to_normalize:
+                # TODO change of fps AND video recode|normalize will lead to a/v desync
                 src_ac3_path = make_temp_file('.ac3')
                 dst_ac3_path = make_temp_file('.ac3')
                 result_commands.extend(
                     ffmpeg_extract_cmds(track.source_file(), src_ac3_path, track.id(), [], ['-c:a copy']))
-                result_commands.append('call eac3to {} {}'.format(quote(src_ac3_path), quote(dst_ac3_path)))
+                # TODO use commercial decoders?
+                # TODO specify path to log file
+                result_commands.append(u'call eac3to {} {}'.format(quote(src_ac3_path), quote(dst_ac3_path)))
                 result_commands.append(make_delete_command(src_ac3_path))
                 track_sources[track.id()] = [dst_ac3_path, 0]
                 mux_temporary_files.append(dst_ac3_path)
@@ -752,7 +760,6 @@ def main():
                 mux_temporary_files.append(srt_file)
             elif track.codec_id() == SubtitleTrack.PGS:
                 sup_file = make_temp_file('.sup')
-                # TODO use track.source_path() or smth similar instead of movie.path() here and in all other places
                 result_commands.extend(ffmpeg_cmds(
                     track.source_file(), sup_file, '', ['-map 0:{}'.format(track.id()), '-c:s copy']))
                 idx_file = make_temp_file('.idx')
