@@ -235,6 +235,8 @@ class Colors(object):
         return self._guess_metric('color_primaries')
 
 class SubtitleTrack(Track):
+    _RE_SUB_CAPTIONS_NUM = re.compile(r', (?P<num>\d+) caption')
+
     ASS = 'ass'
     PGS = 'hdmv_pgs_subtitle'
     SRT = 'subrip'
@@ -247,3 +249,9 @@ class SubtitleTrack(Track):
 
     def __init__(self, parent_path, ffm_data):
         super(SubtitleTrack, self).__init__(parent_path, ffm_data, self.CODEC_NAMES)
+
+    def num_captions(self):
+        match = self._RE_SUB_CAPTIONS_NUM.search(self.source_file())
+        if match:
+            return int(match.groupdict()['num'])
+        return None

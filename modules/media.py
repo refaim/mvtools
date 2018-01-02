@@ -1,8 +1,10 @@
 import functools
 import os
+import re
 
 import ffmpeg
 import lang
+import misc
 import platform
 
 from tracks import Track, AudioTrack, VideoTrack, SubtitleTrack
@@ -60,6 +62,8 @@ class File(object):
         return self._get_tracks()[track_type]
 
 class Movie(object):
+    RE_SUB_CAPTIONS_NUM = re.compile(r', (?P<num>\d+) caption')
+
     @staticmethod
     def sort_key(prefix, media_file):
         result = []
@@ -78,8 +82,7 @@ class Movie(object):
         # TODO assert video tracks length
         self._set_languages()
         self._clear_wrong_forced_flags()
-        self._set_forced_by_frame_length()
-        self._set_forced_by_file_size()
+        self._set_forced_flag()
         self._set_crf()
 
     def _set_languages(self):
@@ -94,25 +97,19 @@ class Movie(object):
                     track.set_language(lang.guess_language(track.source_file()))
 
     def _clear_wrong_forced_flags(self):
-        pass # TODO
+        for track_type in (Track.AUD, Track.VID):
+            for track in self.tracks(track_type):
+                track.set_forced(False)
 
-    def _set_forced_by_frame_length(self):
-        max_length = -1
-        for track in self.tracks(Track.SUB):
-            length = track.frames_len()
-            if length is None:
-                return
-            max_length = max(float(length), max_length)
-        if max_length <= 0:
-            return
-
-        forced_track_threshold = max_length / 100.0 * 50.0
-        for track in self.tracks(Track.SUB):
-            if (max_length - track.frames_len()) > forced_track_threshold:
-                track.set_forced(True)
-
-    def _set_forced_by_file_size(self):
-        pass # TODO
+    def _set_forced_flag(self):
+        metrics = ((lambda t: t.frames_len(), 50.0), (lambda t: t.num_captions(), 50.0))
+        for value_getter, threshold_percentage in metrics:
+            max_value = misc.safe_unsigned_max(value_getter(track) for track in self.tracks(Track.SUB))
+            if max_value is not None:
+                forced_threshold = max_value / 100.0 * threshold_percentage
+                for track in self.tracks(Track.SUB):
+                    if (max_value - value_getter(track)) > forced_threshold:
+                        track.set_forced(True)
 
     def _set_crf(self):
         for track in self.tracks(Track.VID):

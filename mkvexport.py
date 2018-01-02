@@ -9,6 +9,7 @@ import sys
 from modules import cmd
 from modules import ffmpeg
 from modules import media
+from modules import misc
 from modules import platform
 from modules.tracks import Track, VideoTrack, Colors, AudioTrack, SubtitleTrack
 
@@ -34,12 +35,6 @@ LANGUAGES = {
     'eng': ('en',),
     'jpn': ('jp',),
 }
-
-def try_int(value):
-    try:
-        return int(value)
-    except:
-        return None
 
 ACTIONS_IDX_TEXT = 0
 ACTIONS_IDX_ENABLED = 1
@@ -72,7 +67,7 @@ def ask_to_select(prompt, values, movie_path=None, header=None):
         if action and action[ACTIONS_IDX_ENABLED]:
             action[ACTIONS_IDX_FUNC](movie_path)
         else:
-            chosen_id = try_int(response)
+            chosen_id = misc.try_int(response)
     return chosen_id if isinstance(values, dict) else values_dict[chosen_id]
 
 # TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! if pass single path then external subtitles will be ignored
@@ -188,7 +183,6 @@ def main():
                 crop_args_map[movie_object.main_path()] = raw_crops_map[os.path.splitext(cur_name)[0]]
             movies[new_path] = movie_object
 
-    # TODO ignore container-set forced flag if it is on single video or audio track (clear it when parsing?)
     output_track_specs = {
         (Track.VID, False): ['und'],
         (Track.AUD, False): args.al,
