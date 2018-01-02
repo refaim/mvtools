@@ -85,16 +85,29 @@ class Movie(object):
         self._set_forced_flag()
         self._set_crf()
 
-    def _set_languages(self):
+    def _single_file_tracks(self, track_type):
         for media_file in self._media_files:
-            for track_type in (Track.AUD, Track.SUB):
-                type_tracks = list(media_file.tracks(track_type))
-                file_tracks = []
-                for file_track_type in (Track.AUD, Track.VID, Track.SUB):
-                    file_tracks.extend(media_file.tracks(file_track_type))
-                if len(file_tracks) == len(type_tracks) == 1:
-                    track = file_tracks[0]
-                    track.set_language(lang.guess_language(track.source_file()))
+            type_tracks = list(media_file.tracks(track_type))
+            file_tracks = []
+            for file_track_type in (Track.AUD, Track.VID, Track.SUB):
+                file_tracks.extend(media_file.tracks(file_track_type))
+            if len(file_tracks) == len(type_tracks) == 1:
+                yield file_tracks[0]
+
+    def _set_languages(self):
+        for track_type in (Track.AUD, Track.SUB):
+            for track in self._single_file_tracks(track_type):
+                if track.language() == 'und':
+                    track.set_language(lang.guess(track.source_file()))
+
+        for track in self._single_file_tracks(Track.SUB):
+            if not track.is_binary() and (track.language() == 'und' or track.encoding() is None):
+                encoding_data = platform.detect_encoding(track.source_file())
+                assert encoding_data['confidence'] >= 0.8
+                new_lang = lang.norm_lang(encoding_data['language'] or 'und')
+                if new_lang:
+                    track.set_language(new_lang)
+                track.set_encoding(track.encoding() or lang.norm_encoding(encoding_data['encoding']))
 
     def _clear_wrong_forced_flags(self):
         for track_type in (Track.AUD, Track.VID):

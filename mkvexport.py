@@ -181,7 +181,7 @@ def main():
             new_path = os.path.join(os.path.abspath(args.dst), os.path.splitext(new_name)[0] + '.mkv')
             if raw_crops_map is not None:
                 crop_args_map[movie_object.main_path()] = raw_crops_map[os.path.splitext(cur_name)[0]]
-            movies[new_path] = movie_object
+            movies[new_path] = movie_object # TODO do it lazy-style
 
     output_track_specs = {
         (Track.VID, False): ['und'],
@@ -438,7 +438,6 @@ def main():
         for qualified_id, (source_file, source_file_track_id) in track_sources.iteritems():
             track_ids_by_files.setdefault(source_file, {})[qualified_id] = source_file_track_id
 
-        # TODO specify external subtitles text encoding !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         source_file_ids = {}
         for i, (source_file, track_ids_map) in enumerate(track_ids_by_files.iteritems()):
             source_file_ids[source_file] = i
@@ -451,6 +450,8 @@ def main():
                         default = track.qualified_id() == output_tracks[track_type][0].qualified_id()
                         file_track_id = track_ids_map[track.qualified_id()]
                         mux.append('--track-name {0}:""'.format(file_track_id))
+                        if track_type == Track.SUB and track.encoding() is not None:
+                            mux.append('--sub-charset {0}:{1}'.format(file_track_id, track.encoding()))
                         mux.append('--language {0}:{1}'.format(file_track_id, track.language()))
                         mux.append('--default-track {0}:{1}'.format(file_track_id, 'yes' if default else 'no'))
                         if track.is_forced():

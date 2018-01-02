@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import chardet
 import locale
 import os
 import subprocess
@@ -33,3 +34,12 @@ def make_temporary_file(extension):
 
 def file_ext(path):
     return os.path.splitext(path)[1].lower()
+
+def detect_encoding(filepath):
+    detector = chardet.UniversalDetector()
+    for line in open(filepath, 'rb'):
+        detector.feed(line)
+        if detector.done:
+            break
+    detector.close()
+    return detector.result

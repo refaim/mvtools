@@ -249,6 +249,16 @@ class SubtitleTrack(Track):
 
     def __init__(self, parent_path, ffm_data):
         super(SubtitleTrack, self).__init__(parent_path, ffm_data, self.CODEC_NAMES)
+        self._encoding = None
+
+    def is_binary(self):
+        return self.codec_id() == self.PGS
+
+    def encoding(self):
+        return self._encoding
+
+    def set_encoding(self, value):
+        self._encoding = value
 
     def num_captions(self):
         match = self._RE_SUB_CAPTIONS_NUM.search(self.source_file())

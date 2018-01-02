@@ -1,5 +1,7 @@
 import re
 
+import misc
+
 RE_LETTER_CLUSTERS = re.compile(r'[a-z]+', re.IGNORECASE)
 
 LANGUAGES = {
@@ -19,16 +21,23 @@ LANGUAGES = {
     'ukr': ['Ukrainian'],
     'und': [],
 }
-LANGUAGE_STRINGS = {}
-for key, values in LANGUAGES.iteritems():
-    for string in values + [key]:
-        LANGUAGE_STRINGS[string.lower()] = key
+LANGUAGE_STRINGS = misc.make_strings_dict(LANGUAGES)
 
-def guess_language(filepath):
+ENCODINGS = {
+    'CP1251': ['windows-1251'],
+    'UTF-8': ['utf8'],
+}
+ENCODING_STRINGS = misc.make_strings_dict(ENCODINGS)
+
+def norm_lang(s):
+    return LANGUAGE_STRINGS[s.lower()]
+
+def norm_encoding(s):
+    return ENCODING_STRINGS[s.lower()]
+
+def guess(filepath):
     found_languages = set()
     for string in RE_LETTER_CLUSTERS.findall(filepath.lower()):
         if string in LANGUAGE_STRINGS:
             found_languages.add(LANGUAGE_STRINGS[string])
-    if len(found_languages) != 1:
-        raise Exception(u"Unable to guess language of '{}'".format(filepath))
-    return list(found_languages)[0]
+    return list(found_languages)
