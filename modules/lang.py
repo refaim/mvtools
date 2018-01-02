@@ -25,7 +25,8 @@ LANGUAGE_STRINGS = misc.make_strings_dict(LANGUAGES)
 
 ENCODINGS = {
     'CP1251': ['windows-1251'],
-    'UTF-8': ['utf8'],
+    'US-ASCII': ['ascii'],
+    'UTF-8': ['utf8', 'utf-8-sig'],
 }
 ENCODING_STRINGS = misc.make_strings_dict(ENCODINGS)
 
