@@ -20,8 +20,10 @@ class File(object):
 
     EXTENSIONS = {
         '.ac3': (Track.AUD,),
-        '.avi': (Track.VID, Track.AUD, Track.SUB),
-        '.flv': (Track.VID, Track.AUD, Track.SUB),
+        '.avi': (Track.VID, Track.AUD),
+        '.dts': (Track.AUD,),
+        '.flac': (Track.AUD,),
+        '.flv': (Track.VID, Track.AUD),
         '.m4v': (Track.VID, Track.AUD, Track.SUB),
         '.mkv': (Track.VID, Track.AUD, Track.SUB),
         '.mp4': (Track.VID, Track.AUD, Track.SUB),

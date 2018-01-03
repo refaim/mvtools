@@ -83,6 +83,7 @@ class AudioTrack(Track):
     AC3 = 'ac3'
     DTS = 'dts_dts'
     DTS_HD = 'dts_dts_hd_ma'
+    FLAC = 'flac'
     MP2 = 'mp2'
     MP3 = 'mp3'
 
