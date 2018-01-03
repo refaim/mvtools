@@ -360,7 +360,8 @@ def main():
         # TODO volume normalization when downmix|recode, see
         # TODO https://github.com/mdhiggins/sickbeard_mp4_automator/issues/219 and
         # TODO https://github.com/slhck/ffmpeg-normalize/
-        codecs_to_normalize = set([AudioTrack.AC3, AudioTrack.DTS]) # TODO dts-hd?
+        # TODO change of fps AND video recode|normalize will lead to a/v desync
+        codecs_to_normalize = set([AudioTrack.AC3, AudioTrack.DTS])
         codecs_to_recode = set([AudioTrack.MP2, AudioTrack.FLAC])
         codecs_to_downmix = codecs_to_recode | set([AudioTrack.AAC_HE, AudioTrack.AC3, AudioTrack.DTS, AudioTrack.DTS_HD])
         for track in output_tracks[Track.AUD]:
@@ -368,9 +369,7 @@ def main():
                 raise Exception('Unhandled audio codec {}'.format(track.codec_id()))
             assert track.channels() <= 6
 
-            # TODO launch eac3to and check if dialnorm really needs to be done (see eac3to supported containers)
             if track.codec_id() in codecs_to_normalize:
-                # TODO change of fps AND video recode|normalize will lead to a/v desync
                 src_eac_path = track.source_file()
                 if not track.is_single():
                     src_eac_path = platform.make_temporary_file(track.get_single_track_file_extension())
