@@ -360,30 +360,31 @@ def main():
         # TODO volume normalization when downmix|recode, see
         # TODO https://github.com/mdhiggins/sickbeard_mp4_automator/issues/219 and
         # TODO https://github.com/slhck/ffmpeg-normalize/
-        codecs_to_recode = set([AudioTrack.MP2])
-        downmix_codecs = codecs_to_recode | set([AudioTrack.AAC_HE, AudioTrack.AC3, AudioTrack.DTS, AudioTrack.DTS_HD])
+        codecs_to_normalize = set([AudioTrack.AC3, AudioTrack.DTS]) # TODO dts-hd?
+        codecs_to_recode = set([AudioTrack.MP2, AudioTrack.FLAC])
+        codecs_to_downmix = codecs_to_recode | set([AudioTrack.AAC_HE, AudioTrack.AC3, AudioTrack.DTS, AudioTrack.DTS_HD])
         for track in output_tracks[Track.AUD]:
-            if track.codec_id() not in AudioTrack.CODEC_NAMES:
+            if track.codec_id() not in AudioTrack.CODEC_PROPS:
                 raise Exception('Unhandled audio codec {}'.format(track.codec_id()))
             assert track.channels() <= 6
 
-            if track.codec_id() == AudioTrack.AC3:
+            # TODO launch eac3to and check if dialnorm really needs to be done (see eac3to supported containers)
+            if track.codec_id() in codecs_to_normalize:
                 # TODO change of fps AND video recode|normalize will lead to a/v desync
-                src_ac3_path = track.source_file()
-                if platform.file_ext(track.source_file()) != '.ac3':
-                    src_ac3_path = platform.make_temporary_file('.ac3')
-                    result_commands.extend(ffmpeg.cmds_extract_track(track.source_file(), src_ac3_path, track.id(), [], ['-c:a copy']))
-                # TODO use commercial decoders?
+                src_eac_path = track.source_file()
+                if not track.is_single():
+                    src_eac_path = platform.make_temporary_file(track.get_single_track_file_extension())
+                    result_commands.extend(ffmpeg.cmds_extract_track(track.source_file(), src_eac_path, track.id(), [], ['-c:a copy']))
                 # TODO specify path to log file
-                dst_ac3_path = platform.make_temporary_file('.ac3')
-                result_commands.append(u'call eac3to {} {}'.format(cmd.quote(src_ac3_path), cmd.quote(dst_ac3_path)))
-                if src_ac3_path != track.source_file():
-                    result_commands.append(cmd.del_files_command(src_ac3_path))
-                track_sources[track.qualified_id()] = [dst_ac3_path, 0]
-                mux_temporary_files.append(dst_ac3_path)
+                dst_eac_path = platform.make_temporary_file(track.get_single_track_file_extension())
+                result_commands.append(u'call eac3to {} {}'.format(cmd.quote(src_eac_path), cmd.quote(dst_eac_path)))
+                if src_eac_path != track.source_file():
+                    result_commands.append(cmd.del_files_command(src_eac_path))
+                track_sources[track.qualified_id()] = [dst_eac_path, 0]
+                mux_temporary_files.append(dst_eac_path)
 
             recode = args.ar or track.codec_id() in codecs_to_recode
-            recode = recode or args.dm and (track.codec_id() in downmix_codecs or track.channels() > 2)
+            recode = recode or args.dm and (track.codec_id() in codecs_to_downmix or track.channels() > 2)
             if recode:
                 wav_path = platform.make_temporary_file('.wav')
                 ffmpeg_options = ['-f wav', '-rf64 auto']
@@ -402,8 +403,7 @@ def main():
                 track_sources[track.qualified_id()] = [m4a_path, 0]
 
         # TODO assert that fonts only present if subtitles ass/ssa
-        # TODO support external srt subtitles
-        # TODO support external subtitle charset detection & re-encoding to utf-8
+        # TODO subtitle edit fix common errors
         for track in output_tracks[Track.SUB]:
             if track.codec_id() not in SubtitleTrack.CODEC_NAMES:
                 raise Exception('Unhandled subtitle codec {}'.format(track.codec_id()))

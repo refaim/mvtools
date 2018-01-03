@@ -3,6 +3,8 @@
 import math
 import re
 
+import platform
+
 class Track(object):
     AUD = 'audio'
     VID = 'video'
@@ -87,18 +89,29 @@ class AudioTrack(Track):
     MP2 = 'mp2'
     MP3 = 'mp3'
 
-    CODEC_NAMES = {
-        AAC_HE: 'aac_he',
-        AAC_LC: 'aac_lc',
-        AC3: 'ac3',
-        DTS: 'dts',
-        DTS_HD: 'dhm',
-        MP2: 'mp2',
-        MP3: 'mp3'
+    CODEC_PROPS_IDX_NAME = 0
+    CODEC_PROPS_IDX_FEXT = 1
+    CODEC_PROPS = {
+        AAC_HE: ['aac_he', '.m4a'],
+        AAC_LC: ['aac_lc', '.m4a'],
+        AC3: ['ac3', '.ac3'],
+        DTS: ['dts', '.dts'],
+        DTS_HD: ['dhm', None],
+        FLAC: ['flac', '.flac'],
+        MP2: ['mp2', '.mp2'],
+        MP3: ['mp3', '.mp3'],
     }
 
     def __init__(self, parent_path, ffm_data):
-        super(AudioTrack, self).__init__(parent_path, ffm_data, self.CODEC_NAMES)
+        codec_names = { codec_id: props[self.CODEC_PROPS_IDX_NAME]
+            for codec_id, props in self.CODEC_PROPS.iteritems() }
+        super(AudioTrack, self).__init__(parent_path, ffm_data, codec_names)
+
+    def get_single_track_file_extension(self):
+        return self.CODEC_PROPS[self.codec_id()][self.CODEC_PROPS_IDX_FEXT]
+
+    def is_single(self):
+        return platform.file_ext(self.source_file()) == self.get_single_track_file_extension()
 
     def codec_id(self):
         profile = self._ffm_data.get('profile')
