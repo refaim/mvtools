@@ -39,6 +39,9 @@ def move_file_commands(src_file, dst_file):
             dst_name=quote(os.path.basename(dst_file)))
     ]
 
+def create_dir_command(dir_path):
+    return u'mkdir {}'.format(quote(dir_path))
+
 def write_batch(filepath, commands):
     with codecs.open(filepath, 'a', 'cp866') as fobj:
         for command in commands:

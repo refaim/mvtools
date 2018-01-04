@@ -197,6 +197,7 @@ def main():
         pass
     shutil.copyfile(MUX_HEADER, MUX_SCRIPT)
 
+    created_directories = set()
     # TODO catch some of my exceptions, report skipped file, ask for action, log skipped file
     common_crop_args = None
     for target_path, movie in sorted(movies.iteritems(), key=lambda m: m[1].main_path()):
@@ -272,6 +273,11 @@ def main():
 
         result_commands = [u'echo {}'.format(movie.main_path())]
         mux_temporary_files = []
+
+        target_directory = os.path.dirname(target_path)
+        if not os.path.isdir(target_directory) and target_directory not in created_directories:
+           result_commands.append(cmd.create_dir_command(target_directory))
+           created_directories.add(target_directory)
 
         # TODO support 2pass encoding
         # TODO what if there is crf already?
@@ -480,12 +486,6 @@ def main():
         # TODO return xx flag
 
         cmd.write_batch(MUX_SCRIPT, result_commands)
-
-        # TODO add this to batch files (mkdir creates intermediate directories automatically)
-        try:
-            os.makedirs(os.path.dirname(target_path))
-        except:
-            pass
 
     return 0
 
