@@ -38,7 +38,7 @@ LANGUAGES = {
 
 ACTIONS_IDX_TEXT = 0
 ACTIONS_IDX_ENABLED = 1
-ACTIONS_IDX_FUNC = 1
+ACTIONS_IDX_FUNC = 2
 def ask_to_select(prompt, values, movie_path=None, header=None):
     actions = {
         'p': ('preview', movie_path and os.path.isfile(movie_path), lambda p: os.system('mplayer {} >nul 2>&1'.format(cmd.quote(p)))),
