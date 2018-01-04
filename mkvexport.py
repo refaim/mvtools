@@ -125,8 +125,6 @@ def main():
     parser.add_argument('dst', type=cmd.argparse_path, help='path to destination directory')
     parser.add_argument('--temp', type=cmd.argparse_path, help='path to temporary directory')
 
-    # TODO add special "all" language value
-
     # TODO add argument groups
     parser.add_argument('-vk', default=False, action='store_true', help='keep source video')
     parser.add_argument('-vr', default=False, action='store_true', help='recode video')
@@ -366,7 +364,7 @@ def main():
         # TODO https://github.com/slhck/ffmpeg-normalize/
         # TODO change of fps AND video recode|normalize will lead to a/v desync
 
-        def make_single_track_file(track):
+        def make_single_audio_track_file(track):
             if track.is_single():
                 return (track.source_file(), False)
             tmp_path = platform.make_temporary_file(track.get_single_track_file_extension())
@@ -379,14 +377,14 @@ def main():
         max_audio_channels = 2 if args.a2 else 6
         for track in output_tracks[Track.AUD]:
             if track.codec_id() not in AudioTrack.CODEC_PROPS:
-                raise Exception('Unhandled audio codec {}'.format(track.codec_id()))
+                raise CliException(u'Unhandled audio codec {}'.format(track.codec_id()))
 
             need_denorm = track.codec_id() in audio_codecs_to_denorm
             need_downmix = track.channels() > max_audio_channels
             need_recode = need_downmix or track.codec_id() in audio_codecs_to_recode or args.ar and track.codec_id() not in audio_codecs_to_keep
 
             if need_denorm or need_downmix or need_recode:
-                src_track_file, is_src_track_file_temporary = make_single_track_file(track)
+                src_track_file, is_src_track_file_temporary = make_single_audio_track_file(track)
                 eac_track_file = platform.make_temporary_file('.wav' if need_recode else platform.file_ext(src_track_file))
                 eac_opts = []
                 if need_downmix:

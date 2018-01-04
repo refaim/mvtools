@@ -111,7 +111,9 @@ class AudioTrack(Track):
         super(AudioTrack, self).__init__(parent_path, ffm_data, codec_names)
 
     def get_single_track_file_extension(self):
-        return self.CODEC_PROPS[self.codec_id()][self.CODEC_PROPS_IDX_FEXT]
+        result = self.CODEC_PROPS[self.codec_id()][self.CODEC_PROPS_IDX_FEXT]
+        assert result is not None
+        return result
 
     def is_single(self):
         return platform.file_ext(self.source_file()) == self.get_single_track_file_extension()
