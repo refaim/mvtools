@@ -42,7 +42,7 @@ class Track(object):
         return self._ffm_data['codec_name']
 
     def codec_name(self):
-        return self._codec_names[self.codec_id()]
+        return self._codec_names.get(self.codec_id(), self.codec_id())
 
     def name(self):
         return self._tags().get('title', '')
