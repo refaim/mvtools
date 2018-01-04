@@ -17,14 +17,25 @@ class Track(object):
         SUB: ('--subtitle-tracks', '-S'),
     }
 
-    def __init__(self, parent_path, ffm_data, codec_names):
+    _CODEC_PROPS_IDX_NAME = 0
+    _CODEC_PROPS_IDX_FEXT = 1
+
+    def __init__(self, parent_path, ffm_data, codec_props):
         self._parent_path = parent_path
         self._ffm_data = ffm_data
-        self._codec_names = codec_names
+        self._codec_props = codec_props
         self._duration = None
 
     def source_file(self):
         return self._parent_path
+
+    def get_single_track_file_extension(self):
+        result = self._codec_props[self.codec_id()][self._CODEC_PROPS_IDX_FEXT]
+        assert result is not None
+        return result
+
+    def is_single(self):
+        return platform.file_ext(self.source_file()) == self.get_single_track_file_extension()
 
     def _tags(self):
         return self._ffm_data.setdefault('tags', {})
@@ -41,8 +52,13 @@ class Track(object):
     def codec_id(self):
         return self._ffm_data['codec_name']
 
+    def codec_unknown(self):
+        return self.codec_id() not in self._codec_props
+
     def codec_name(self):
-        return self._codec_names.get(self.codec_id(), self.codec_id())
+        if self.codec_unknown():
+            return self.codec_id()
+        return self._codec_props[self.codec_id()][self._CODEC_PROPS_IDX_NAME]
 
     def name(self):
         return self._tags().get('title', '')
@@ -91,9 +107,7 @@ class AudioTrack(Track):
     MP3 = 'mp3'
     PCM_S16L = 'pcm_s16le'
 
-    CODEC_PROPS_IDX_NAME = 0
-    CODEC_PROPS_IDX_FEXT = 1
-    CODEC_PROPS = {
+    _CODEC_PROPS = {
         AAC_HE: ['aac_he', '.m4a'],
         AAC_LC: ['aac_lc', '.m4a'],
         AC3: ['ac3', '.ac3'],
@@ -106,17 +120,7 @@ class AudioTrack(Track):
     }
 
     def __init__(self, parent_path, ffm_data):
-        codec_names = { codec_id: props[self.CODEC_PROPS_IDX_NAME]
-            for codec_id, props in self.CODEC_PROPS.iteritems() }
-        super(AudioTrack, self).__init__(parent_path, ffm_data, codec_names)
-
-    def get_single_track_file_extension(self):
-        result = self.CODEC_PROPS[self.codec_id()][self.CODEC_PROPS_IDX_FEXT]
-        assert result is not None
-        return result
-
-    def is_single(self):
-        return platform.file_ext(self.source_file()) == self.get_single_track_file_extension()
+        super(AudioTrack, self).__init__(parent_path, ffm_data, self._CODEC_PROPS)
 
     def codec_id(self):
         profile = self._ffm_data.get('profile')
@@ -263,19 +267,22 @@ class SubtitleTrack(Track):
     SRT = 'subrip'
     VOBSUB = 'dvd_subtitle'
 
-    CODEC_NAMES = {
-        ASS: 'ass',
-        PGS: 'pgs',
-        SRT: 'srt',
-        VOBSUB: 'vbs',
+    _CODEC_PROPS = {
+        ASS: ['ass', '.ass'],
+        PGS: ['pgs', '.sup'],
+        SRT: ['srt', '.srt'],
+        VOBSUB: ['vbs', None],
     }
 
     def __init__(self, parent_path, ffm_data):
-        super(SubtitleTrack, self).__init__(parent_path, ffm_data, self.CODEC_NAMES)
+        super(SubtitleTrack, self).__init__(parent_path, ffm_data, self._CODEC_PROPS)
         self._encoding = None
 
     def is_binary(self):
-        return self.codec_id() == self.PGS
+        return self.codec_id() in (self.PGS, self.VOBSUB)
+
+    def is_text(self):
+        return not self.is_binary()
 
     def encoding(self):
         return self._encoding

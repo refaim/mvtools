@@ -357,11 +357,12 @@ def main():
             track_sources[video_track.qualified_id()] = [new_video_path, 0]
             mux_temporary_files.append(new_video_path)
 
-        def make_single_audio_track_file(track):
+        def make_single_track_file(track, stream_id):
             if track.is_single():
                 return (track.source_file(), False)
             tmp_path = platform.make_temporary_file(track.get_single_track_file_extension())
-            result_commands.extend(ffmpeg.cmds_extract_track(track.source_file(), tmp_path, track.id(), [], ['-c:a copy']))
+            result_commands.extend(ffmpeg.cmds_extract_track(
+                track.source_file(), tmp_path, track.id(), [], ['-c:{} copy'.format(stream_id)]))
             return (tmp_path, True)
 
         # TODO change of fps AND video recode|normalize will lead to a/v desync
@@ -370,7 +371,7 @@ def main():
         audio_codecs_to_keep = set([AudioTrack.AAC_LC, AudioTrack.MP3])
         max_audio_channels = 2 if args.a2 else 6
         for track in output_tracks[Track.AUD]:
-            if track.codec_id() not in AudioTrack.CODEC_PROPS:
+            if track.codec_unknown():
                 raise CliException(u'Unhandled audio codec {}'.format(track.codec_id()))
 
             need_denorm = track.codec_id() in audio_codecs_to_denorm
@@ -378,7 +379,7 @@ def main():
             need_recode = need_downmix or track.codec_id() in audio_codecs_to_recode or args.ar and track.codec_id() not in audio_codecs_to_keep
 
             if need_denorm or need_downmix or need_recode:
-                src_track_file, is_src_track_file_temporary = make_single_audio_track_file(track)
+                src_track_file, is_src_track_file_temporary = make_single_track_file(track, ffmpeg.STREAM_AUD)
                 eac_track_file = platform.make_temporary_file('.wav' if need_recode else platform.file_ext(src_track_file))
                 eac_opts = []
                 if need_downmix:
@@ -400,33 +401,30 @@ def main():
                 mux_temporary_files.append(dst_track_file)
                 track_sources[track.qualified_id()] = [dst_track_file, 0]
 
-        # TODO assert that fonts only present if subtitles ass/ssa
-        # TODO subtitle edit fix common errors
         for track in output_tracks[Track.SUB]:
-            if track.codec_id() not in SubtitleTrack.CODEC_NAMES:
+            if track.codec_unknown():
                 raise CliException(u'Unhandled subtitle codec {}'.format(track.codec_id()))
-            # TODO convert with subtitle edit
-            if track.codec_id() == SubtitleTrack.ASS:
-                # TODO do not mux zero-size result .srt file !!!
+            if track.is_text():
+                track_file, is_track_file_temporary = make_single_track_file(track, ffmpeg.STREAM_SUB)
                 srt_file = platform.make_temporary_file('.srt')
-                result_commands.extend(ffmpeg.cmds_extract_track(track.source_file(), srt_file, track.id(), [], ['-c:s text']))
+                result_commands.append(u'python {script} {src_path} {dst_path}'.format(
+                    script=cmd.quote(os.path.join(os.path.dirname(__file__), 'any2srt.py')),
+                    src_path=cmd.quote(track_file), dst_path=cmd.quote(srt_file)))
                 track_sources[track.qualified_id()] = [srt_file, 0]
                 mux_temporary_files.append(srt_file)
+                if is_track_file_temporary:
+                    result_commands.append(cmd.del_files_command(track_file))
             elif track.codec_id() == SubtitleTrack.PGS:
-                sup_file = track.source_file()
-                if platform.file_ext(track.source_file()) != '.sup':
-                    sup_file = platform.make_temporary_file('.sup')
-                    result_commands.extend(ffmpeg.cmds_convert(
-                        track.source_file(), [], sup_file, ['-map 0:{}'.format(track.id()), '-c:s copy']))
+                track_file, is_track_file_temporary = make_single_track_file(track, ffmpeg.STREAM_SUB)
                 idx_file = platform.make_temporary_file('.idx')
                 sub_file = u'{}.sub'.format(os.path.splitext(idx_file)[0])
                 result_commands.append(u'call bdsup2sub -l {} -o {} {}'.format(
                     LANGUAGES[track.language()][LANGUAGES_IDX_SUB_LANG],
-                    cmd.quote(idx_file), cmd.quote(sup_file)))
+                    cmd.quote(idx_file), cmd.quote(track_file)))
                 track_sources[track.qualified_id()] = [idx_file, 0]
-                if sup_file != track.source_file():
-                    result_commands.append(cmd.del_files_command(sup_file))
                 mux_temporary_files.extend([idx_file, sub_file])
+                if is_track_file_temporary:
+                    result_commands.append(cmd.del_files_command(track_file))
 
         mux_path = platform.make_temporary_file('.mkv')
 
