@@ -144,7 +144,6 @@ def main():
     parser.add_argument('-fo', default=False, action='store_true', help='make forced subtitles optional')
 
     parser.add_argument('-eo', default=False, action='store_true', help='remux only if re-encoding')
-    # TODO check name conflicts
     parser.add_argument('-nf', type=cmd.argparse_path, default=None, help='path to names map file')
 
     # TODO add parametes to ask for file name !!!
@@ -182,6 +181,7 @@ def main():
             new_path = os.path.join(os.path.abspath(args.dst), os.path.splitext(new_name)[0] + '.mkv')
             if raw_crops_map is not None:
                 crop_args_map[movie_object.main_path()] = raw_crops_map[os.path.splitext(cur_name)[0]]
+            assert new_path not in movies
             movies[new_path] = movie_object
 
     output_track_specs = collections.OrderedDict([
@@ -225,8 +225,6 @@ def main():
 
                 chosen_track_id = None
                 if len(candidates) == 1: chosen_track_id = list(candidates.keys())[0]
-
-                # TODO audio: prefer DVO|MVO to AVO (but not if AVO Goblin)
 
                 if chosen_track_id not in candidates:
                     candidate_filepaths = set(track.source_file() for track in candidates.itervalues())
@@ -359,11 +357,6 @@ def main():
             track_sources[video_track.qualified_id()] = [new_video_path, 0]
             mux_temporary_files.append(new_video_path)
 
-        # TODO volume normalization when downmix|recode, see
-        # TODO https://github.com/mdhiggins/sickbeard_mp4_automator/issues/219 and
-        # TODO https://github.com/slhck/ffmpeg-normalize/
-        # TODO change of fps AND video recode|normalize will lead to a/v desync
-
         def make_single_audio_track_file(track):
             if track.is_single():
                 return (track.source_file(), False)
@@ -371,6 +364,7 @@ def main():
             result_commands.extend(ffmpeg.cmds_extract_track(track.source_file(), tmp_path, track.id(), [], ['-c:a copy']))
             return (tmp_path, True)
 
+        # TODO change of fps AND video recode|normalize will lead to a/v desync
         audio_codecs_to_denorm = set([AudioTrack.AC3, AudioTrack.DTS])
         audio_codecs_to_recode = set([AudioTrack.MP2, AudioTrack.FLAC, AudioTrack.PCM_S16L])
         audio_codecs_to_keep = set([AudioTrack.AAC_LC, AudioTrack.MP3])
