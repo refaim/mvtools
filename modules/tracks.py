@@ -3,6 +3,7 @@
 import math
 import re
 
+import misc
 import platform
 
 class Track(object):
@@ -67,7 +68,7 @@ class Track(object):
         return self._duration
 
     def frames_len(self):
-        return self._tags().get('NUMBER_OF_FRAMES-eng', None)
+        return misc.try_int(self._tags().get('NUMBER_OF_FRAMES-eng', None))
 
     def is_forced(self):
         return bool(self._ffm_data['disposition']['forced']) or \
