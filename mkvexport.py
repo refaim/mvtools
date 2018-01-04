@@ -136,7 +136,7 @@ def main():
 
     parser.add_argument('-al', nargs='*', choices=languages, default=[], help='ordered list of audio languages to keep')
     parser.add_argument('-ar', default=False, action='store_true', help='recode audio')
-    parser.add_argument('-dm', default=False, action='store_true', help='downmix multi-channel audio to stereo')
+    parser.add_argument('-a2', default=False, action='store_true', help='downmix multi-channel audio to stereo')
 
     parser.add_argument('-sl', nargs='*', choices=languages, default=[], help='ordered list of full subtitle languages to keep')
     parser.add_argument('-fl', nargs='*', choices=languages, default=[], help='ordered list of forced subtitle languages to keep')
@@ -361,53 +361,48 @@ def main():
         # TODO https://github.com/mdhiggins/sickbeard_mp4_automator/issues/219 and
         # TODO https://github.com/slhck/ffmpeg-normalize/
         # TODO change of fps AND video recode|normalize will lead to a/v desync
-        codecs_to_normalize = set([AudioTrack.AC3, AudioTrack.DTS])
-        codecs_to_recode = set([AudioTrack.MP2, AudioTrack.FLAC])
-        codecs_to_downmix = codecs_to_recode | set([AudioTrack.AAC_HE, AudioTrack.AC3, AudioTrack.DTS, AudioTrack.DTS_HD])
-        max_audio_channels = 2 if args.dm else 6
+
+        def make_single_track_file(track):
+            if track.is_single():
+                return (track.source_file(), False)
+            tmp_path = platform.make_temporary_file(track.get_single_track_file_extension())
+            result_commands.extend(ffmpeg.cmds_extract_track(track.source_file(), tmp_path, track.id(), [], ['-c:a copy']))
+            return (tmp_path, True)
+
+        audio_codecs_to_denorm = set([AudioTrack.AC3, AudioTrack.DTS])
+        audio_codecs_to_recode = set([AudioTrack.MP2, AudioTrack.FLAC, AudioTrack.PCM_S16L])
+        audio_codecs_to_keep = set([AudioTrack.AAC_LC, AudioTrack.MP3])
+        max_audio_channels = 2 if args.a2 else 6
         for track in output_tracks[Track.AUD]:
             if track.codec_id() not in AudioTrack.CODEC_PROPS:
                 raise Exception('Unhandled audio codec {}'.format(track.codec_id()))
 
-            if track.codec_id() in codecs_to_normalize:
-                src_eac_path = track.source_file()
-                if not track.is_single():
-                    src_eac_path = platform.make_temporary_file(track.get_single_track_file_extension())
-                    result_commands.extend(ffmpeg.cmds_extract_track(track.source_file(), src_eac_path, track.id(), [], ['-c:a copy']))
-                # TODO specify path to log file
-                dst_eac_path = platform.make_temporary_file(track.get_single_track_file_extension())
-                result_commands.append(u'call eac3to {} {}'.format(cmd.quote(src_eac_path), cmd.quote(dst_eac_path)))
-                if src_eac_path != track.source_file():
-                    result_commands.append(cmd.del_files_command(src_eac_path))
-                track_sources[track.qualified_id()] = [dst_eac_path, 0]
-                mux_temporary_files.append(dst_eac_path)
+            need_denorm = track.codec_id() in audio_codecs_to_denorm
+            need_downmix = track.channels() > max_audio_channels
+            need_recode = need_downmix or track.codec_id() in audio_codecs_to_recode or args.ar and track.codec_id() not in audio_codecs_to_keep
 
-            need_recode = args.ar or track.codec_id() in codecs_to_recode
-            need_downmix = args.dm and track.codec_id() in codecs_to_downmix or track.channels() > max_audio_channels
-            if need_recode or need_downmix:
-                # TODO use eac3to to parse containers?
-                # TODO use -c:a copy and decode with eac3to? !!!!!!!!!!!!!!!!!!!!!!!!!!!
-                wav_path = platform.make_temporary_file('.wav')
-                track_file, track_id = track_sources[track.qualified_id()]
-                result_commands.extend(ffmpeg.cmds_extract_track(
-                    track_file, wav_path, track_id, [], ['-f wav', '-rf64 auto']))
-
-                # TODO combine downmix with dialnorm removing?
+            if need_denorm or need_downmix or need_recode:
+                src_track_file, is_src_track_file_temporary = make_single_track_file(track)
+                eac_track_file = platform.make_temporary_file('.wav' if need_recode else platform.file_ext(src_track_file))
+                eac_opts = []
                 if need_downmix:
-                    downmix_option = '-downStereo' if max_audio_channels == 2 else '-down6'
-                    old_wav_path = wav_path
-                    wav_path = platform.make_temporary_file('.wav')
-                    result_commands.append(u'call eac3to {} {} {}'.format(
-                        cmd.quote(old_wav_path), cmd.quote(wav_path), downmix_option))
-                    result_commands.append(cmd.del_files_command(old_wav_path))
+                    eac_opts.append('-downStereo' if max_audio_channels == 2 else '-down6')
+                result_commands.append(u'call eac3to {} {} {}'.format(
+                    cmd.quote(src_track_file), cmd.quote(eac_track_file), ' '.join(eac_opts)))
+                if is_src_track_file_temporary:
+                    result_commands.append(cmd.del_files_command(src_track_file))
 
-                m4a_path = platform.make_temporary_file('.m4a')
-                qaac_options = ['--tvbr {}'.format(63 if args.dm else 91), '--quality 2', '--rate keep', '--no-delay']
-                encode = u'qaac64 {} {} -o {}'.format(u' '.join(qaac_options), cmd.quote(wav_path), cmd.quote(m4a_path))
-                result_commands.append(encode)
-                result_commands.append(cmd.del_files_command(wav_path))
-                mux_temporary_files.append(m4a_path)
-                track_sources[track.qualified_id()] = [m4a_path, 0]
+                dst_track_file = eac_track_file
+                if need_recode:
+                    m4a_track_file = platform.make_temporary_file('.m4a')
+                    qaac_opts = ['--tvbr {}'.format(63 if max_audio_channels == 2 else 91), '--quality 2', '--rate keep', '--no-delay']
+                    qaac = u'qaac64 {} {} -o {}'.format(u' '.join(qaac_opts), cmd.quote(eac_track_file), cmd.quote(m4a_track_file))
+                    result_commands.append(qaac)
+                    result_commands.append(cmd.del_files_command(eac_track_file))
+                    dst_track_file = m4a_track_file
+
+                mux_temporary_files.append(dst_track_file)
+                track_sources[track.qualified_id()] = [dst_track_file, 0]
 
         # TODO assert that fonts only present if subtitles ass/ssa
         # TODO subtitle edit fix common errors

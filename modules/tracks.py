@@ -89,6 +89,7 @@ class AudioTrack(Track):
     FLAC = 'flac'
     MP2 = 'mp2'
     MP3 = 'mp3'
+    PCM_S16L = 'pcm_s16le'
 
     CODEC_PROPS_IDX_NAME = 0
     CODEC_PROPS_IDX_FEXT = 1
@@ -101,6 +102,7 @@ class AudioTrack(Track):
         FLAC: ['flac', '.flac'],
         MP2: ['mp2', '.mp2'],
         MP3: ['mp3', '.mp3'],
+        PCM_S16L: ['pcm', '.wav'],
     }
 
     def __init__(self, parent_path, ffm_data):
