@@ -91,17 +91,16 @@ def find_movies(path):
 
     media_groups = []
     for fileset in media_by_folder.itervalues():
-        videopaths = set({ fp for fp in fileset if Track.VID in media.File.EXTENSIONS.get(platform.file_ext(fp), []) })
-        fileset -= videopaths
-
-        for videopath in videopaths:
-            group = [videopath]
-            videoname, _ = os.path.splitext(videopath)
-            for filepath in fileset:
-                filename, _ = os.path.splitext(filepath)
-                if filename.startswith(videoname):
-                    group.append(filepath)
-            media_groups.append(group)
+        videopaths = [fp for fp in fileset if Track.VID in media.File.EXTENSIONS.get(platform.file_ext(fp), [])]
+        for videopath in sorted(videopaths):
+            if videopath in fileset:
+                group = [videopath]
+                videoname, _ = os.path.splitext(videopath)
+                for filepath in fileset:
+                    filename, _ = os.path.splitext(filepath)
+                    if filename.startswith(videoname):
+                        group.append(filepath)
+                media_groups.append(group)
             fileset -= set(group)
 
     for group in media_groups:
