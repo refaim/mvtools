@@ -198,6 +198,8 @@ class VideoTrack(Track):
     def field_order(self):
         if self._field_order is None:
             fo = self._ffm_data.get('field_order')
+            if fo is None:
+                fo = self.FO_PRG
             if fo is not None:
                 assert fo in (self.FO_PRG, self.FO_INT_BOT, self.FO_INT_TOP)
                 self._field_order = fo
