@@ -36,6 +36,9 @@ LANGUAGES = {
     'jpn': ('jp',),
 }
 
+class CliException(Exception):
+    pass
+
 ACTIONS_IDX_TEXT = 0
 ACTIONS_IDX_ENABLED = 1
 ACTIONS_IDX_FUNC = 2
@@ -107,7 +110,7 @@ def read_map_file(path, handle_key, handle_value):
     result = None
     if path is not None:
         if not os.path.isfile(path):
-            raise Exception(u'Could not open file "{}"'.format(path))
+            raise CliException(u'Could not open file "{}"'.format(path))
         result = {}
         with codecs.open(path, 'r', 'utf-8') as fobj:
             for line in fobj:
@@ -152,7 +155,7 @@ def main():
     if not args.temp:
         args.temp = args.dst
     if args.cf and args.sc:
-        raise Exception('Use "-sc" OR "-cf"')
+        raise CliException(u'Use "-sc" OR "-cf"')
 
     def read_movie_path(path):
         return os.path.splitext(os.path.normpath(path.strip()))[0]
@@ -220,7 +223,7 @@ def main():
                     candidates[track.qualified_id()] = track
                 if not candidates:
                     if search_forced and args.fo: continue
-                    raise Exception('{} {} {} not found'.format(forced_string, track_type, target_lang))
+                    raise CliException(u'{} {} {} not found'.format(forced_string, track_type, target_lang))
 
                 chosen_track_id = None
                 if len(candidates) == 1: chosen_track_id = list(candidates.keys())[0]
@@ -330,7 +333,7 @@ def main():
 
             dst_color_space = src_colors.correct_space()
             if src_colors.space() != dst_color_space:
-                raise Exception('Not implemented')
+                raise CliException(u'Not implemented')
                 # TODO specify input/output color_range
                 # TODO specify each input component separately
                 # TODO The input transfer characteristics, color space, color primaries and color range should be set on the input data
@@ -409,7 +412,7 @@ def main():
         # TODO subtitle edit fix common errors
         for track in output_tracks[Track.SUB]:
             if track.codec_id() not in SubtitleTrack.CODEC_NAMES:
-                raise Exception('Unhandled subtitle codec {}'.format(track.codec_id()))
+                raise CliException(u'Unhandled subtitle codec {}'.format(track.codec_id()))
             # TODO convert with subtitle edit
             if track.codec_id() == SubtitleTrack.ASS:
                 # TODO do not mux zero-size result .srt file !!!
@@ -498,7 +501,15 @@ def main():
     return 0
 
 if __name__ == '__main__':
+    error = None
     try:
-        sys.exit(main())
+        rc = main()
+    except CliException as e:
+        error = e.message
     except KeyboardInterrupt:
-        platform.print_string(u'Interrupted by user')
+        error = u'Interrupted by user'
+    finally:
+        if error is not None:
+            platform.print_string(error)
+            rc = 1
+        sys.exit(rc)
