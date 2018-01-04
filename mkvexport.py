@@ -480,7 +480,8 @@ def main():
 
         if len(source_file_ids) > 1 or not args.eo:
             result_commands.append(u' '.join(mux))
-        result_commands.append(cmd.del_files_command(*sorted(set(mux_temporary_files))))
+        if len(mux_temporary_files) > 0:
+            result_commands.append(cmd.del_files_command(*sorted(set(mux_temporary_files))))
         # TODO use robocopy or dism to fully utilize 1gbps connection
         result_commands.append(cmd.copy_file_command(mux_path, target_path))
         result_commands.append(cmd.del_files_command(mux_path))
