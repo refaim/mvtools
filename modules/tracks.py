@@ -267,7 +267,7 @@ class SubtitleTrack(Track):
         ASS: 'ass',
         PGS: 'pgs',
         SRT: 'srt',
-        VOBSUB: 'sub',
+        VOBSUB: 'vbs',
     }
 
     def __init__(self, parent_path, ffm_data):
