@@ -341,6 +341,7 @@ def main():
             ffmpeg_dst_options = ['-an', '-sn', '-dn']
             if ffmpeg_filters:
                 ffmpeg_dst_options.append('-filter:v {}'.format(','.join(ffmpeg_filters)))
+            # TODO do not specify color primaries if source SD and values unknown
             ffmpeg_dst_options.extend([
                 '-c:v libx264', '-preset veryslow', '-pix_fmt {}'.format(VideoTrack.YUV420P),
                 '-tune {}'.format(tune_params[TUNES_IDX_REAL_TUNE]),
@@ -409,6 +410,7 @@ def main():
         for track in output_tracks[Track.SUB]:
             if track.codec_id() not in SubtitleTrack.CODEC_NAMES:
                 raise Exception('Unhandled subtitle codec {}'.format(track.codec_id()))
+            # TODO convert with subtitle edit
             if track.codec_id() == SubtitleTrack.ASS:
                 # TODO do not mux zero-size result .srt file !!!
                 srt_file = platform.make_temporary_file('.srt')
@@ -482,6 +484,7 @@ def main():
         # TODO use robocopy or dism to fully utilize 1gbps connection
         result_commands.append(cmd.copy_file_command(mux_path, target_path))
         result_commands.append(cmd.del_files_command(mux_path))
+        # TODO return xx flag
 
         cmd.write_batch(MUX_SCRIPT, result_commands)
 
