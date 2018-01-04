@@ -332,7 +332,7 @@ def main():
 
             dst_color_space = src_colors.correct_space()
             if src_colors.space() != dst_color_space:
-                raise CliException(u'Not implemented')
+                raise CliException(u'Colorspace conversion not implemented')
                 # TODO specify input/output color_range
                 # TODO specify each input component separately
                 # TODO The input transfer characteristics, color space, color primaries and color range should be set on the input data
@@ -501,14 +501,14 @@ def main():
 
 if __name__ == '__main__':
     error = None
+    return_code = 0
     try:
-        rc = main()
+        return_code = main()
     except CliException as e:
         error = e.message
     except KeyboardInterrupt:
         error = u'Interrupted by user'
-    finally:
-        if error is not None:
-            platform.print_string(error)
-            rc = 1
-        sys.exit(rc)
+    if error is not None:
+        platform.print_string(error)
+        return_code = 1
+    sys.exit(return_code)
