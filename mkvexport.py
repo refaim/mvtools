@@ -2,6 +2,7 @@
 
 import argparse
 import codecs
+import collections
 import os
 import shutil
 import sys
@@ -184,12 +185,12 @@ def main():
                 crop_args_map[movie_object.main_path()] = raw_crops_map[os.path.splitext(cur_name)[0]]
             movies[new_path] = movie_object
 
-    output_track_specs = {
-        (Track.VID, False): ['und'],
-        (Track.AUD, False): args.al,
-        (Track.SUB, False): args.sl,
-        (Track.SUB, True): args.fl,
-    }
+    output_track_specs = collections.OrderedDict([
+        ((Track.VID, False), ['und']),
+        ((Track.AUD, False), args.al),
+        ((Track.SUB, False), args.sl),
+        ((Track.SUB, True), args.fl),
+    ])
 
     try:
         os.remove(MUX_SCRIPT)
