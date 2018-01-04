@@ -53,7 +53,7 @@ class File(object):
                 for track_id, track_data in tracks_of_type.iteritems():
                     track_class = self._TRACK_PROPS[track_type][self._TRACK_PROPS_IDX_CLASS]
                     self._tracks_by_type[track_type].append(track_class(self._path, track_data))
-                self._tracks_by_type[track_type].sort()
+                self._tracks_by_type[track_type].sort(key=lambda track: track.qualified_id())
         return self._tracks_by_type
 
     def tracks(self, track_type):
