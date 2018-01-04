@@ -28,12 +28,24 @@ def make_whitespaced_args_string(args):
 def del_files_command(*args):
     return u'del /q {}'.format(' '.join(quote(p) for p in args))
 
-def copy_file_command(src, dst):
-    return u'copy /z {} {}'.format(quote(src), quote(dst))
+def move_file_commands(src_file, dst_file):
+    return [
+        u'robocopy {src_folder} {dst_folder} {src_name} /Z /MOV /NS /NC /NDL /NJH /NJS'.format(
+            src_folder=quote(os.path.dirname(src_file)),
+            dst_folder=quote(os.path.dirname(dst_file)),
+            src_name=quote(os.path.basename(src_file))),
+        u'ren {src_file} {dst_name}'.format(
+            src_file=quote(os.path.join(os.path.dirname(dst_file), os.path.basename(src_file))),
+            dst_name=quote(os.path.basename(dst_file)))
+    ]
 
 def write_batch(filepath, commands):
     with codecs.open(filepath, 'a', 'cp866') as fobj:
         for command in commands:
-            result_string = u'{} || exit /b 1'.format(command.strip())
+            min_errorlevel = 2 if command.lower().startswith('robocopy') else 1
+            exit_clause = u'exit /b 1'
+            if min_errorlevel > 1:
+                exit_clause = u'if errorlevel {} exit /b 1'.format(min_errorlevel)
+            result_string = u'{} || {}'.format(command.strip(), exit_clause)
             fobj.write(u'{}\r\n'.format(result_string))
         fobj.write(u'\r\n')

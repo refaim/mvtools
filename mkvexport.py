@@ -484,9 +484,8 @@ def main():
             result_commands.append(u' '.join(mux))
         if len(mux_temporary_files) > 0:
             result_commands.append(cmd.del_files_command(*sorted(set(mux_temporary_files))))
-        # TODO use robocopy or dism to fully utilize 1gbps connection
-        result_commands.append(cmd.copy_file_command(mux_path, target_path))
-        result_commands.append(cmd.del_files_command(mux_path))
+        result_commands.extend(cmd.move_file_commands(mux_path, target_path))
+
         # TODO return xx flag
 
         cmd.write_batch(MUX_SCRIPT, result_commands)
