@@ -22,7 +22,7 @@ def identify_tracks(media_path, stream_ids):
 # TODO progress bar, estimate, size difference in files
 # TODO support windows cmd window header progress
 def cmds_convert(src_file, src_opts, dst_file, dst_opts):
-    ffmpeg = 'ffmpeg -v error -stats -y{src_opts}-i {src}{dst_opts}{dst}'.format(
+    ffmpeg = u'ffmpeg -v error -stats -y{src_opts}-i {src}{dst_opts}{dst}'.format(
         src=cmd.quote(src_file), src_opts=cmd.make_whitespaced_args_string(src_opts),
         dst=cmd.quote(dst_file), dst_opts=cmd.make_whitespaced_args_string(dst_opts))
     commands = [ffmpeg]
