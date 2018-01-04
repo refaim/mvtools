@@ -364,10 +364,10 @@ def main():
         codecs_to_normalize = set([AudioTrack.AC3, AudioTrack.DTS])
         codecs_to_recode = set([AudioTrack.MP2, AudioTrack.FLAC])
         codecs_to_downmix = codecs_to_recode | set([AudioTrack.AAC_HE, AudioTrack.AC3, AudioTrack.DTS, AudioTrack.DTS_HD])
+        max_audio_channels = 2 if args.dm else 6
         for track in output_tracks[Track.AUD]:
             if track.codec_id() not in AudioTrack.CODEC_PROPS:
                 raise Exception('Unhandled audio codec {}'.format(track.codec_id()))
-            assert track.channels() <= 6
 
             if track.codec_id() in codecs_to_normalize:
                 src_eac_path = track.source_file()
@@ -382,16 +382,24 @@ def main():
                 track_sources[track.qualified_id()] = [dst_eac_path, 0]
                 mux_temporary_files.append(dst_eac_path)
 
-            recode = args.ar or track.codec_id() in codecs_to_recode
-            recode = recode or args.dm and (track.codec_id() in codecs_to_downmix or track.channels() > 2)
-            if recode:
+            need_recode = args.ar or track.codec_id() in codecs_to_recode
+            need_downmix = args.dm and track.codec_id() in codecs_to_downmix or track.channels() > max_audio_channels
+            if need_recode or need_downmix:
+                # TODO use eac3to to parse containers?
+                # TODO use -c:a copy and decode with eac3to? !!!!!!!!!!!!!!!!!!!!!!!!!!!
                 wav_path = platform.make_temporary_file('.wav')
-                ffmpeg_options = ['-f wav', '-rf64 auto']
-                if args.dm:
-                    ffmpeg_options.append('-ac 2')
                 track_file, track_id = track_sources[track.qualified_id()]
-                result_commands.extend(
-                    ffmpeg.cmds_extract_track(track_file, wav_path, track_id, [], ffmpeg_options))
+                result_commands.extend(ffmpeg.cmds_extract_track(
+                    track_file, wav_path, track_id, [], ['-f wav', '-rf64 auto']))
+
+                # TODO combine downmix with dialnorm removing?
+                if need_downmix:
+                    downmix_option = '-downStereo' if max_audio_channels == 2 else '-down6'
+                    old_wav_path = wav_path
+                    wav_path = platform.make_temporary_file('.wav')
+                    result_commands.append(u'call eac3to {} {} {}'.format(
+                        cmd.quote(old_wav_path), cmd.quote(wav_path), downmix_option))
+                    result_commands.append(cmd.del_files_command(old_wav_path))
 
                 m4a_path = platform.make_temporary_file('.m4a')
                 qaac_options = ['--tvbr {}'.format(63 if args.dm else 91), '--quality 2', '--rate keep', '--no-delay']
