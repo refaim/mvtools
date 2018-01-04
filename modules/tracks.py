@@ -259,11 +259,13 @@ class SubtitleTrack(Track):
     ASS = 'ass'
     PGS = 'hdmv_pgs_subtitle'
     SRT = 'subrip'
+    VOBSUB = 'dvd_subtitle'
 
     CODEC_NAMES = {
         ASS: 'ass',
         PGS: 'pgs',
         SRT: 'srt',
+        VOBSUB: 'sub',
     }
 
     def __init__(self, parent_path, ffm_data):
