@@ -366,9 +366,14 @@ def main():
         def make_single_track_file(track, stream_id):
             if track.is_single():
                 return (track.source_file(), False)
-            tmp_path = platform.make_temporary_file(track.get_single_track_file_extension())
-            result_commands.extend(ffmpeg.cmds_extract_track(
-                track.source_file(), tmp_path, track.id(), [], ['-c:{} copy'.format(stream_id)]))
+            extension = track.get_single_track_file_extension()
+            ffmpeg_opts = ['-c:{} copy'.format(stream_id)]
+            # TODO move it out !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            if stream_id == ffmpeg.STREAM_AUD and track.codec_id() in (AudioTrack.AAC_LC, AudioTrack.AAC_HE):
+                extension = '.wav'
+                ffmpeg_opts = ['-f wav', '-rf64 auto']
+            tmp_path = platform.make_temporary_file(extension)
+            result_commands.extend(ffmpeg.cmds_extract_track(track.source_file(), tmp_path, track.id(), [], ffmpeg_opts))
             return (tmp_path, True)
 
         # TODO change of fps AND video recode|normalize will lead to a/v desync

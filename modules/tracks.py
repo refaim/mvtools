@@ -108,8 +108,8 @@ class AudioTrack(Track):
     PCM_S16L = 'pcm_s16le'
 
     _CODEC_PROPS = {
-        AAC_HE: ['aac_he', '.m4a'],
-        AAC_LC: ['aac_lc', '.m4a'],
+        AAC_HE: ['aac_he', '.aac'],
+        AAC_LC: ['aac_lc', '.aac'],
         AC3: ['ac3', '.ac3'],
         DTS: ['dts', '.dts'],
         DTS_HD: ['dhm', None],
