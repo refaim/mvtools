@@ -9,6 +9,7 @@ import sys
 
 from modules import cmd
 from modules import ffmpeg
+from modules import lang
 from modules import media
 from modules import misc
 from modules import platform
@@ -422,6 +423,7 @@ def main():
                     script=cmd.quote(os.path.join(os.path.dirname(__file__), 'any2srt.py')),
                     src_path=cmd.quote(track_file), dst_path=cmd.quote(srt_file)))
                 track_sources[track.qualified_id()] = [srt_file, 0]
+                track.set_encoding(lang.norm_encoding('utf-8'))
                 mux_temporary_files.append(srt_file)
                 if is_track_file_temporary:
                     result_commands.append(cmd.del_files_command(track_file))
