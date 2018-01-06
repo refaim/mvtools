@@ -131,6 +131,7 @@ def main():
     parser.add_argument('-vr', default=False, action='store_true', help='recode video')
     parser.add_argument('-vt', help='force tune')
     parser.add_argument('-va', default=None, choices=['16:9'], help='set video display aspect ratio')
+    parser.add_argument('-nc', default=False, action='store_true', help='do not keep chapters')
 
     parser.add_argument('-cr', default=False, action='store_true', help='crop video')
     parser.add_argument('-cf', type=cmd.argparse_path, default=None, help='path to crop map file')
@@ -471,7 +472,7 @@ def main():
                     mux.append(tracks_flag_no)
             file_flags = ['--no-track-tags', '--no-attachments', '--no-buttons', '--no-global-tags']
             # TODO actually search for chapters !!!!!!!!!
-            if source_file != video_track.source_file():
+            if args.nc or source_file != video_track.source_file():
                 file_flags.append('--no-chapters')
             mux.append(u'{} {}'.format(u' '.join(file_flags), cmd.quote(source_file)))
 
