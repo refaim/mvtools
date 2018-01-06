@@ -1,5 +1,6 @@
 import codecs
 import os
+import re
 import sys
 
 import platform
@@ -17,7 +18,10 @@ def quote(path):
         if platform.is_windows() or "'" in path:
             assert '"' not in path
             q = u'"'
-    return q + path + q
+    return q + escape(path) + q
+
+def escape(path):
+    return re.sub(r'\^?&', u'^&', path)
 
 def make_whitespaced_args_string(args):
     result = u' '
