@@ -22,14 +22,18 @@ class File(object):
         '.ac3': (Track.AUD,),
         '.avi': (Track.VID, Track.AUD),
         '.dts': (Track.AUD,),
+        '.dtsma': (Track.AUD,),
+        '.eac3': (Track.AUD,),
         '.flac': (Track.AUD,),
         '.flv': (Track.VID, Track.AUD),
+        '.m4a': (Track.AUD,),
         '.m4v': (Track.VID, Track.AUD, Track.SUB),
         '.mkv': (Track.VID, Track.AUD, Track.SUB),
         '.mp4': (Track.VID, Track.AUD, Track.SUB),
         '.mpg': (Track.VID, Track.AUD, Track.SUB),
         '.srt': (Track.SUB,),
         '.sup': (Track.SUB,),
+        '.ts': (Track.VID, Track.AUD, Track.SUB),
         '.wmv': (Track.VID, Track.AUD, Track.SUB),
     }
 

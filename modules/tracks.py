@@ -102,6 +102,7 @@ class AudioTrack(Track):
     AC3 = 'ac3'
     DTS = 'dts_dts'
     DTS_HD_MA = 'dts_dts_hd_ma'
+    EAC3 = 'eac3'
     FLAC = 'flac'
     MP2 = 'mp2'
     MP3 = 'mp3'
@@ -112,7 +113,8 @@ class AudioTrack(Track):
         AAC_LC: ['aac_lc', '.aac'],
         AC3: ['ac3', '.ac3'],
         DTS: ['dts', '.dts'],
-        DTS_HD_MA: ['dts_hd_ma', '.dts'],
+        DTS_HD_MA: ['dtsma', '.dts'],
+        EAC3: ['eac3', '.eac3'],
         FLAC: ['flac', '.flac'],
         MP2: ['mp2', '.mp2'],
         MP3: ['mp3', '.mp3'],
@@ -135,14 +137,18 @@ class AudioTrack(Track):
 class VideoTrack(Track):
     PAL = 'not_ffmpeg_const_pal'
     NTSC = 'not_ffmpeg_const_ntsc'
+    DEINT = 'not_ffmpeg_const_deinterlaced'
     _STANDARDS = {
         '13978/583': NTSC,
         '20327/813': PAL,
         '20877/835': PAL,
+        '24/1': NTSC,
         '24000/1001': NTSC,
         '25/1': PAL,
+        '27021/1127': NTSC,
         '2997/125': NTSC,
         '30000/1001': NTSC,
+        '50/1': DEINT,
     }
 
     YUV420P = 'yuv420p'
@@ -218,6 +224,7 @@ class Colors(object):
     BT_709 = 'bt709'
     BT_601_PAL = 'bt470bg'
     BT_601_NTSC = 'smpte170m'
+    FCC = 'fcc'
 
     RANGE_TV = 'tv'
 
@@ -247,7 +254,7 @@ class Colors(object):
         result = self._ffm_data.get(metric)
         if result is None:
             result = self.correct_space()
-        assert result in (self.BT_709, self.BT_601_PAL, self.BT_601_NTSC)
+        assert result in (self.BT_709, self.BT_601_PAL, self.BT_601_NTSC, self.FCC)
         return result
 
     def space(self):
@@ -263,12 +270,14 @@ class SubtitleTrack(Track):
     _RE_SUB_CAPTIONS_NUM = re.compile(r', (?P<num>\d+) caption')
 
     ASS = 'ass'
+    MOV = 'mov_text'
     PGS = 'hdmv_pgs_subtitle'
     SRT = 'subrip'
     VOBSUB = 'dvd_subtitle'
 
     _CODEC_PROPS = {
         ASS: ['ass', '.ass'],
+        MOV: ['mov', '.ass'],
         PGS: ['pgs', '.sup'],
         SRT: ['srt', '.srt'],
         VOBSUB: ['vbs', None],
