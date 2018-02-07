@@ -102,7 +102,7 @@ class Movie(object):
         for track_type in (Track.AUD, Track.SUB):
             for track in self._single_file_tracks(track_type):
                 if track.language() == 'und':
-                    guessed = lang.guess(track.source_file())
+                    guessed = lang.guess(os.path.basename(track.source_file()))
                     if len(guessed) == 1:
                         track.set_language(guessed[0])
 
