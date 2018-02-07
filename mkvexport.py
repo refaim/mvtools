@@ -124,7 +124,6 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('sources', type=cmd.argparse_path, nargs='+', help='paths to source directories/files')
     parser.add_argument('dst', type=cmd.argparse_path, help='path to destination directory')
-    parser.add_argument('--temp', type=cmd.argparse_path, help='path to temporary directory')
 
     # TODO add argument groups
     parser.add_argument('-vk', default=False, action='store_true', help='keep source video')
@@ -151,8 +150,6 @@ def main():
     # TODO add parametes to ask for file name !!!
 
     args = parser.parse_args()
-    if not args.temp:
-        args.temp = args.dst
     if args.cf and args.sc:
         raise CliException(u'Use "-sc" OR "-cf"')
 
