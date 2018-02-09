@@ -213,11 +213,12 @@ def main():
                 candidates = {}
                 for track in movie.tracks(track_type):
                     if track.qualified_id() in used_tracks: continue
-                    if track.is_forced() != search_forced: continue
                     if track.language() not in (target_lang, 'und') and target_lang != 'und': continue
                     if any(s in track.name().lower() for s in [u'comment', u'коммент']): continue
-                    if not track.is_forced() and track.duration() is not None:
-                        if abs(track.duration() - reference_duration) > duration_threshold: continue
+                    if track.is_forced() is not None:
+                        if track.is_forced() != search_forced: continue
+                        if not track.is_forced() and track.duration() is not None:
+                            if reference_duration - track.duration() > duration_threshold: continue
                     candidates[track.qualified_id()] = track
                 if not candidates:
                     if search_forced and args.fo: continue

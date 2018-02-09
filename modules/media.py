@@ -120,12 +120,17 @@ class Movie(object):
             for track in self.tracks(track_type):
                 track.set_forced(False)
 
+        for track in self._single_file_tracks(Track.SUB):
+            if not track.is_binary():
+                track.set_forced(None)
+
+        relevant_tracks = [track for track in self.tracks(Track.SUB) if track.language() != 'chi']
         metrics = ((lambda t: t.frames_len(), 50.0), (lambda t: t.num_captions(), 50.0))
         for value_getter, threshold_percentage in metrics:
-            max_value = misc.safe_unsigned_max(value_getter(track) for track in self.tracks(Track.SUB))
+            max_value = misc.safe_unsigned_max(value_getter(track) for track in relevant_tracks)
             if max_value is not None:
                 forced_threshold = max_value / 100.0 * threshold_percentage
-                for track in self.tracks(Track.SUB):
+                for track in relevant_tracks:
                     if (max_value - value_getter(track)) > forced_threshold:
                         track.set_forced(True)
 
