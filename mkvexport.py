@@ -377,8 +377,8 @@ def main():
             return (tmp_path, True)
 
         # TODO change of fps AND video recode|normalize will lead to a/v desync
-        audio_codecs_to_denorm = set([AudioTrack.AC3, AudioTrack.DTS, AudioTrack.EAC3])
-        audio_codecs_to_recode = set([AudioTrack.MP2, AudioTrack.FLAC, AudioTrack.PCM_S16L, AudioTrack.DTS_HD_MA])
+        audio_codecs_to_denorm = set([AudioTrack.AC3, AudioTrack.DTS])
+        audio_codecs_to_recode = set([AudioTrack.DTSHRA, AudioTrack.DTSMA, AudioTrack.EAC3, AudioTrack.FLAC, AudioTrack.MP2, AudioTrack.PCM_S16L])
         audio_codecs_to_keep = set([AudioTrack.AAC_LC, AudioTrack.MP3])
         max_audio_channels = 2 if args.a2 else 6
         for track in output_tracks[Track.AUD]:

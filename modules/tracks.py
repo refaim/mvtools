@@ -103,7 +103,8 @@ class AudioTrack(Track):
     AAC_LC = 'aac_lc'
     AC3 = 'ac3'
     DTS = 'dts_dts'
-    DTS_HD_MA = 'dts_dts_hd_ma'
+    DTSHRA = 'dts_dts_hd_hra'
+    DTSMA = 'dts_dts_hd_ma'
     EAC3 = 'eac3'
     FLAC = 'flac'
     MP2 = 'mp2'
@@ -115,7 +116,8 @@ class AudioTrack(Track):
         AAC_LC: ['aac_lc', '.aac'],
         AC3: ['ac3', '.ac3'],
         DTS: ['dts', '.dts'],
-        DTS_HD_MA: ['dtsma', '.dts'],
+        DTSHRA: ['dtshra', '.dts'],
+        DTSMA: ['dtsma', '.dts'],
         EAC3: ['eac3', '.eac3'],
         FLAC: ['flac', '.flac'],
         MP2: ['mp2', '.mp2'],
