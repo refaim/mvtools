@@ -381,14 +381,13 @@ def main():
 
         # TODO change of fps AND video recode|normalize will lead to a/v desync
         audio_codecs_to_denorm = set([AudioTrack.AC3, AudioTrack.DTS])
-        audio_codecs_to_recode = set([AudioTrack.DTSHRA, AudioTrack.DTSMA, AudioTrack.EAC3, AudioTrack.FLAC, AudioTrack.MP2, AudioTrack.PCM_S16L])
+        audio_codecs_to_recode = set([AudioTrack.DTSHRA, AudioTrack.DTSMA, AudioTrack.EAC3, AudioTrack.FLAC, AudioTrack.MP2, AudioTrack.PCM_S16L, AudioTrack.TRUE_HD])
         audio_codecs_to_keep = set([AudioTrack.AAC_LC, AudioTrack.MP3])
         max_audio_channels = 2 if args.a2 else 6
         for track in output_tracks[Track.AUD]:
             if track.codec_unknown():
                 raise CliException(u'Unhandled audio codec {}'.format(track.codec_id()))
 
-            # TODO maybe use eac3to on all tracks to handle superfluos bitrate?
             need_denorm = track.codec_id() in audio_codecs_to_denorm
             need_downmix = track.channels() > max_audio_channels
             need_recode = need_downmix or track.codec_id() in audio_codecs_to_recode or args.ar and track.codec_id() not in audio_codecs_to_keep
