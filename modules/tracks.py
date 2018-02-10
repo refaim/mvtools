@@ -264,6 +264,8 @@ class Colors(object):
         return result
 
     def space(self):
+        if self._ffm_data.get('color_space') == self.FCC:
+            return self.FCC
         return self._guess_metric('color_space')
 
     def trc(self):
