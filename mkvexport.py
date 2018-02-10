@@ -157,7 +157,10 @@ def main():
         return os.path.splitext(os.path.normpath(path.strip()))[0]
 
     def read_crop_args(s):
-        return [int(x) for x in s.strip().split(':')]
+        s = s.strip()
+        if s.lower() == 'no':
+            return False
+        return [int(x) for x in s.split(':')]
 
     filenames_map = read_map_file(args.nf, read_movie_path, read_movie_path)
     raw_crops_map = read_map_file(args.cf, read_movie_path, read_crop_args)
@@ -316,7 +319,7 @@ def main():
                             pass
                     if args.sc:
                         common_crop_args = crop_args
-            if crop_args is None:
+            if crop_args is None or not crop_args:
                 crop_args = [video_track.width(), video_track.height(), 0, 0]
             dw, dh, dx, dy = crop_args
             if not VideoTrack.dimensions_correct(dw, dh):
