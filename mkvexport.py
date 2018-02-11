@@ -75,34 +75,34 @@ def ask_to_select(prompt, values, movie_path=None, header=None):
             chosen_id = misc.try_int(response)
     return chosen_id if isinstance(values, dict) else values_dict[chosen_id]
 
-# TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! if pass single path then external subtitles will be ignored
-def find_movies(path):
-    filepaths = []
-    if os.path.isfile(path):
-        filepaths.append(os.path.abspath(path))
-    elif os.path.isdir(path):
-        for root, dirs, files in os.walk(path):
-            for filename in files:
-                filepaths.append(os.path.abspath(os.path.join(root, filename)))
+def is_movie_satellite(movie_path, candidate_path):
+    return os.path.basename(candidate_path).lower().startswith(os.path.splitext(os.path.basename(movie_path))[0].lower())
+
+def find_movies(search_path):
+    found_files = []
+    if os.path.isfile(search_path):
+        search_dir = os.path.dirname(search_path)
+        for name in os.listdir(search_dir):
+            if is_movie_satellite(search_path, name):
+                found_files.append(os.path.join(search_dir, name))
+    elif os.path.isdir(search_path):
+        for search_dir, _, files in os.walk(search_path):
+            found_files.extend(os.path.join(search_dir, name) for name in files)
 
     media_by_folder = {}
-    for filepath in filepaths:
-        if platform.file_ext(filepath) in media.File.EXTENSIONS:
-            media_by_folder.setdefault(os.path.dirname(filepath), set()).add(filepath)
+    for path in (os.path.abspath(fp) for fp in found_files):
+        if platform.file_ext(path) in media.File.EXTENSIONS:
+            media_by_folder.setdefault(os.path.dirname(path), set()).add(path)
 
     media_groups = []
-    for fileset in media_by_folder.itervalues():
-        videopaths = [fp for fp in fileset if Track.VID in media.File.EXTENSIONS.get(platform.file_ext(fp), [])]
-        for videopath in sorted(videopaths):
-            if videopath in fileset:
-                group = [videopath]
-                videoname, _ = os.path.splitext(videopath)
-                for filepath in fileset:
-                    filename, _ = os.path.splitext(filepath)
-                    if filename.startswith(videoname):
-                        group.append(filepath)
+    for remaining_media in media_by_folder.itervalues():
+        video_paths = [fp for fp in remaining_media if Track.VID in media.File.EXTENSIONS.get(platform.file_ext(fp), [])]
+        for video in sorted(video_paths):
+            group = []
+            if video in remaining_media:
+                group = [video] + [path for path in remaining_media if is_movie_satellite(video, path)]
                 media_groups.append(group)
-            fileset -= set(group)
+            remaining_media -= set(group)
 
     for group in media_groups:
         yield media.Movie(group)
