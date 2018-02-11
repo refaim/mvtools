@@ -169,10 +169,7 @@ def main():
     crop_args_map = None if raw_crops_map is None else {}
     for argspath in args.sources:
         for movie_object in find_movies(argspath):
-            cur_name = os.path.basename(movie_object.main_path())
-            if os.path.isdir(argspath):
-                cur_name = os.path.relpath(movie_object.main_path(), argspath)
-            cur_name = os.path.normpath(cur_name)
+            cur_name = os.path.normpath(os.path.relpath(movie_object.main_path(), os.getcwd()))
             new_name = cur_name
             if filenames_map is not None:
                 raw_new_name_string = filenames_map[os.path.splitext(cur_name)[0]]
