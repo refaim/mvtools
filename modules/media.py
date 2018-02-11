@@ -99,6 +99,10 @@ class Movie(object):
                 yield file_tracks[0]
 
     def _set_languages(self):
+        for media_file in self._media_files:
+            if len(media_file.tracks(Track.VID)) == 1 and len(media_file.tracks(Track.AUD)) == 1:
+                media_file.tracks(Track.AUD)[0].set_language('und')
+
         for track_type in (Track.AUD, Track.SUB):
             for track in self._single_file_tracks(track_type):
                 if track.language() == 'und':
