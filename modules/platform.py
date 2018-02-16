@@ -23,7 +23,7 @@ def execute(command):
     if isinstance(command, list):
         result_command = [cmd.escape(arg).encode(cmd_encoding) for arg in command]
     else:
-        result_command = cmd.escape(command).encode(cmd_encoding)
+        result_command = command.encode(cmd_encoding)
     process = subprocess.Popen(result_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     stdout, stderr = process.communicate()
     if process.returncode != 0 or stderr:

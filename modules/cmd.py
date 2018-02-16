@@ -18,7 +18,7 @@ def quote(path):
         if platform.is_windows() or "'" in path:
             assert '"' not in path
             q = u'"'
-    return q + escape(path) + q
+    return q + path + q
 
 def escape(path):
     return re.sub(r'\^?&', u'^&', path)
