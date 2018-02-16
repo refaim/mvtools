@@ -6,6 +6,7 @@ RE_LETTER_CLUSTERS = re.compile(r'[a-z]+', re.IGNORECASE)
 
 LANGUAGES = {
     'ara': ['Arabic'],
+    'bul': ['Bulgarian'],
     'chi': ['Chinese'],
     'cze': ['Czech'],
     'dan': ['Danish'],
@@ -15,6 +16,7 @@ LANGUAGES = {
     'fin': ['Finnish'],
     'fre': ['French'],
     'ger': ['German'],
+    'gre': ['Modern Greek'],
     'heb': ['Hebrew'],
     'hrv': ['Croatian'],
     'hun': ['Hungarian'],
@@ -23,6 +25,7 @@ LANGUAGES = {
     'jpn': ['Japanese'],
     'kor': ['Korean'],
     'lav': ['Latvian'],
+    'lit': ['Lithuanian'],
     'nor': ['Norwegian'],
     'pol': ['Polish'],
     'por': ['Portuguese'],
@@ -54,6 +57,7 @@ def norm_encoding(s):
 
 def guess(filepath):
     found_languages = set()
+    # TODO parse 2xRus.Eng as und instead of eng
     for string in RE_LETTER_CLUSTERS.findall(filepath.lower()):
         if string in LANGUAGE_STRINGS:
             found_languages.add(LANGUAGE_STRINGS[string])
