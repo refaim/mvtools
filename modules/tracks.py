@@ -87,10 +87,8 @@ class Track(object):
         return misc.try_int(self._tags().get('NUMBER_OF_FRAMES-eng', None))
 
     def is_forced(self):
-        f = self._ffm_data['disposition']['forced']
-        if f is None:
-            return f
-        return bool(f) or any(s in self.name().lower() for s in [u'forced', u'форсир'])
+        forced = self._ffm_data['disposition']['forced']
+        return forced if forced is None else bool(forced)
 
     def set_forced(self, value):
         self._ffm_data['disposition']['forced'] = value

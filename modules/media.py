@@ -1,3 +1,5 @@
+# coding: utf-8
+
 import functools
 import os
 import re
@@ -127,6 +129,11 @@ class Movie(object):
         for track in self._single_file_tracks(Track.SUB):
             if not track.is_binary():
                 track.set_forced(None)
+
+        forced_strings = [u'forced', u'forsed', u'форсир', u'caption']
+        for track in self.tracks(Track.SUB):
+            if any(s in track.name().lower() for s in forced_strings):
+                track.set_forced(True)
 
         relevant_tracks = [track for track in self.tracks(Track.SUB) if track.language() != 'chi']
         metrics = ((lambda t: t.frames_len(), 50.0), (lambda t: t.num_captions(), 50.0))
