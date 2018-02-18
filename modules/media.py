@@ -1,5 +1,6 @@
 # coding: utf-8
 
+import fnmatch
 import functools
 import os
 import re
@@ -9,35 +10,45 @@ import lang
 import misc
 import platform
 
-from tracks import Track, AudioTrack, VideoTrack, SubtitleTrack
+from tracks import Track, AudioTrack, VideoTrack, SubtitleTrack, ChaptersTrack
 
 class File(object):
     _TRACK_PROPS_IDX_CLASS = 0
     _TRACK_PROPS_IDX_FFMPEG_STREAM = 1
     _TRACK_PROPS = {
+        Track.VID: (VideoTrack, ffmpeg.STREAM_VID),
         Track.AUD: (AudioTrack, ffmpeg.STREAM_AUD),
         Track.SUB: (SubtitleTrack, ffmpeg.STREAM_SUB),
-        Track.VID: (VideoTrack, ffmpeg.STREAM_VID),
+        Track.CHA: (ChaptersTrack, None),
     }
 
-    EXTENSIONS = {
-        '.ac3': (Track.AUD,),
-        '.avi': (Track.VID, Track.AUD),
-        '.dts': (Track.AUD,),
-        '.dtsma': (Track.AUD,),
-        '.eac3': (Track.AUD,),
-        '.flac': (Track.AUD,),
-        '.flv': (Track.VID, Track.AUD),
-        '.m4a': (Track.AUD,),
-        '.m4v': (Track.VID, Track.AUD, Track.SUB),
-        '.mkv': (Track.VID, Track.AUD, Track.SUB),
-        '.mp4': (Track.VID, Track.AUD, Track.SUB),
-        '.mpg': (Track.VID, Track.AUD, Track.SUB),
-        '.srt': (Track.SUB,),
-        '.sup': (Track.SUB,),
-        '.ts': (Track.VID, Track.AUD, Track.SUB),
-        '.wmv': (Track.VID, Track.AUD, Track.SUB),
+    CONTAINER_TRACK_TYPES = {
+        '*.ac3': (Track.AUD,),
+        '*.avi': (Track.VID, Track.AUD),
+        '*.dts': (Track.AUD,),
+        '*.dtsma': (Track.AUD,),
+        '*.eac3': (Track.AUD,),
+        '*.flac': (Track.AUD,),
+        '*.flv': (Track.VID, Track.AUD),
+        '*.m4a': (Track.AUD,),
+        '*.m4v': (Track.VID, Track.AUD, Track.SUB),
+        '*.mkv': (Track.VID, Track.AUD, Track.SUB),
+        '*.mp4': (Track.VID, Track.AUD, Track.SUB),
+        '*.mpg': (Track.VID, Track.AUD, Track.SUB),
+        '*.srt': (Track.SUB,),
+        '*.sup': (Track.SUB,),
+        '*.ts': (Track.VID, Track.AUD, Track.SUB),
+        '*.wmv': (Track.VID, Track.AUD, Track.SUB),
+        '*chapters*.txt': (Track.CHA,),
+        '*chapters*.xml': (Track.CHA,),
     }
+
+    @classmethod
+    def possible_track_types(cls, file_path):
+        for wildcard in cls.CONTAINER_TRACK_TYPES:
+            if fnmatch.fnmatch(file_path, wildcard):
+                return list(cls.CONTAINER_TRACK_TYPES[wildcard])
+        return []
 
     def __init__(self, file_path):
         self._path = file_path
@@ -49,10 +60,13 @@ class File(object):
     def _get_tracks(self):
         if self._tracks_by_type is None:
             tracks_data = {}
-            for track_type in self.EXTENSIONS[platform.file_ext(self._path)]:
-                stream_id = self._TRACK_PROPS[track_type][self._TRACK_PROPS_IDX_FFMPEG_STREAM]
-                for track_id, track in ffmpeg.identify_tracks(self._path, stream_id).iteritems():
-                    tracks_data.setdefault(track['codec_type'], {})[track_id] = track
+            for track_type in File.possible_track_types(self._path):
+                if track_type == Track.CHA:
+                    tracks_data.setdefault(Track.CHA, {})[-1] = {}
+                else:
+                    stream_id = self._TRACK_PROPS[track_type][self._TRACK_PROPS_IDX_FFMPEG_STREAM]
+                    for track_id, track in ffmpeg.identify_tracks(self._path, stream_id).iteritems():
+                        tracks_data.setdefault(track['codec_type'], {})[track_id] = track
 
             self._tracks_by_type = { track_type: [] for track_type in self._TRACK_PROPS.iterkeys() }
             for track_type, tracks_of_type in tracks_data.iteritems():
@@ -87,6 +101,7 @@ class Movie(object):
         self._media_paths.sort(key=functools.partial(self.sort_key, sort_prefix))
         self._media_files = [File(path) for path in self._media_paths]
         assert len(list(self.tracks(Track.VID))) >= 1
+        assert len(list(self.tracks(Track.CHA))) <= 1
         self._set_languages()
         self._set_forced()
         self._set_crf()
@@ -162,6 +177,10 @@ class Movie(object):
 
     def main_path(self):
         return self._main_path
+
+    def chapters_path(self):
+        tracks = list(self.tracks(Track.CHA))
+        return tracks[0].source_file() if tracks else None
 
     def reference_duration(self):
         durations = [track.duration() for track in self.tracks(Track.VID)]

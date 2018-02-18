@@ -47,6 +47,7 @@ ACTIONS_IDX_FUNC = 2
 # TODO table-like print
 def ask_to_select(prompt, values, movie_path=None, header=None):
     actions = {
+        # TODO preview multi-track audio-video
         'p': ('preview', movie_path and os.path.isfile(movie_path), lambda p: os.system('mplayer {} >nul 2>&1'.format(cmd.quote(p)))),
     }
     values_dict = values if isinstance(values, dict) else { i: v for i, v in enumerate(values) }
@@ -92,12 +93,12 @@ def find_movies(search_path):
 
     media_by_folder = {}
     for path in (os.path.abspath(fp) for fp in found_files):
-        if platform.file_ext(path) in media.File.EXTENSIONS:
+        if len(media.File.possible_track_types(path)) > 0:
             media_by_folder.setdefault(os.path.dirname(path), set()).add(path)
 
     media_groups = []
     for remaining_media in media_by_folder.itervalues():
-        video_paths = [fp for fp in remaining_media if Track.VID in media.File.EXTENSIONS.get(platform.file_ext(fp), [])]
+        video_paths = [fp for fp in remaining_media if Track.VID in media.File.possible_track_types(fp)]
         for video in sorted(video_paths):
             group = []
             if video in remaining_media:
@@ -131,7 +132,6 @@ def main():
     parser.add_argument('-vr', default=False, action='store_true', help='recode video')
     parser.add_argument('-vt', help='force tune')
     parser.add_argument('-va', default=None, choices=['16:9'], help='set video display aspect ratio')
-    parser.add_argument('-nc', default=False, action='store_true', help='do not keep chapters')
 
     parser.add_argument('-cr', default=False, action='store_true', help='crop video')
     parser.add_argument('-cf', type=cmd.argparse_path, default=None, help='path to crop map file')
@@ -471,8 +471,8 @@ def main():
                 elif tracks_flag_no:
                     mux.append(tracks_flag_no)
             file_flags = ['--no-track-tags', '--no-attachments', '--no-buttons', '--no-global-tags']
-            # TODO actually search for chapters !!!!!!!!!
-            if args.nc or source_file != video_track.source_file():
+            # TODO video source file may not be used at all !!!!!!!!!!!!!!
+            if source_file != video_track.source_file():
                 file_flags.append('--no-chapters')
             mux.append(u'{} {}'.format(u' '.join(file_flags), cmd.quote(source_file)))
 
@@ -489,6 +489,11 @@ def main():
             result_commands.append(u' '.join(mux))
         if len(mux_temporary_files) > 0:
             result_commands.append(cmd.del_files_command(*sorted(set(mux_temporary_files))))
+
+        if movie.chapters_path() is not None:
+            result_commands.append('mkvpropedit --chapters {} {}'.format(
+                cmd.quote(movie.chapters_path()), cmd.quote(mux_path)))
+
         result_commands.extend(cmd.move_file_commands(mux_path, target_path))
 
         # TODO return xx flag

@@ -10,6 +10,7 @@ class Track(object):
     AUD = 'audio'
     VID = 'video'
     SUB = 'subtitle'
+    CHA = 'chapters'
 
     TYPE_FLAGS = {
         VID: (None, '-D'),
@@ -312,3 +313,10 @@ class SubtitleTrack(Track):
         if match:
             return int(match.groupdict()['num'])
         return None
+
+class ChaptersTrack(Track):
+    def __init__(self, parent_path, ffm_data):
+        super(ChaptersTrack, self).__init__(parent_path, ffm_data, {})
+
+    def id(self):
+        return id(self)
