@@ -449,6 +449,7 @@ def main():
         track_ids_by_files = {}
         for qualified_id, (source_file, source_file_track_id) in track_sources.iteritems():
             track_ids_by_files.setdefault(source_file, {})[qualified_id] = source_file_track_id
+        track_ids_by_files.setdefault(video_track.source_file(), {})
 
         source_file_ids = {}
         for i, (source_file, track_ids_map) in enumerate(track_ids_by_files.iteritems()):
@@ -471,7 +472,6 @@ def main():
                 elif tracks_flag_no:
                     mux.append(tracks_flag_no)
             file_flags = ['--no-track-tags', '--no-attachments', '--no-buttons', '--no-global-tags']
-            # TODO video source file may not be used at all !!!!!!!!!!!!!!
             if source_file != video_track.source_file():
                 file_flags.append('--no-chapters')
             mux.append(u'{} {}'.format(u' '.join(file_flags), cmd.quote(source_file)))
