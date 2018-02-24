@@ -489,7 +489,7 @@ def main():
             result_commands.append(cmd.del_files_command(*sorted(set(mux_temporary_files))))
 
         if movie.chapters_path() is not None:
-            result_commands.append('mkvpropedit --chapters {} {}'.format(
+            result_commands.append(u'mkvpropedit --chapters {} {}'.format(
                 cmd.quote(movie.chapters_path()), cmd.quote(mux_path)))
 
         result_commands.extend(cmd.move_file_commands(mux_path, target_path))
