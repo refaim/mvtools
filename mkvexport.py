@@ -402,7 +402,7 @@ def main():
                 dst_track_file = eac_track_file
                 if need_recode:
                     m4a_track_file = platform.make_temporary_file('.m4a')
-                    qaac_opts = ['--tvbr {}'.format(63 if max_audio_channels == 2 else 91), '--quality 2', '--rate keep', '--no-delay']
+                    qaac_opts = ['--tvbr 91', '--quality 2', '--rate keep', '--no-delay']
                     qaac = u'qaac64 {} {} -o {}'.format(u' '.join(qaac_opts), cmd.quote(eac_track_file), cmd.quote(m4a_track_file))
                     result_commands.append(qaac)
                     result_commands.append(cmd.del_files_command(eac_track_file))
