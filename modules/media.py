@@ -142,11 +142,15 @@ class Movie(object):
             for track in self.tracks(track_type):
                 track.set_forced(False)
 
+        forced_strings = [u'forced', u'forsed', u'форсир']
         for track in self._single_file_tracks(Track.SUB):
             if not track.is_binary():
                 track.set_forced(None)
+            track_file = track.source_file().lower()
+            if u'normal' not in track_file and any(s in track_file for s in forced_strings):
+                track.set_forced(True)
 
-        forced_strings = [u'forced', u'forsed', u'форсир', u'caption']
+        forced_strings.append(u'caption')
         for track in self.tracks(Track.SUB):
             if any(s in track.name().lower() for s in forced_strings):
                 track.set_forced(True)
