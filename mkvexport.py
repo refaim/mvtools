@@ -42,12 +42,7 @@ ACTIONS_IDX_TEXT = 0
 ACTIONS_IDX_ENABLED = 1
 ACTIONS_IDX_FUNC = 2
 # TODO table-like print
-def ask_to_select(prompt, values, movie_path=None, header=None):
-    actions = {
-        # TODO FIX UNICODE FILENAME PREVIEW !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        # TODO preview multi-track audio-video
-        'p': ('preview', movie_path and os.path.isfile(movie_path), lambda p: os.system('mplayer {} >nul 2>&1'.format(cmd.quote(p)))),
-    }
+def ask_to_select(prompt, values, handle_response=lambda x: x, header=None):
     values_dict = values if isinstance(values, dict) else { i: v for i, v in enumerate(values) }
     chosen_id = None
     while chosen_id not in values_dict:
@@ -56,24 +51,39 @@ def ask_to_select(prompt, values, movie_path=None, header=None):
         value_fmt = u'{:>%d} {}' % max(len(str(i)) for i in values_dict.iterkeys())
         for i, v in sorted(values_dict.iteritems()):
             platform.print_string(value_fmt.format(i, v))
-
-        hint_strings = [u'{} {}'.format(key.upper(), text)
-            for key, (text, enabled, _) in sorted(actions.iteritems()) if enabled]
-        prompt_strings = [prompt]
-        if hint_strings:
-            prompt_strings.append('({})'.format(u', '.join(hint_strings)))
-        final_prompt = u'{}: '.format(u' '.join(prompt_strings))
-
         try:
-            response = raw_input(final_prompt).strip().lower()
+            response = raw_input(u'{}: '.format(prompt)).strip().lower()
+            handle_response(response)
         except EOFError:
             raise KeyboardInterrupt()
-        action = actions.get(response)
-        if action and action[ACTIONS_IDX_ENABLED]:
-            action[ACTIONS_IDX_FUNC](movie_path)
-        else:
-            chosen_id = misc.try_int(response)
+        chosen_id = misc.try_int(response)
     return chosen_id if isinstance(values, dict) else values_dict[chosen_id]
+
+def ask_to_select_tracks(movie, track_type, candidates, header):
+    def handle_response(text):
+        MPV_OPTS = { Track.AUD: '--audio-file {}', Track.SUB: '--sub-file {}' }
+        if text == 'p':
+            command = [u'mpv {}'.format(cmd.quote(list(movie.tracks(Track.VID))[0].source_file()))]
+            for track in sorted(candidates, key=lambda t: movie.track_index_in_type(t)):
+                if track.is_single():
+                    command.append(MPV_OPTS[track.type()].format(cmd.quote(track.source_file())))
+            os.system(u'{} >nul 2>&1'.format(u' '.join(command)))
+        return text
+
+    candidate_strings = {}
+    from_single_file = len({ t.source_file() for t in candidates }) == 1
+    for track in candidates:
+        strings = [u'(ID {})'.format(track.id()), track.language(), track.codec_name()]
+        if track_type == Track.AUD:
+            strings.append('{}ch'.format(track.channels()))
+        if track.name():
+            strings.append(track.name())
+        if track.is_default():
+            strings.append(u'(default)')
+        if not from_single_file:
+            strings.append(u'[{}]'.format(os.path.basename(track.source_file())))
+        candidate_strings[movie.track_index_in_type(track)] = u' '.join(strings)
+    return ask_to_select(u'Enter track index', candidate_strings, handle_response, header)
 
 def is_movie_satellite(movie_path, candidate_path):
     return os.path.basename(candidate_path).lower().startswith(os.path.splitext(os.path.basename(movie_path))[0].lower())
@@ -226,29 +236,14 @@ def main():
                 chosen_track_id = None
                 if len(candidates) == 1: chosen_track_id = list(candidates.keys())[0]
 
+                sorted_candidates = sorted(candidates.itervalues(), key=lambda t: t.qualified_id())
                 if chosen_track_id not in candidates:
-                    candidate_filepaths = set(track.source_file() for track in candidates.itervalues())
-                    from_single_file = len(candidate_filepaths) == 1
-                    preview_path = list(candidate_filepaths)[0] if from_single_file else None
-
                     candidates_by_index = {}
-                    candidate_strings = {}
-                    for track in sorted(candidates.itervalues(), key=lambda t: t.qualified_id()):
-                        strings = [u'(ID {})'.format(track.id()), track.language(), track.codec_name()]
-                        if track_type == Track.AUD:
-                            strings.append('{}ch'.format(track.channels()))
-                        if track.name():
-                            strings.append(track.name())
-                        if track.is_default():
-                            strings.append(u'(default)')
-                        if not from_single_file:
-                            strings.append(u'[{}]'.format(os.path.basename(track.source_file())))
-                        track_index = movie.track_index_in_type(track)
-                        candidate_strings[track_index] = u' '.join(strings)
-                        candidates_by_index[track_index] = track.qualified_id()
+                    for track in sorted_candidates:
+                        candidates_by_index[movie.track_index_in_type(track)] = track.qualified_id()
                     header = u'--- {}, {}, {} ---'.format(
                         track_type.capitalize(), target_lang.upper(), forced_string)
-                    chosen_track_index = ask_to_select(u'Enter track index', candidate_strings, preview_path, header=header)
+                    chosen_track_index = ask_to_select_tracks(movie, track_type, sorted_candidates, header)
                     chosen_track_id = candidates_by_index[chosen_track_index]
 
                 used_tracks.add(chosen_track_id)
@@ -285,10 +280,8 @@ def main():
             video_track.profile() == VideoTrack.PROFILE_HIGH and \
             video_track.level() == VideoTrack.LEVEL_41
         if args.vr or not encoded_ok and not args.vk:
-            chosen_tune = args.vt or ask_to_select(
-                u'Enter tune ID',
-                sorted(TUNES.iterkeys(), key=lambda k: TUNES[k][TUNES_IDX_SORT_KEY]),
-                video_track.source_file())
+            chosen_tune = args.vt or ask_to_select(u'Enter tune ID',
+                sorted(TUNES.iterkeys(), key=lambda k: TUNES[k][TUNES_IDX_SORT_KEY]))
             tune_params = TUNES[chosen_tune]
 
             # TODO check out rutracker manuals for dvd rip filters and stuff
