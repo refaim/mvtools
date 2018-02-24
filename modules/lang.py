@@ -22,6 +22,7 @@ LANGUAGES = {
     'hun': ['Hungarian'],
     'ice': ['Icelandic'],
     'ind': ['Indonesian'],
+    'ita': ['Italian'],
     'jpn': ['Japanese'],
     'kor': ['Korean'],
     'lav': ['Latvian'],

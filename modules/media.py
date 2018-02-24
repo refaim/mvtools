@@ -26,6 +26,7 @@ class File(object):
         '*.ac3': (Track.AUD,),
         '*.avi': (Track.VID, Track.AUD),
         '*.dts': (Track.AUD,),
+        '*.dtshr': (Track.AUD,),
         '*.dtsma': (Track.AUD,),
         '*.eac3': (Track.AUD,),
         '*.flac': (Track.AUD,),

@@ -44,6 +44,7 @@ ACTIONS_IDX_FUNC = 2
 # TODO table-like print
 def ask_to_select(prompt, values, movie_path=None, header=None):
     actions = {
+        # TODO FIX UNICODE FILENAME PREVIEW !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         # TODO preview multi-track audio-video
         'p': ('preview', movie_path and os.path.isfile(movie_path), lambda p: os.system('mplayer {} >nul 2>&1'.format(cmd.quote(p)))),
     }
