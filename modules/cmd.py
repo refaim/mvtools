@@ -1,12 +1,8 @@
 import codecs
 import os
 import re
-import sys
 
 import platform
-
-def argparse_path(bytestring):
-    return os.path.abspath(os.path.expandvars(bytestring.decode(sys.getfilesystemencoding())))
 
 def quote(path):
     if path == '-':

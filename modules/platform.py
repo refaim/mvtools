@@ -18,15 +18,16 @@ def print_string(s, *args, **kwargs):
     output = kwargs.get('file', sys.stdout)
     print(s.encode(output.encoding, errors='ignore'), *args, **kwargs)
 
-def execute(command):
+def execute(command, capture_output=True):
     cmd_encoding = locale.getpreferredencoding()
     if isinstance(command, list):
         result_command = [cmd.escape(arg).encode(cmd_encoding) for arg in command]
     else:
         result_command = command.encode(cmd_encoding)
-    process = subprocess.Popen(result_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    output_buffer = subprocess.PIPE if capture_output else None
+    process = subprocess.Popen(result_command, stdout=output_buffer, stderr=output_buffer, shell=True)
     stdout, stderr = process.communicate()
-    if process.returncode != 0 or stderr:
+    if process.returncode != 0 or capture_output and stderr:
         print_string(stderr.decode(locale.getpreferredencoding()), file=sys.stderr)
         raise Exception('Process execution error!')
     return stdout

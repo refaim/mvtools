@@ -5,8 +5,8 @@ import codecs
 import collections
 import os
 import shutil
-import sys
 
+from modules import cli
 from modules import cmd
 from modules import ffmpeg
 from modules import lang
@@ -37,9 +37,6 @@ LANGUAGES = {
     'eng': ('en',),
     'jpn': ('jp',),
 }
-
-class CliException(Exception):
-    pass
 
 ACTIONS_IDX_TEXT = 0
 ACTIONS_IDX_ENABLED = 1
@@ -113,7 +110,7 @@ def read_map_file(path, handle_key, handle_value):
     result = None
     if path is not None:
         if not os.path.isfile(path):
-            raise CliException(u'Could not open file "{}"'.format(path))
+            raise cli.Error(u'Could not open file "{}"'.format(path))
         result = {}
         with codecs.open(path, 'r', 'utf-8') as fobj:
             for line in fobj:
@@ -124,8 +121,8 @@ def read_map_file(path, handle_key, handle_value):
 def main():
     languages = sorted(LANGUAGES.iterkeys())
     parser = argparse.ArgumentParser()
-    parser.add_argument('sources', type=cmd.argparse_path, nargs='+', help='paths to source directories/files')
-    parser.add_argument('dst', type=cmd.argparse_path, help='path to destination directory')
+    parser.add_argument('sources', type=cli.argparse_path, nargs='+', help='paths to source directories/files')
+    parser.add_argument('dst', type=cli.argparse_path, help='path to destination directory')
 
     # TODO add argument groups
     parser.add_argument('-vk', default=False, action='store_true', help='keep source video')
@@ -134,7 +131,7 @@ def main():
     parser.add_argument('-va', default=None, choices=['16:9'], help='set video display aspect ratio')
 
     parser.add_argument('-cr', default=False, action='store_true', help='crop video')
-    parser.add_argument('-cf', type=cmd.argparse_path, default=None, help='path to crop map file')
+    parser.add_argument('-cf', type=cli.argparse_path, default=None, help='path to crop map file')
     parser.add_argument('-sc', default=False, action='store_true', help='use same crop values for all files')
 
     parser.add_argument('-al', nargs='*', choices=languages, default=[], help='ordered list of audio languages to keep')
@@ -146,13 +143,13 @@ def main():
     parser.add_argument('-fo', default=False, action='store_true', help='make forced subtitles optional')
 
     parser.add_argument('-eo', default=False, action='store_true', help='remux only if re-encoding')
-    parser.add_argument('-nf', type=cmd.argparse_path, default=None, help='path to names map file')
+    parser.add_argument('-nf', type=cli.argparse_path, default=None, help='path to names map file')
 
     # TODO add parametes to ask for file name !!!
 
     args = parser.parse_args()
     if args.cf and args.sc:
-        raise CliException(u'Use "-sc" OR "-cf"')
+        raise cli.Error(u'Use "-sc" OR "-cf"')
 
     def read_movie_path(path):
         return os.path.splitext(os.path.normpath(path.strip()))[0]
@@ -223,7 +220,7 @@ def main():
                     candidates[track.qualified_id()] = track
                 if not candidates:
                     if search_forced and args.fo: continue
-                    raise CliException(u'{} {} {} not found'.format(forced_string, track_type, target_lang))
+                    raise cli.Error(u'{} {} {} not found'.format(forced_string, track_type, target_lang))
 
                 chosen_track_id = None
                 if len(candidates) == 1: chosen_track_id = list(candidates.keys())[0]
@@ -336,7 +333,7 @@ def main():
 
             dst_color_space = src_colors.correct_space()
             if src_colors.space() != dst_color_space:
-                raise CliException(u'Colorspace conversion not implemented')
+                raise cli.Error(u'Colorspace conversion not implemented')
                 # TODO specify input/output color_range
                 # TODO specify each input component separately
                 # TODO The input transfer characteristics, color space, color primaries and color range should be set on the input data
@@ -384,7 +381,7 @@ def main():
         max_audio_channels = 2 if args.a2 else 6
         for track in output_tracks[Track.AUD]:
             if track.codec_unknown():
-                raise CliException(u'Unhandled audio codec {}'.format(track.codec_id()))
+                raise cli.Error(u'Unhandled audio codec {}'.format(track.codec_id()))
 
             need_denorm = track.codec_id() in audio_codecs_to_denorm
             need_downmix = track.channels() > max_audio_channels
@@ -415,7 +412,7 @@ def main():
 
         for track in output_tracks[Track.SUB]:
             if track.codec_unknown():
-                raise CliException(u'Unhandled subtitle codec {}'.format(track.codec_id()))
+                raise cli.Error(u'Unhandled subtitle codec {}'.format(track.codec_id()))
             if track.is_text():
                 # TODO tx3g should be converted to ass without -c:s copy
                 track_file, is_track_file_temporary = make_single_track_file(track, ffmpeg.STREAM_SUB)
@@ -503,15 +500,4 @@ def main():
     return 0
 
 if __name__ == '__main__':
-    error = None
-    return_code = 0
-    try:
-        return_code = main()
-    except CliException as e:
-        error = e.message
-    except KeyboardInterrupt:
-        error = u'Interrupted by user'
-    if error is not None:
-        platform.print_string(error)
-        return_code = 1
-    sys.exit(return_code)
+    cli.run(main)
