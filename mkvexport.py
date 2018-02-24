@@ -100,7 +100,7 @@ def find_movies(search_path):
         for video in sorted(video_paths):
             group = []
             if video in remaining_media:
-                group = [video] + [path for path in remaining_media if is_movie_satellite(video, path)]
+                group = [path for path in remaining_media if is_movie_satellite(video, path)]
                 media_groups.append(group)
             remaining_media -= set(group)
 
