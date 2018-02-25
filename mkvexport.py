@@ -154,7 +154,6 @@ def main():
     parser.add_argument('-fl', nargs='*', choices=languages, default=[], help='ordered list of forced subtitle languages to keep')
     parser.add_argument('-fo', default=False, action='store_true', help='make forced subtitles optional')
 
-    parser.add_argument('-eo', default=False, action='store_true', help='remux only if re-encoding')
     parser.add_argument('-nf', type=cli.argparse_path, default=None, help='path to names map file')
 
     # TODO add parametes to ask for file name !!!
@@ -479,7 +478,7 @@ def main():
                 track_order.append('{}:{}'.format(source_file_ids[source_file], source_file_track_id))
         mux.append('--track-order {}'.format(','.join(track_order)))
 
-        if len(source_file_ids) > 1 or not args.eo:
+        if len(source_file_ids) > 1:
             result_commands.append(u' '.join(mux))
         if len(mux_temporary_files) > 0:
             result_commands.append(cmd.del_files_command(*sorted(set(mux_temporary_files))))
