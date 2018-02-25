@@ -302,7 +302,6 @@ def main():
             # TODO check out rutracker manuals for dvd rip filters and stuff
             ffmpeg_filters = []
 
-            # TODO what about interleaved?
             assert video_track.field_order() is not None
             if video_track.field_order() in (VideoTrack.FO_INT_BOT, VideoTrack.FO_INT_TOP):
                 ffmpeg_filters.append('yadif=1:-1:1')
@@ -383,7 +382,6 @@ def main():
             result_commands.extend(ffmpeg.cmds_extract_track(track.source_file(), tmp_path, track.id(), [], ffmpeg_opts))
             return (tmp_path, True)
 
-        # TODO change of fps AND video recode|normalize will lead to a/v desync
         audio_codecs_to_denorm = set([AudioTrack.AC3, AudioTrack.DTS])
         audio_codecs_to_recode = set([AudioTrack.DTSHRA, AudioTrack.DTSMA, AudioTrack.EAC3, AudioTrack.FLAC, AudioTrack.MP2, AudioTrack.PCM_S16L, AudioTrack.TRUE_HD])
         audio_codecs_to_keep = set([AudioTrack.AAC_LC, AudioTrack.MP3])
