@@ -293,7 +293,7 @@ def main():
                 ffmpeg_filters.append('yadif=1:-1:1')
 
             crop_args = None
-            if args.cr:
+            if args.cr or args.cf:
                 if common_crop_args is not None:
                     crop_args = common_crop_args
                 if crop_args_map is not None:
