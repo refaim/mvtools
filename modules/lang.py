@@ -1,8 +1,7 @@
 import re
 
 import misc
-
-RE_LETTER_CLUSTERS = re.compile(r'[a-z]+', re.IGNORECASE)
+import platform
 
 LANGUAGES = {
     'ara': ['Arabic'],
@@ -57,10 +56,10 @@ def norm_lang(s):
 def norm_encoding(s):
     return ENCODING_STRINGS[s.lower()]
 
-def guess(filepath):
+def guess(file_path):
     found_languages = set()
-    # TODO parse 2xRus.Eng as und instead of eng
-    for string in RE_LETTER_CLUSTERS.findall(filepath.lower()):
+    file_name = re.sub(r'\dx', r'', platform.file_name(file_path).lower())
+    for string in re.findall(r'[a-z]+', file_name, re.IGNORECASE):
         if string in LANGUAGE_STRINGS:
             found_languages.add(LANGUAGE_STRINGS[string])
     return list(found_languages)
