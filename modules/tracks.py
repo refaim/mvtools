@@ -139,6 +139,9 @@ class AudioTrack(Track):
     def channels(self):
         return int(self._ffm_data['channels'])
 
+    def delay(self):
+        return int(self._ffm_data['start_pts'])
+
 class VideoTrack(Track):
     PAL = 'not_ffmpeg_const_pal'
     NTSC = 'not_ffmpeg_const_ntsc'

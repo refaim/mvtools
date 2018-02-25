@@ -388,6 +388,8 @@ def main():
                 eac_opts = []
                 if need_downmix:
                     eac_opts.append('-downStereo' if max_audio_channels == 2 else '-down6')
+                if track.delay() != 0:
+                    eac_opts.append('{}{}ms'.format('+' if track.delay() > 0 else '-', abs(track.delay())))
                 result_commands.append(u'call eac3to {} {} {}'.format(
                     cmd.quote(src_track_file), cmd.quote(eac_track_file), ' '.join(eac_opts)))
                 if is_src_track_file_temporary:
