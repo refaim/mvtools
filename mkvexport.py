@@ -63,13 +63,13 @@ def ask_to_select(prompt, values, handle_response=lambda x: x, header=None):
 
 def ask_to_select_tracks(movie, track_type, candidates, header):
     def handle_response(text):
-        MPV_OPTS = { Track.AUD: '--audio-file {}', Track.SUB: '--sub-file {}' }
+        MPV_OPTS = { Track.AUD: u'--audio-file {}', Track.SUB: u'--sub-file {}' }
         if text == 'p':
             command = [u'mpv {}'.format(cmd.quote(list(movie.tracks(Track.VID))[0].source_file()))]
             for track in sorted(candidates, key=lambda t: movie.track_index_in_type(t)):
                 if track.is_single():
                     command.append(MPV_OPTS[track.type()].format(cmd.quote(track.source_file())))
-            os.system(u'{} >nul 2>&1'.format(u' '.join(command)))
+            platform.execute(u'{} >nul 2>&1'.format(u' '.join(command)), capture_output=False)
         return text
 
     candidate_strings = {}
