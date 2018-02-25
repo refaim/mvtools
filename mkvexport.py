@@ -4,7 +4,9 @@ import argparse
 import codecs
 import collections
 import os
+import re
 import shutil
+import tvdb_api
 
 from modules import cli
 from modules import cmd
@@ -155,12 +157,15 @@ def main():
     parser.add_argument('-fo', default=False, action='store_true', help='make forced subtitles optional')
 
     parser.add_argument('-nf', type=cli.argparse_path, default=None, help='path to names map file')
-
-    # TODO add parametes to ask for file name !!!
+    parser.add_argument('-tv', default=None, help='TV series name')
 
     args = parser.parse_args()
     if args.cf and args.sc:
-        raise cli.Error(u'Use "-sc" OR "-cf"')
+        raise cli.Error(u'Use "-cf" OR "-sc"')
+    if args.nf and args.tv:
+        raise cli.Error(u'Use "-nf" OR "-tv"')
+    if args.vk and (args.vr or args.vt):
+        raise cli.Error(u'Use "-vk" OR "-vr/-vt"')
 
     def read_movie_path(path):
         return os.path.splitext(os.path.normpath(path.strip()))[0]
@@ -174,18 +179,28 @@ def main():
     filenames_map = read_map_file(args.nf, read_movie_path, read_movie_path)
     raw_crops_map = read_map_file(args.cf, read_movie_path, read_crop_args)
 
+    if args.tv:
+        tvdb = tvdb_api.Tvdb()
+
     movies = {}
     crop_args_map = None if raw_crops_map is None else {}
     for argspath in args.sources:
         for movie_object in find_movies(argspath):
             cur_name = os.path.normpath(os.path.relpath(movie_object.main_path(), os.getcwd()))
             new_name = cur_name
-            if filenames_map is not None:
+            if args.tv:
+                match = re.match(r'.*s(\d+).?e(\d+)', os.path.basename(movie_object.main_path()), re.IGNORECASE)
+                season, episode = [int(x) for x in match.groups()]
+                episode_info = tvdb[args.tv][season][episode]
+                assert episode_info['dvdEpisodeNumber'] == episode_info['airedEpisodeNumber']
+                new_name = u'{:02d} {}'.format(episode_info['dvdEpisodeNumber'], episode_info['episodename'])
+            elif filenames_map is not None:
                 raw_new_name_string = filenames_map[os.path.splitext(cur_name)[0]]
                 new_name = None
                 if raw_new_name_string == 'NO': continue
                 elif raw_new_name_string == 'KEEP': new_name = cur_name
-                else: new_name = u'{}.mkv'.format(raw_new_name_string)
+                else: new_name = raw_new_name_string
+            # TODO check if filename valid, convert if not !!!!!!!!!!!!!!!!!!
             new_path = os.path.join(os.path.abspath(args.dst), os.path.splitext(new_name)[0] + '.mkv')
             if raw_crops_map is not None:
                 crop_args_map[movie_object.main_path()] = raw_crops_map[os.path.splitext(cur_name)[0]]
