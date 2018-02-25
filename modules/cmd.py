@@ -34,6 +34,8 @@ def move_file_commands(src_file, dst_file):
             src_folder=quote(os.path.dirname(src_file)),
             dst_folder=quote(os.path.dirname(dst_file)),
             src_name=quote(os.path.basename(src_file))),
+        u'if exist {dst_file} del /q {dst_file}'.format(
+            dst_file=quote(dst_file)),
         u'ren {src_file} {dst_name}'.format(
             src_file=quote(os.path.join(os.path.dirname(dst_file), os.path.basename(src_file))),
             dst_name=quote(os.path.basename(dst_file)))
