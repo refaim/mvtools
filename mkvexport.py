@@ -88,7 +88,7 @@ def ask_to_select_tracks(movie, track_type, candidates, header):
     return ask_to_select(u'Enter track index', candidate_strings, handle_response, header)
 
 def is_movie_satellite(movie_path, candidate_path):
-    return os.path.basename(candidate_path).lower().startswith(os.path.splitext(os.path.basename(movie_path))[0].lower())
+    return os.path.basename(candidate_path).lower().startswith(platform.file_name(movie_path).lower())
 
 def find_movies(search_path):
     found_files = []
@@ -195,16 +195,16 @@ def main():
                 assert episode_info['dvdEpisodeNumber'] == episode_info['airedEpisodeNumber']
                 new_name = u'{:02d} {}'.format(episode_info['dvdEpisodeNumber'], episode_info['episodename'])
             elif filenames_map is not None:
-                raw_new_name_string = filenames_map[os.path.splitext(cur_name)[0]]
+                raw_new_name_string = filenames_map[platform.file_name(cur_name)]
                 new_name = None
                 if raw_new_name_string == 'NO': continue
                 elif raw_new_name_string == 'KEEP': new_name = cur_name
                 else: new_name = raw_new_name_string
-            # TODO check if filename valid, convert if not !!!!!!!!!!!!!!!!!!
-            new_path = os.path.join(os.path.abspath(args.dst), os.path.splitext(new_name)[0] + '.mkv')
+            new_name = platform.clean_filename(new_name)
+            new_path = os.path.join(os.path.abspath(args.dst), platform.file_name(new_name) + '.mkv')
             if raw_crops_map is not None:
-                crop_args_map[movie_object.main_path()] = raw_crops_map[os.path.splitext(cur_name)[0]]
-            assert new_path not in movies
+                crop_args_map[movie_object.main_path()] = raw_crops_map[platform.file_name(cur_name)]
+            assert new_path not in movies, new_path
             movies[new_path] = movie_object
 
     output_track_specs = collections.OrderedDict([

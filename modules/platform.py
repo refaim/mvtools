@@ -35,6 +35,9 @@ def execute(command, capture_output=True):
 def make_temporary_file(extension):
     return os.path.join(tempfile.gettempdir(), u'{}.{}'.format(uuid.uuid4(), extension.lstrip('.')))
 
+def file_name(path):
+    return os.path.splitext(os.path.basename(path))[0]
+
 def file_ext(path):
     return os.path.splitext(path)[1].lower()
 
@@ -46,3 +49,12 @@ def detect_encoding(filepath):
             break
     detector.close()
     return detector.result
+
+def clean_filename(filename):
+    if not is_windows():
+        return filename
+    filename = filename.replace(u': ', u' - ')
+    name, ext = os.path.splitext(filename)
+    filename = name.rstrip(u'.').strip() + ext.strip()
+    invalid_characters = set(r'<>:"/\|?*')
+    return u''.join(c for c in filename if c not in invalid_characters)
