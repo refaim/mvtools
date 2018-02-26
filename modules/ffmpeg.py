@@ -12,9 +12,16 @@ STREAM_VID = 'V'
 
 def identify_tracks(media_path, stream_ids):
     tracks = {}
-    template = u'ffprobe -v quiet -print_format json -show_streams -select_streams'
+    ffprobe_opts = [
+        u'-v quiet',
+        u'-print_format json',
+        u'-probesize {}'.format(50 * 1024 * 1024),
+        u'-analyzeduration {}'.format(int(3e+7)),
+        u'-show_streams',
+    ]
     for stream_specifier in stream_ids:
-        ffprobe = u' '.join([template, stream_specifier, cmd.quote(media_path)])
+        ffprobe = u'ffprobe {opts} -select_streams {stream} {path}'.format(
+            opts=u' '.join(ffprobe_opts), stream=stream_specifier, path=cmd.quote(media_path))
         for stream in json.loads(platform.execute(ffprobe))['streams']:
             tracks[stream['index']] = stream
     return tracks
