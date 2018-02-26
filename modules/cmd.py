@@ -44,13 +44,16 @@ def move_file_commands(src_file, dst_file):
 def create_dir_command(dir_path):
     return u'if not exist {path} mkdir {path}'.format(path=quote(dir_path))
 
-def write_batch(filepath, commands):
+def write_batch(filepath, commands, allowed_exit_codes):
     with codecs.open(filepath, 'a', 'cp866') as fobj:
         for command in commands:
-            min_errorlevel = 2 if command.lower().startswith('robocopy') else 1
+            fail_exit_code = 1
+            for program, code in allowed_exit_codes.iteritems():
+                if program in command.lower():
+                    fail_exit_code = code + 1
             exit_clause = u'exit /b 1'
-            if min_errorlevel > 1:
-                exit_clause = u'if errorlevel {} exit /b 1'.format(min_errorlevel)
+            if fail_exit_code > 1:
+                exit_clause = u'if errorlevel {} exit /b 1'.format(fail_exit_code)
             result_string = u'{} || {}'.format(command.strip(), exit_clause)
             fobj.write(u'{}\r\n'.format(result_string))
         fobj.write(u'\r\n')

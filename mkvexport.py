@@ -504,7 +504,7 @@ def main():
 
         # TODO return xx flag
 
-        cmd.write_batch(MUX_SCRIPT, result_commands)
+        cmd.write_batch(MUX_SCRIPT, result_commands, { 'robocopy': 1, 'mkvmerge': 1 })
 
     return 0
 
