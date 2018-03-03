@@ -22,15 +22,15 @@ LANG_ORDER = ['und', 'jpn', 'eng', 'rus']
 MUX_SCRIPT = os.path.join(os.getcwd(), 'mux.cmd')
 MUX_HEADER = os.path.join(os.path.dirname(__file__), 'mux_header.cmd')
 
-TUNES_IDX_SORT_KEY = 0
-TUNES_IDX_CRF = 1
-TUNES_IDX_REAL_TUNE = 2
-TUNES = {
-    'animation': (1, 18, 'animation'),
-    'film': (2, 22, 'film'),
-    'trash': (3, 23, 'film'),
-    'supertrash': (4, 25, 'film'),
-}
+TUNES_IDX_CRF = 0
+TUNES_IDX_REAL_TUNE = 1
+TUNES = collections.OrderedDict((
+    ('anm_good', (18, 'animation')),
+    ('anm_trash', (23, 'animation')),
+    ('film_good', (22, 'film')),
+    ('film_trash', (23, 'film')),
+    ('film_supertrash', (25, 'film')),
+))
 
 # TODO move out
 LANGUAGES_IDX_SUB_LANG = 0
@@ -295,8 +295,7 @@ def main():
             video_track.profile() == VideoTrack.PROFILE_HIGH and \
             video_track.level() == VideoTrack.LEVEL_41
         if args.vr or not encoded_ok and not args.vk:
-            chosen_tune = args.vt or ask_to_select(u'Enter tune ID',
-                sorted(TUNES.iterkeys(), key=lambda k: TUNES[k][TUNES_IDX_SORT_KEY]))
+            chosen_tune = args.vt or ask_to_select(u'Enter tune ID', TUNES.iterkeys())
             tune_params = TUNES[chosen_tune]
 
             # TODO check out rutracker manuals for dvd rip filters and stuff
