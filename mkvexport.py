@@ -191,19 +191,23 @@ def main():
             if args.tv:
                 match = re.match(r'.*s(\d+).?e(\d+)', os.path.basename(movie_object.main_path()), re.IGNORECASE)
                 season, episode = [int(x) for x in match.groups()]
-                episode_info = tvdb[args.tv][season][episode]
-                assert episode_info['dvdEpisodeNumber'] == episode_info['airedEpisodeNumber']
-                new_name = u'{:02d} {}'.format(episode_info['dvdEpisodeNumber'], episode_info['episodename'])
+                ep_info = tvdb[args.tv][season][episode]
+                ep_dvdn = ep_info['dvdEpisodeNumber']
+                ep_airn = ep_info['airedEpisodeNumber']
+                assert ep_dvdn is None or ep_dvdn == ep_airn
+                new_name = u'{:02d} {}.mkv'.format(ep_airn, ep_info['episodename'])
             elif filenames_map is not None:
-                raw_new_name_string = filenames_map[platform.file_name(cur_name)]
+                raw_new_name_string = filenames_map[os.path.splitext(cur_name)[0]]
                 new_name = None
                 if raw_new_name_string == 'NO': continue
                 elif raw_new_name_string == 'KEEP': new_name = cur_name
                 else: new_name = raw_new_name_string
+                if not new_name.endswith('.mkv'):
+                    new_name = u'{}.mkv'.format(new_name)
             new_name = platform.clean_filename(new_name)
-            new_path = os.path.join(os.path.abspath(args.dst), platform.file_name(new_name) + '.mkv')
+            new_path = os.path.join(os.path.abspath(args.dst), new_name)
             if raw_crops_map is not None:
-                crop_args_map[movie_object.main_path()] = raw_crops_map[platform.file_name(cur_name)]
+                crop_args_map[movie_object.main_path()] = raw_crops_map[os.path.splitext(cur_name)[0]]
             assert new_path not in movies, new_path
             movies[new_path] = movie_object
 
