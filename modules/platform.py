@@ -53,8 +53,8 @@ def detect_encoding(filepath):
 def clean_filename(filename):
     if not is_windows():
         return filename
-    filename = filename.replace(u': ', u' - ')
+    filename = filename.replace(u': ', u' - ').replace('"', "'")
     name, ext = os.path.splitext(filename)
     filename = name.rstrip(u'.').strip() + ext.strip()
-    invalid_characters = set(r'<>:"/\|?*')
+    invalid_characters = set(r'<>:/\|?*')
     return u''.join(c for c in filename if c not in invalid_characters)
