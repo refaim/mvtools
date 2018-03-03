@@ -280,7 +280,7 @@ def main():
             for track in track_list:
                 track_sources[track.qualified_id()] = [track.source_file(), track.id()]
 
-        result_commands = [u'echo {}'.format(movie.main_path())]
+        result_commands = [u'echo {}'.format(cmd.quote(movie.main_path()))]
         mux_temporary_files = []
 
         target_directory = os.path.dirname(target_path)
