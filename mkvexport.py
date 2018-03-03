@@ -305,6 +305,9 @@ def main():
             if video_track.field_order() in (VideoTrack.FO_INT_BOT, VideoTrack.FO_INT_TOP):
                 ffmpeg_filters.append('yadif=1:-1:1')
 
+            if args.va:
+                ffmpeg_filters.append('setdar=dar={}'.format(args.va))
+
             crop_args = None
             if args.cr or args.cf:
                 if common_crop_args is not None:
@@ -330,9 +333,6 @@ def main():
             assert VideoTrack.dimensions_correct(dw, dh)
             if dx > 0 or dy > 0 or dw != video_track.width() or dh != video_track.height():
                 ffmpeg_filters.append('crop={w}:{h}:{x}:{y}'.format(w=dw, h=dh, x=dx, y=dy))
-
-            if args.va:
-                ffmpeg_filters.append('setdar=dar={}'.format(args.va))
 
             src_colors = video_track.colors()
             assert video_track.pix_fmt() == VideoTrack.YUV420P
