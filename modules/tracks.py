@@ -147,20 +147,6 @@ class VideoTrack(Track):
     NTSC = 'not_ffmpeg_const_ntsc'
     DEINT = 'not_ffmpeg_const_deinterlaced'
 
-    _STANDARDS = {
-        '13978/583': NTSC,
-        '19001/317': DEINT,
-        '20327/813': PAL,
-        '20877/835': PAL,
-        '24/1': NTSC,
-        '24000/1001': NTSC,
-        '25/1': PAL,
-        '27021/1127': NTSC,
-        '2997/125': NTSC,
-        '30000/1001': NTSC,
-        '50/1': DEINT,
-    }
-
     YUV420P = 'yuv420p'
     CODEC_H264 = 'h264'
     PROFILE_HIGH = 'High'
@@ -215,7 +201,18 @@ class VideoTrack(Track):
         return self._colors
 
     def standard(self):
-        return self._STANDARDS[self._ffm_data['r_frame_rate']]
+        def equals(x, y, p):
+            return abs(x - y) <= p
+        rate_string = self._ffm_data['r_frame_rate']
+        a, b = [float(n) for n in rate_string.split('/')]
+        rate_float = a / b
+        if equals(rate_float, 23.976, 0.1):
+            return self.NTSC
+        if equals(rate_float, 25, 0.1):
+            return self.PAL
+        if equals(rate_float, 50, 0.1):
+            return self.DEINT
+        assert False, rate_string
 
     def field_order(self):
         if self._field_order is None:
