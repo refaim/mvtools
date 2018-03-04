@@ -92,7 +92,7 @@ def is_movie_satellite(movie_path, candidate_path):
     cd, cn = platform.split_path(candidate_path)
     return md.lower() == cd.lower() and cn.lower().startswith(os.path.splitext(mn)[0].lower())
 
-def find_movies(search_path):
+def find_movies(search_path, ignore_languages):
     found_files = []
     if os.path.isfile(search_path):
         search_dir = os.path.dirname(search_path)
@@ -120,7 +120,7 @@ def find_movies(search_path):
             remaining_media -= set(group)
 
     for group in media_groups:
-        yield media.Movie(group)
+        yield media.Movie(group, ignore_languages)
 
 def read_map_file(path, handle_key, handle_value):
     result = None
@@ -160,6 +160,7 @@ def main():
 
     parser.add_argument('-nf', type=cli.argparse_path, default=None, help='path to names map file')
     parser.add_argument('-tv', default=None, help='TV series name')
+    parser.add_argument('-il', default=False, action='store_true', help='Ignore track language data')
 
     args = parser.parse_args()
     if args.cf and args.sc:
@@ -187,7 +188,7 @@ def main():
     movies = {}
     crop_args_map = None if raw_crops_map is None else {}
     for argspath in args.sources:
-        for movie_object in find_movies(argspath):
+        for movie_object in find_movies(argspath, args.il):
             cur_path = os.path.normpath(os.path.relpath(movie_object.main_path(), os.getcwd()))
             new_path = cur_path
             if args.tv:

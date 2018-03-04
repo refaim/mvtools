@@ -92,10 +92,11 @@ class Movie(object):
             result.append(cluster)
         return u' '.join(result)
 
-    def __init__(self, media_paths):
+    def __init__(self, media_paths, ignore_languages):
         self._media_paths = list(media_paths)
         self._media_files = None
         self._main_path = self._media_paths[0]
+        self._ignore_languages = ignore_languages
 
     def _parse_media(self):
         sort_prefix = os.path.commonprefix([path for path in self._media_paths])
@@ -103,6 +104,8 @@ class Movie(object):
         self._media_files = [File(path) for path in self._media_paths]
         assert len(list(self.tracks(Track.VID))) >= 1
         assert len(list(self.tracks(Track.CHA))) <= 1
+
+    def _fill_metadata(self):
         self._set_languages()
         self._set_forced()
         self._set_crf()
@@ -117,9 +120,10 @@ class Movie(object):
                 yield file_tracks[0]
 
     def _set_languages(self):
-        for media_file in self._media_files:
-            if len(media_file.tracks(Track.VID)) == 1 and len(media_file.tracks(Track.AUD)) == 1:
-                media_file.tracks(Track.AUD)[0].set_language('und')
+        if self._ignore_languages:
+            for track_type in (Track.AUD, Track.SUB):
+                for track in self.tracks(track_type):
+                    track.set_language('und')
 
         for track_type in (Track.AUD, Track.SUB):
             for track in self._single_file_tracks(track_type):
@@ -178,6 +182,7 @@ class Movie(object):
     def tracks(self, track_type):
         if self._media_files is None:
             self._parse_media()
+            self._fill_metadata()
         for media_file in self._media_files:
             for track in media_file.tracks(track_type):
                 yield track
