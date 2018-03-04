@@ -494,8 +494,7 @@ def main():
                 track_order.append('{}:{}'.format(source_file_ids[source_file], source_file_track_id))
         mux.append('--track-order {}'.format(','.join(track_order)))
 
-        if len(source_file_ids) > 1:
-            result_commands.append(u' '.join(mux))
+        result_commands.append(u' '.join(mux))
         if len(mux_temporary_files) > 0:
             result_commands.append(cmd.del_files_command(*sorted(set(mux_temporary_files))))
 
