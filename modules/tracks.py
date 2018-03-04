@@ -210,7 +210,7 @@ class VideoTrack(Track):
             return self.NTSC
         if equals(rate_float, 25, 0.1):
             return self.PAL
-        if equals(rate_float, 50, 0.1):
+        if any(equals(rate_float, x, 0.1) for x in [50, 60]):
             return self.DEINT
         assert False, rate_string
 
