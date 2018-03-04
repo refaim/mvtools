@@ -186,8 +186,8 @@ def main():
     crop_args_map = None if raw_crops_map is None else {}
     for argspath in args.sources:
         for movie_object in find_movies(argspath):
-            cur_name = os.path.normpath(os.path.relpath(movie_object.main_path(), os.getcwd()))
-            new_name = cur_name
+            cur_path = os.path.normpath(os.path.relpath(movie_object.main_path(), os.getcwd()))
+            new_path = cur_path
             if args.tv:
                 match = re.match(r'.*s(\d+).?e(\d+)', os.path.basename(movie_object.main_path()), re.IGNORECASE)
                 season, episode = [int(x) for x in match.groups()]
@@ -195,19 +195,19 @@ def main():
                 ep_dvdn = ep_info['dvdEpisodeNumber']
                 ep_airn = ep_info['airedEpisodeNumber']
                 assert ep_dvdn is None or ep_dvdn == ep_airn
-                new_name = u'{:02d} {}.mkv'.format(ep_airn, ep_info['episodename'])
+                cur_path = u'{:02d} {}.mkv'.format(ep_airn, ep_info['episodename'])
             elif filenames_map is not None:
-                raw_new_name_string = filenames_map[os.path.splitext(cur_name)[0]]
-                new_name = None
+                raw_new_name_string = filenames_map[os.path.splitext(cur_path)[0]]
+                cur_path = None
                 if raw_new_name_string == 'NO': continue
-                elif raw_new_name_string == 'KEEP': new_name = cur_name
-                else: new_name = raw_new_name_string
-                if not new_name.endswith('.mkv'):
-                    new_name = u'{}.mkv'.format(new_name)
-            new_name = platform.clean_filename(new_name)
-            new_path = os.path.join(os.path.abspath(args.dst), new_name)
+                elif raw_new_name_string == 'KEEP': cur_path = cur_path
+                else: cur_path = raw_new_name_string
+                if not cur_path.endswith('.mkv'):
+                    cur_path = u'{}.mkv'.format(cur_path)
+            new_path = os.path.join(
+                os.path.abspath(args.dst), os.path.dirname(cur_path), platform.clean_filename(os.path.basename(cur_path)))
             if raw_crops_map is not None:
-                crop_args_map[movie_object.main_path()] = raw_crops_map[os.path.splitext(cur_name)[0]]
+                crop_args_map[movie_object.main_path()] = raw_crops_map[os.path.splitext(cur_path)[0]]
             assert new_path not in movies, new_path
             movies[new_path] = movie_object
 
