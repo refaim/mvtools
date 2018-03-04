@@ -35,11 +35,11 @@ def execute(command, capture_output=True):
 def make_temporary_file(extension):
     return os.path.join(tempfile.gettempdir(), u'{}.{}'.format(uuid.uuid4(), extension.lstrip('.')))
 
-def file_name(path):
-    return os.path.splitext(os.path.basename(path))[0]
-
 def file_ext(path):
     return os.path.splitext(path)[1].lower()
+
+def split_path(path):
+    return os.path.dirname(path), os.path.basename(path)
 
 def detect_encoding(filepath):
     detector = chardet.UniversalDetector()

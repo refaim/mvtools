@@ -1,7 +1,7 @@
+import os
 import re
 
 import misc
-import platform
 
 LANGUAGES = {
     'ara': ['Arabic'],
@@ -60,7 +60,7 @@ def norm_encoding(s):
 
 def guess(file_path):
     found_languages = set()
-    file_name = re.sub(r'\dx', r'', platform.file_name(file_path).lower())
+    file_name = re.sub(r'\dx', r'', os.path.splitext(os.path.basename(file_path))[0].lower())
     for string in re.findall(r'[a-z]+', file_name, re.IGNORECASE):
         if string in LANGUAGE_STRINGS:
             found_languages.add(LANGUAGE_STRINGS[string])

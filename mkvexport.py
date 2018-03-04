@@ -88,14 +88,16 @@ def ask_to_select_tracks(movie, track_type, candidates, header):
     return ask_to_select(u'Enter track index', candidate_strings, handle_response, header)
 
 def is_movie_satellite(movie_path, candidate_path):
-    return os.path.basename(candidate_path).lower().startswith(platform.file_name(movie_path).lower())
+    md, mn = platform.split_path(movie_path)
+    cd, cn = platform.split_path(candidate_path)
+    return md.lower() == cd.lower() and cn.lower().startswith(os.path.splitext(mn)[0].lower())
 
 def find_movies(search_path):
     found_files = []
     if os.path.isfile(search_path):
         search_dir = os.path.dirname(search_path)
         for name in os.listdir(search_dir):
-            if is_movie_satellite(search_path, name):
+            if is_movie_satellite(search_path, os.path.join(search_dir, name)):
                 found_files.append(os.path.join(search_dir, name))
     elif os.path.isdir(search_path):
         for search_dir, _, files in os.walk(search_path):
@@ -109,7 +111,7 @@ def find_movies(search_path):
     media_groups = []
     for remaining_media in media_by_folder.itervalues():
         video_paths = [fp for fp in remaining_media if Track.VID in media.File.possible_track_types(fp)]
-        for video in sorted(video_paths):
+        for video in sorted(video_paths, key=len):
             group = []
             if video in remaining_media:
                 remaining_media.remove(video)
