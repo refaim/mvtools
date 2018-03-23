@@ -119,7 +119,7 @@ def find_movies(search_path, ignore_languages):
                 media_groups.append([video] + group)
             remaining_media -= set(group)
 
-    for group in media_groups:
+    for group in sorted(media_groups):
         yield media.Movie(group, ignore_languages)
 
 def read_map_file(path, handle_key, handle_value):
