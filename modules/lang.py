@@ -28,6 +28,7 @@ LANGUAGES = {
     'kor': ['Korean'],
     'lav': ['Latvian'],
     'lit': ['Lithuanian'],
+    'may': ['Malay'],
     'nor': ['Norwegian'],
     'pol': ['Polish'],
     'por': ['Portuguese'],
@@ -42,6 +43,7 @@ LANGUAGES = {
     'tur': ['Turkish'],
     'ukr': ['Ukrainian'],
     'und': [],
+    'vie': ['Vietnamese'],
 }
 LANGUAGE_STRINGS = misc.make_strings_dict(LANGUAGES)
 
