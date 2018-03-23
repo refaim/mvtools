@@ -179,8 +179,9 @@ class VideoTrack(Track):
 
     def height(self):
         p = self._ffm_data
-        assert p['height'] == p['coded_height'] or p['coded_height'] == 0
-        return p['height']
+        hh, ch = p['height'], p['coded_height']
+        assert hh == ch or ch == 0 or hh == 1080 and ch == 1088, 'hh = {} ch = {}'.format(hh, ch)
+        return hh
 
     def profile(self):
         return self._ffm_data['profile']
