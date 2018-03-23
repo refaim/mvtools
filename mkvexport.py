@@ -401,7 +401,7 @@ def main():
                 extension = '.wav'
                 ffmpeg_opts = ['-f wav', '-rf64 auto']
             tmp_path = platform.make_temporary_file(extension)
-            result_commands.extend(ffmpeg.cmds_extract_track(track.source_file(), tmp_path, track.id(), [], ffmpeg_opts))
+            result_commands.append(ffmpeg.cmd_extract_track(track.source_file(), tmp_path, track.id(), [], ffmpeg_opts))
             return (tmp_path, True)
 
         audio_codecs_to_denorm = set([AudioTrack.AC3, AudioTrack.DTS])
@@ -535,7 +535,10 @@ def main():
                 else: prepared_commands = [command.strip(), u'if errorlevel {} call :stop'.format(fail_exit_code)]
                 for prep_command in prepared_commands:
                     body_file.write(u'{}\r\n'.format(prep_command))
-            body_file.write(u'\r\ncall :stop 0\r\n')
+            body_file.write(u'\r\n')
+
+    with codecs.open(MUX_BODY, 'a', 'utf-8') as body_file:
+        body_file.write(u'call :stop 0\r\n')
 
     return 0
 
