@@ -145,6 +145,7 @@ def main():
     parser.add_argument('-vr', default=False, action='store_true', help='recode video')
     parser.add_argument('-vt', help='force tune')
     parser.add_argument('-va', default=None, choices=['16:9'], help='set video display aspect ratio')
+    parser.add_argument('-vs', default=None, choices=['720p'], help='scale video')
 
     parser.add_argument('-cr', default=False, action='store_true', help='crop video')
     parser.add_argument('-cf', type=cli.argparse_path, default=None, help='path to crop map file')
@@ -301,7 +302,7 @@ def main():
             video_track.crf() is not None and \
             video_track.profile() == VideoTrack.PROFILE_HIGH and \
             video_track.level() == VideoTrack.LEVEL_41
-        if args.vr or not encoded_ok and not args.vk:
+        if args.vr or args.vs or not encoded_ok and not args.vk:
             chosen_tune = args.vt or ask_to_select(u'Enter tune ID', TUNES.iterkeys())
             tune_params = TUNES[chosen_tune]
 
@@ -310,6 +311,7 @@ def main():
 
             assert video_track.field_order() is not None
             if video_track.field_order() in (VideoTrack.FO_INT_BOT, VideoTrack.FO_INT_TOP):
+                # TODO consider bwdif
                 ffmpeg_filters.append('yadif=1:-1:1')
 
             if args.va:
@@ -340,6 +342,11 @@ def main():
             assert VideoTrack.dimensions_correct(dw, dh)
             if dx > 0 or dy > 0 or dw != video_track.width() or dh != video_track.height():
                 ffmpeg_filters.append('crop={w}:{h}:{x}:{y}'.format(w=dw, h=dh, x=dx, y=dy))
+
+            # TODO support different resolutions
+            # TODO forbid upscale
+            if args.vs == '720p':
+                ffmpeg_filters.append('scale=1280:-8')
 
             src_colors = video_track.colors()
             assert video_track.pix_fmt() == VideoTrack.YUV420P
