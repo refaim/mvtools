@@ -19,8 +19,8 @@ from modules.tracks import Track, VideoTrack, Colors, AudioTrack, SubtitleTrack
 
 LANG_ORDER = ['und', 'jpn', 'eng', 'rus']
 
-MUX_SCRIPT = os.path.join(platform.getcwd(), u'mux.cmd')
-MUX_HEADER = os.path.join(os.path.dirname(__file__), u'mux_header.cmd')
+MUX_BODY = os.path.join(platform.getcwd(), u'mux.cmd')
+MUX_HEAD = os.path.join(os.path.dirname(__file__), u'mux_head.cmd')
 
 TUNES_IDX_CRF = 0
 TUNES_IDX_REAL_TUNE = 1
@@ -191,6 +191,8 @@ def main():
     for argspath in args.sources:
         for movie_object in find_movies(argspath, args.il):
             cur_path = os.path.normpath(os.path.relpath(movie_object.main_path(), platform.getcwd()))
+            if raw_crops_map is not None:
+                crop_args_map[movie_object.main_path()] = raw_crops_map[os.path.splitext(cur_path)[0]]
             if args.tv:
                 movie_name = os.path.basename(movie_object.main_path())
                 src_season = int(re.match(r'.*s(\d+)', movie_name, re.IGNORECASE).group(1))
@@ -219,8 +221,6 @@ def main():
                     cur_path = u'{}.mkv'.format(cur_path)
             new_path = os.path.join(
                 os.path.abspath(args.dst), os.path.dirname(cur_path), platform.clean_filename(os.path.basename(cur_path)))
-            if raw_crops_map is not None:
-                crop_args_map[movie_object.main_path()] = raw_crops_map[os.path.splitext(cur_path)[0]]
             assert new_path not in movies, new_path
             movies[new_path] = movie_object
 
@@ -232,10 +232,10 @@ def main():
     ])
 
     try:
-        os.remove(MUX_SCRIPT)
+        os.remove(MUX_BODY)
     except:
         pass
-    shutil.copyfile(MUX_HEADER, MUX_SCRIPT)
+    shutil.copyfile(MUX_HEAD, MUX_BODY)
 
     created_directories = set()
     # TODO catch some of my exceptions, report skipped file, ask for action, log skipped file
@@ -386,8 +386,8 @@ def main():
                 '-colorspace {}'.format(dst_color_space),
             ])
             new_video_path = platform.make_temporary_file('.mkv')
-            result_commands.extend(
-                ffmpeg.cmds_convert(video_track.source_file(), ffmpeg_src_options, new_video_path, ffmpeg_dst_options))
+            result_commands.append(
+                ffmpeg.cmd_convert(video_track.source_file(), ffmpeg_src_options, new_video_path, ffmpeg_dst_options))
             track_sources[video_track.qualified_id()] = [new_video_path, 0]
             mux_temporary_files.append(new_video_path)
 
@@ -523,9 +523,19 @@ def main():
 
         result_commands.extend(cmd.move_file_commands(mux_path, target_path))
 
-        # TODO return xx flag
-
-        cmd.write_batch(MUX_SCRIPT, result_commands, { 'robocopy': 1, 'mkvmerge': 1 })
+        allowed_exit_codes = { 'robocopy': 1, 'mkvmerge': 1 }
+        with codecs.open(MUX_BODY, 'a', 'utf-8') as body_file:
+            for command in result_commands:
+                fail_exit_code = 1
+                for program, code in allowed_exit_codes.iteritems():
+                    if program in command.lower():
+                        fail_exit_code = code + 1
+                prepared_commands = None
+                if fail_exit_code == 1: prepared_commands = [u'{} || call :stop'.format(command.strip())]
+                else: prepared_commands = [command.strip(), u'if errorlevel {} call :stop'.format(fail_exit_code)]
+                for prep_command in prepared_commands:
+                    body_file.write(u'{}\r\n'.format(prep_command))
+            body_file.write(u'\r\ncall :stop 0\r\n')
 
     return 0
 

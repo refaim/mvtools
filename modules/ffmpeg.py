@@ -28,19 +28,15 @@ def identify_tracks(media_path, stream_ids):
 
 # TODO progress bar, estimate, size difference in files
 # TODO support windows cmd window header progress
-def cmds_convert(src_file, src_opts, dst_file, dst_opts):
-    ffmpeg = u'ffmpeg -v error -stats -y{src_opts}-i {src}{dst_opts}{dst}'.format(
+def cmd_convert(src_file, src_opts, dst_file, dst_opts):
+    return u'ffmpeg -v error -stats -y{src_opts}-i {src}{dst_opts}{dst}'.format(
         src=cmd.quote(src_file), src_opts=cmd.make_whitespaced_args_string(src_opts),
         dst=cmd.quote(dst_file), dst_opts=cmd.make_whitespaced_args_string(dst_opts))
-    commands = [ffmpeg]
-    if platform.is_windows():
-        commands = [u'chcp 65001 >nul && {}'.format(ffmpeg), u'chcp 866 >nul']
-    return commands
 
-def cmds_extract_track(src_file, dst_file, track_id, src_opts=None, dst_opts=None):
+def cmd_extract_track(src_file, dst_file, track_id, src_opts=None, dst_opts=None):
     if src_opts is None: src_opts = []
     if dst_opts is None: dst_opts = []
-    return cmds_convert(
+    return cmd_convert(
         src_file, [] + src_opts,
         dst_file, ['-map_metadata -1', '-map_chapters -1', '-map 0:{}'.format(track_id)] + dst_opts)
 

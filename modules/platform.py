@@ -16,7 +16,10 @@ def is_windows():
 def print_string(s, *args, **kwargs):
     assert isinstance(s, unicode)
     output = kwargs.get('file', sys.stdout)
-    print(s.encode(output.encoding, errors='ignore'), *args, **kwargs)
+    encoding = output.encoding
+    if encoding == 'cp65001':
+        encoding = 'utf-8'
+    print(s.encode(encoding, errors='ignore'), *args, **kwargs)
 
 def execute(command, capture_output=True):
     cmd_encoding = locale.getpreferredencoding()
