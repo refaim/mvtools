@@ -19,8 +19,8 @@ from modules.tracks import Track, VideoTrack, Colors, AudioTrack, SubtitleTrack
 
 LANG_ORDER = ['und', 'jpn', 'eng', 'rus']
 
-MUX_SCRIPT = os.path.join(os.getcwd(), 'mux.cmd')
-MUX_HEADER = os.path.join(os.path.dirname(__file__), 'mux_header.cmd')
+MUX_SCRIPT = os.path.join(platform.getcwd(), u'mux.cmd')
+MUX_HEADER = os.path.join(os.path.dirname(__file__), u'mux_header.cmd')
 
 TUNES_IDX_CRF = 0
 TUNES_IDX_REAL_TUNE = 1
@@ -189,7 +189,7 @@ def main():
     crop_args_map = None if raw_crops_map is None else {}
     for argspath in args.sources:
         for movie_object in find_movies(argspath, args.il):
-            cur_path = os.path.normpath(os.path.relpath(movie_object.main_path(), os.getcwd()))
+            cur_path = os.path.normpath(os.path.relpath(movie_object.main_path(), platform.getcwd()))
             new_path = cur_path
             if args.tv:
                 match = re.match(r'.*s(\d+).?e(\d+)', os.path.basename(movie_object.main_path()), re.IGNORECASE)

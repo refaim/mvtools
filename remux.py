@@ -46,7 +46,7 @@ def main():
 
     for src_directory, movie_id in sorted(eac3to_ids.iteritems()):
         def remux_callback(path):
-            cwd = os.getcwd()
+            cwd = platform.getcwd()
             os.chdir(src_directory)
             platform.execute('eac3to {}) {}'.format(movie_id.rstrip(')'), cmd.quote(os.path.join(path, 'video.mkv'))), capture_output=False)
             os.chdir(cwd)

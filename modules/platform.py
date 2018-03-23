@@ -58,3 +58,6 @@ def clean_filename(filename):
     filename = name.rstrip(u'.').strip() + ext.strip()
     invalid_characters = set(r'<>:/\|?*')
     return u''.join(c for c in filename if c not in invalid_characters)
+
+def getcwd():
+    return os.getcwd().decode(locale.getpreferredencoding())
