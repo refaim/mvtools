@@ -191,15 +191,24 @@ def main():
     for argspath in args.sources:
         for movie_object in find_movies(argspath, args.il):
             cur_path = os.path.normpath(os.path.relpath(movie_object.main_path(), platform.getcwd()))
-            new_path = cur_path
             if args.tv:
-                match = re.match(r'.*s(\d+).?e(\d+)', os.path.basename(movie_object.main_path()), re.IGNORECASE)
-                season, episode = [int(x) for x in match.groups()]
-                ep_info = tvdb[args.tv][season][episode]
-                ep_dvdn = ep_info['dvdEpisodeNumber']
-                ep_airn = ep_info['airedEpisodeNumber']
-                assert ep_dvdn is None or ep_dvdn == ep_airn
-                cur_path = u'{:02d} {}.mkv'.format(ep_airn, ep_info['episodename'])
+                movie_name = os.path.basename(movie_object.main_path())
+                src_season = int(re.match(r'.*s(\d+)', movie_name, re.IGNORECASE).group(1))
+                src_episodes = [int(x) for x in re.findall(r'e(\d+)', movie_name, re.IGNORECASE)]
+                ep_numbers = []
+                ep_names = set()
+                for src_episode in src_episodes:
+                    ep_info = tvdb[args.tv][src_season][src_episode]
+                    epn_dvd = ep_info['dvdEpisodeNumber']
+                    epn_air = ep_info['airedEpisodeNumber']
+                    if epn_dvd is not None and epn_dvd != epn_air:
+                        epn_dvd_int = int(float(epn_dvd))
+                        epn_dvd_frc = float(epn_dvd) - epn_dvd_int
+                        assert int(epn_air) == int(round(epn_dvd_int + (epn_dvd_frc - 0.1) * 10)), 'd{} a{}'.format(epn_dvd, epn_air)
+                    ep_numbers.append(int(epn_air))
+                    ep_names.add(re.sub(r'\(\d\)$', '', ep_info['episodename']).strip())
+                assert len(ep_numbers) > 0 and len(ep_names) == 1, ep_names
+                cur_path = u'{} {}.mkv'.format('-'.join(u'{:02d}'.format(epn) for epn in sorted(ep_numbers)), list(ep_names)[0])
             elif filenames_map is not None:
                 raw_new_name_string = filenames_map[os.path.splitext(cur_path)[0]]
                 cur_path = None
