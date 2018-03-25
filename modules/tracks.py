@@ -173,15 +173,10 @@ class VideoTrack(Track):
         self._colors = Colors(self.width(), self.height(), self.standard(), self._ffm_data)
 
     def width(self):
-        p = self._ffm_data
-        assert p['width'] == p['coded_width'] or p['coded_width'] == 0
-        return p['width']
+        return self._ffm_data['width']
 
     def height(self):
-        p = self._ffm_data
-        hh, ch = p['height'], p['coded_height']
-        assert hh == ch or ch == 0 or hh == 1080 and ch == 1088, 'hh = {} ch = {}'.format(hh, ch)
-        return hh
+        return self._ffm_data['height']
 
     def profile(self):
         return self._ffm_data['profile']
