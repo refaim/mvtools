@@ -1,12 +1,19 @@
 import os
-import platform
 import sys
+
+import lang
+import platform
 
 class Error(Exception):
     pass
 
 def argparse_path(bytestring):
     return os.path.abspath(os.path.expandvars(bytestring.decode(sys.getfilesystemencoding())))
+
+def argparse_lang(value):
+    if value not in lang.LANGUAGES:
+        raise Error(u'Unknown language "{}"'.format(value))
+    return value
 
 def run(main):
     error = None

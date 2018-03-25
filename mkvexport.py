@@ -17,8 +17,6 @@ from modules import misc
 from modules import platform
 from modules.tracks import Track, VideoTrack, Colors, AudioTrack, SubtitleTrack
 
-LANG_ORDER = ['und', 'jpn', 'eng', 'rus']
-
 MUX_BODY = os.path.join(platform.getcwd(), u'mux.cmd')
 MUX_HEAD = os.path.join(os.path.dirname(__file__), u'mux_head.cmd')
 
@@ -31,14 +29,6 @@ TUNES = collections.OrderedDict((
     ('film_trash', (23, 'film')),
     ('film_supertrash', (25, 'film')),
 ))
-
-# TODO move out
-LANGUAGES_IDX_SUB_LANG = 0
-LANGUAGES = {
-    'rus': ('ru',),
-    'eng': ('en',),
-    'jpn': ('jp',),
-}
 
 ACTIONS_IDX_TEXT = 0
 ACTIONS_IDX_ENABLED = 1
@@ -135,7 +125,6 @@ def read_map_file(path, handle_key, handle_value):
     return result
 
 def main():
-    languages = sorted(LANGUAGES.iterkeys())
     parser = argparse.ArgumentParser()
     parser.add_argument('sources', type=cli.argparse_path, nargs='+', help='paths to source directories/files')
     parser.add_argument('dst', type=cli.argparse_path, help='path to destination directory')
@@ -151,12 +140,12 @@ def main():
     parser.add_argument('-cf', type=cli.argparse_path, default=None, help='path to crop map file')
     parser.add_argument('-sc', default=False, action='store_true', help='use same crop values for all files')
 
-    parser.add_argument('-al', nargs='*', choices=languages, default=[], help='ordered list of audio languages to keep')
+    parser.add_argument('-al', nargs='*', type=cli.argparse_lang, default=[], help='ordered list of audio 3-letter language codes to keep')
     parser.add_argument('-ar', default=False, action='store_true', help='recode audio')
     parser.add_argument('-a2', default=False, action='store_true', help='downmix multi-channel audio to stereo')
 
-    parser.add_argument('-sl', nargs='*', choices=languages, default=[], help='ordered list of full subtitle languages to keep')
-    parser.add_argument('-fl', nargs='*', choices=languages, default=[], help='ordered list of forced subtitle languages to keep')
+    parser.add_argument('-sl', nargs='*', type=cli.argparse_lang, default=[], help='ordered list of full subtitle 3-letter language codes to keep')
+    parser.add_argument('-fl', nargs='*', type=cli.argparse_lang, default=[], help='ordered list of forced subtitle  3-letter language codes to keep')
     parser.add_argument('-fo', default=False, action='store_true', help='make forced subtitles optional')
 
     parser.add_argument('-nf', type=cli.argparse_path, default=None, help='path to names map file')
@@ -461,7 +450,7 @@ def main():
                 idx_file = platform.make_temporary_file('.idx')
                 sub_file = u'{}.sub'.format(os.path.splitext(idx_file)[0])
                 result_commands.append(u'call bdsup2sub -l {} -o {} {}'.format(
-                    LANGUAGES[track.language()][LANGUAGES_IDX_SUB_LANG],
+                    lang.alpha2(track.language()),
                     cmd.quote(idx_file), cmd.quote(track_file)))
                 track_sources[track.qualified_id()] = [idx_file, 0]
                 mux_temporary_files.extend([idx_file, sub_file])
