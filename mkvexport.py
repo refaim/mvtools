@@ -126,6 +126,7 @@ def read_map_file(path, handle_key, handle_value):
 
 def main():
     parser = argparse.ArgumentParser()
+    # TODO support sources as wildcards
     parser.add_argument('sources', type=cli.argparse_path, nargs='+', help='paths to source directories/files')
     parser.add_argument('dst', type=cli.argparse_path, help='path to destination directory')
 
@@ -208,8 +209,8 @@ def main():
                 else: cur_path = raw_new_name_string
                 if not cur_path.endswith('.mkv'):
                     cur_path = u'{}.mkv'.format(cur_path)
-            new_path = os.path.join(
-                os.path.abspath(args.dst), os.path.dirname(cur_path), platform.clean_filename(os.path.basename(cur_path)))
+            new_name = u'{}.mkv'.format(os.path.splitext(platform.clean_filename(os.path.basename(cur_path)))[0])
+            new_path = os.path.join(os.path.abspath(args.dst), os.path.dirname(cur_path), new_name)
             assert new_path not in movies, new_path
             movies[new_path] = movie_object
 
