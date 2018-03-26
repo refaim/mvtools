@@ -468,6 +468,8 @@ def main():
         mux = ['mkvmerge']
         mux.extend(['--output', cmd.quote(mux_path)])
         mux.extend(['--no-track-tags', '--no-global-tags', '--disable-track-statistics-tags'])
+        # Enable seeking while streaming over network
+        mux.extend(['--engage', 'no_cue_duration', '--engage', 'no_cue_relative_position'])
 
         track_ids_by_files = {}
         for qualified_id, (source_file, source_file_track_id) in track_sources.iteritems():
