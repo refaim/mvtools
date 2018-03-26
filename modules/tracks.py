@@ -148,6 +148,7 @@ class VideoTrack(Track):
     DEINT = 'not_ffmpeg_const_deinterlaced'
 
     YUV420P = 'yuv420p'
+    YUVJ420P = 'yuvj420p'
     CODEC_H264 = 'h264'
     PROFILE_HIGH = 'High'
     LEVEL_41 = 41
@@ -229,6 +230,7 @@ class Colors(object):
     BT_601_NTSC = 'smpte170m'
     FCC = 'fcc'
 
+    RANGE_PC = 'pc'
     RANGE_TV = 'tv'
 
     def __init__(self, w, h, standard, ffm_data):

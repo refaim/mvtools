@@ -348,8 +348,8 @@ def main():
                 ffmpeg_filters.append('scale=1280:-8')
 
             src_colors = video_track.colors()
-            assert video_track.pix_fmt() == VideoTrack.YUV420P
-            assert src_colors.range() == Colors.RANGE_TV
+            assert video_track.pix_fmt() in (VideoTrack.YUV420P, VideoTrack.YUVJ420P), video_track.pix_fmt()
+            assert src_colors.range() in (Colors.RANGE_PC, Colors.RANGE_TV), src_colors.range()
 
             dst_color_space = src_colors.correct_space()
             if src_colors.space() != dst_color_space:
@@ -370,7 +370,7 @@ def main():
                 '-tune {}'.format(tune_params[TUNES_IDX_REAL_TUNE]),
                 '-profile:v high', '-level:v 4.1', '-crf {}'.format(tune_params[TUNES_IDX_CRF]),
                 '-map_metadata -1', '-map_chapters -1',
-                '-color_range {}'.format(Colors.RANGE_TV), # TODO "16-235 is a typical NTSC luma range. PAL always uses 0-255 luma range."
+                '-color_range {}'.format(src_colors.range()), # TODO "16-235 is a typical NTSC luma range. PAL always uses 0-255 luma range."
                 '-color_primaries {}'.format(dst_color_space),
                 '-color_trc {}'.format('gamma28' if dst_color_space == Colors.BT_601_PAL else dst_color_space),
                 '-colorspace {}'.format(dst_color_space),
