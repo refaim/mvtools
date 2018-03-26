@@ -110,6 +110,7 @@ class AudioTrack(Track):
     MP3 = 'mp3'
     PCM_S16L = 'pcm_s16le'
     TRUE_HD = 'truehd'
+    VORBIS = 'vorbis'
 
     _CODEC_PROPS = {
         AAC_HE: ['aac_he', '.aac'],
@@ -124,6 +125,7 @@ class AudioTrack(Track):
         MP3: ['mp3', '.mp3'],
         PCM_S16L: ['pcm', '.wav'],
         TRUE_HD: ['thd', '.dts'],
+        VORBIS: ['ogg', '.ogg'],
     }
 
     def __init__(self, parent_path, ffm_data):

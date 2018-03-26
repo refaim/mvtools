@@ -381,22 +381,21 @@ def main():
             track_sources[video_track.qualified_id()] = [new_video_path, 0]
             mux_temporary_files.append(new_video_path)
 
-        def make_single_track_file(track, stream_id):
-            if track.is_single():
+        def make_single_track_file(track, stream_id, file_ext=None, ffmpeg_opts=None):
+            if file_ext is None:
+                file_ext = track.get_single_track_file_extension()
+            if ffmpeg_opts is None:
+                ffmpeg_opts = ['-c:{} copy'.format(stream_id)]
+            if track.is_single() and file_ext == platform.file_ext(track):
                 return (track.source_file(), False)
-            extension = track.get_single_track_file_extension()
-            ffmpeg_opts = ['-c:{} copy'.format(stream_id)]
-            # TODO move it out !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            if stream_id == ffmpeg.STREAM_AUD and track.codec_id() in (AudioTrack.AAC_LC, AudioTrack.AAC_HE):
-                extension = '.wav'
-                ffmpeg_opts = ['-f wav', '-rf64 auto']
-            tmp_path = platform.make_temporary_file(extension)
+            tmp_path = platform.make_temporary_file(file_ext)
             result_commands.append(ffmpeg.cmd_extract_track(track.source_file(), tmp_path, track.id(), [], ffmpeg_opts))
             return (tmp_path, True)
 
         audio_codecs_to_denorm = set([AudioTrack.AC3, AudioTrack.DTS])
-        audio_codecs_to_recode = set([AudioTrack.DTSHRA, AudioTrack.DTSMA, AudioTrack.EAC3, AudioTrack.FLAC, AudioTrack.MP2, AudioTrack.PCM_S16L, AudioTrack.TRUE_HD])
+        audio_codecs_to_recode = set([AudioTrack.DTSHRA, AudioTrack.DTSMA, AudioTrack.EAC3, AudioTrack.FLAC, AudioTrack.MP2, AudioTrack.PCM_S16L, AudioTrack.TRUE_HD, AudioTrack.VORBIS])
         audio_codecs_to_keep = set([AudioTrack.AAC_LC, AudioTrack.MP3])
+        audio_codecs_to_uncompress = set([AudioTrack.AAC_HE, AudioTrack.AAC_LC, AudioTrack.VORBIS])
         max_audio_channels = 2 if args.a2 else 6
         for track in output_tracks[Track.AUD]:
             if track.codec_unknown():
@@ -405,9 +404,15 @@ def main():
             need_denorm = track.codec_id() in audio_codecs_to_denorm
             need_downmix = track.channels() > max_audio_channels
             need_recode = need_downmix or track.codec_id() in audio_codecs_to_recode or args.ar and track.codec_id() not in audio_codecs_to_keep
+            need_uncompress = track.codec_id() in audio_codecs_to_uncompress
 
             if need_denorm or need_downmix or need_recode:
-                src_track_file, is_src_track_file_temporary = make_single_track_file(track, ffmpeg.STREAM_AUD)
+                stf_ext = None
+                stf_ffmpeg_opts = None
+                if need_uncompress:
+                    stf_ext = '.wav'
+                    stf_ffmpeg_opts = ['-f wav', '-rf64 auto']
+                src_track_file, is_src_track_file_temporary = make_single_track_file(track, ffmpeg.STREAM_AUD, stf_ext, stf_ffmpeg_opts)
                 eac_track_file = platform.make_temporary_file('.wav' if need_recode else platform.file_ext(src_track_file))
                 eac_opts = []
                 if need_downmix:
