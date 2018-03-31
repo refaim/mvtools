@@ -117,7 +117,7 @@ class AudioTrack(Track):
         AAC_LC: ['aac_lc', '.aac'],
         AC3: ['ac3', '.ac3'],
         DTS: ['dts', '.dts'],
-        DTSHRA: ['dtshra', '.dts'],
+        DTSHRA: ['dtshra', '.dtshr'],
         DTSMA: ['dtsma', '.dts'],
         EAC3: ['eac3', '.eac3'],
         FLAC: ['flac', '.flac'],

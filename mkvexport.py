@@ -55,6 +55,7 @@ def ask_to_select_tracks(movie, track_type, candidates, header):
     def handle_response(text):
         MPV_OPTS = { Track.AUD: u'--audio-file {}', Track.SUB: u'--sub-file {}' }
         if text == 'p':
+            # TODO somehow consider track delays
             command = [u'mpv {}'.format(cmd.quote(list(movie.tracks(Track.VID))[0].source_file()))]
             for track in sorted(candidates, key=lambda t: movie.track_index_in_type(t)):
                 if track.is_single():
@@ -135,7 +136,7 @@ def main():
     parser.add_argument('-vr', default=False, action='store_true', help='recode video')
     parser.add_argument('-vt', help='force tune')
     parser.add_argument('-va', default=None, choices=['16:9'], help='set video display aspect ratio')
-    parser.add_argument('-vs', default=None, choices=['720p'], help='scale video')
+    parser.add_argument('-vs', default=None, choices=['720p', '1080p', '1440p'], help='scale video')
 
     parser.add_argument('-cr', default=False, action='store_true', help='crop video')
     parser.add_argument('-cf', type=cli.argparse_path, default=None, help='path to crop map file')
@@ -152,6 +153,7 @@ def main():
     parser.add_argument('-nf', type=cli.argparse_path, default=None, help='path to names map file')
     parser.add_argument('-tv', default=None, help='TV series name')
     parser.add_argument('-il', default=False, action='store_true', help='Ignore track language data')
+    parser.add_argument('-xx', default=False, action='store_true', help='Remove original files after processing')
 
     args = parser.parse_args()
     if args.cf and args.sc:
@@ -346,6 +348,10 @@ def main():
             # TODO forbid upscale
             if args.vs == '720p':
                 ffmpeg_filters.append('scale=1280:-8')
+            elif args.vs == '1080p':
+                ffmpeg_filters.append('scale=1920:-8')
+            elif args.vs == '1440p': # TODO !!!!!!!!!!
+                ffmpeg_filters.append('scale=-16:1440')
 
             src_colors = video_track.colors()
             assert video_track.pix_fmt() in (VideoTrack.YUV420P, VideoTrack.YUVJ420P), video_track.pix_fmt()
@@ -386,7 +392,7 @@ def main():
                 file_ext = track.get_single_track_file_extension()
             if ffmpeg_opts is None:
                 ffmpeg_opts = ['-c:{} copy'.format(stream_id)]
-            if track.is_single() and file_ext == platform.file_ext(track):
+            if track.is_single() and file_ext == platform.file_ext(track.source_file()):
                 return (track.source_file(), False)
             tmp_path = platform.make_temporary_file(file_ext)
             result_commands.append(ffmpeg.cmd_extract_track(track.source_file(), tmp_path, track.id(), [], ffmpeg_opts))
@@ -455,6 +461,7 @@ def main():
                 track_file, is_track_file_temporary = make_single_track_file(track, ffmpeg.STREAM_SUB)
                 idx_file = platform.make_temporary_file('.idx')
                 sub_file = u'{}.sub'.format(os.path.splitext(idx_file)[0])
+                # TODO do not use my cmd-wrapper, use original jar
                 result_commands.append(u'call bdsup2sub -l {} -o {} {}'.format(
                     lang.alpha2(track.language()),
                     cmd.quote(idx_file), cmd.quote(track_file)))
@@ -518,6 +525,9 @@ def main():
             result_commands.append(u'mkvpropedit --chapters {} {}'.format(
                 cmd.quote(movie.chapters_path()), cmd.quote(mux_path)))
 
+        if args.xx:
+            result_commands.append(cmd.del_files_command(
+                *sorted(set(media_file.path() for media_file in movie.media_files()))))
         result_commands.extend(cmd.move_file_commands(mux_path, target_path))
 
         allowed_exit_codes = { 'robocopy': 1, 'mkvmerge': 1 }
@@ -528,6 +538,7 @@ def main():
                     if program in command.lower():
                         fail_exit_code = code + 1
                 prepared_commands = None
+                # TODO add unique stop id
                 if fail_exit_code == 1: prepared_commands = [u'{} || call :stop'.format(command.strip())]
                 else: prepared_commands = [command.strip(), u'if errorlevel {} call :stop'.format(fail_exit_code)]
                 for prep_command in prepared_commands:

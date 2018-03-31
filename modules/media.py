@@ -179,10 +179,17 @@ class Movie(object):
             if track.crf() is None:
                 track.set_crf(ffmpeg.detect_crf(track.source_file()))
 
-    def tracks(self, track_type):
+    def _setup_media(self):
         if self._media_files is None:
             self._parse_media()
             self._fill_metadata()
+
+    def media_files(self):
+        self._setup_media()
+        return self._media_files
+
+    def tracks(self, track_type):
+        self._setup_media()
         for media_file in self._media_files:
             for track in media_file.tracks(track_type):
                 yield track
