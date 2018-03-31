@@ -78,6 +78,9 @@ def ask_to_select_tracks(movie, track_type, candidates, header):
         candidate_strings[movie.track_index_in_type(track)] = u' '.join(strings)
     return ask_to_select(u'Enter track index', candidate_strings, handle_response, header)
 
+def is_media_file_path(file_path):
+    return len(media.File.possible_track_types(file_path)) > 0
+
 def is_movie_satellite(movie_path, candidate_path):
     md, mn = platform.split_path(movie_path)
     cd, cn = platform.split_path(candidate_path)
@@ -96,7 +99,7 @@ def find_movies(search_path, ignore_languages):
 
     media_by_folder = {}
     for path in (os.path.abspath(fp) for fp in found_files):
-        if len(media.File.possible_track_types(path)) > 0:
+        if is_media_file_path(path):
             media_by_folder.setdefault(os.path.dirname(path), set()).add(path)
 
     media_groups = []
@@ -164,7 +167,10 @@ def main():
         raise cli.Error(u'Use "-vk" OR "-vr/-vt"')
 
     def read_movie_path(path):
-        return os.path.splitext(os.path.normpath(path.strip()))[0]
+        path = os.path.normpath(path.strip())
+        if is_media_file_path(path):
+            path = os.path.splitext(path)[0]
+        return path
 
     def read_crop_args(s):
         s = s.strip()
@@ -209,9 +215,9 @@ def main():
                 if raw_new_name_string == 'NO': continue
                 elif raw_new_name_string == 'KEEP': cur_path = cur_path
                 else: cur_path = raw_new_name_string
-                if not cur_path.endswith('.mkv'):
-                    cur_path = u'{}.mkv'.format(cur_path)
-            new_name = u'{}.mkv'.format(os.path.splitext(platform.clean_filename(os.path.basename(cur_path)))[0])
+            if is_media_file_path(cur_path):
+                cur_path = os.path.splitext(cur_path)[0]
+            new_name = u'{}.mkv'.format(platform.clean_filename(os.path.basename(cur_path)))
             new_path = os.path.join(os.path.abspath(args.dst), os.path.dirname(cur_path), new_name)
             assert new_path not in movies, new_path
             movies[new_path] = movie_object
