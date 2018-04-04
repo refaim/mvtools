@@ -483,9 +483,6 @@ def main():
         mux = ['mkvmerge']
         mux.extend(['--output', cmd.quote(mux_path)])
         mux.extend(['--no-track-tags', '--no-global-tags', '--disable-track-statistics-tags'])
-        # TODO it does not always help
-        # Enable seeking while streaming over network
-        mux.extend(['--engage', 'no_cue_duration', '--engage', 'no_cue_relative_position'])
 
         track_ids_by_files = {}
         for qualified_id, (source_file, source_file_track_id) in track_sources.iteritems():
@@ -537,7 +534,7 @@ def main():
         if args.xx:
             result_commands.append(cmd.del_files_command(
                 *sorted(set(media_file.path() for media_file in movie.media_files()))))
-        result_commands.extend(cmd.move_file_commands(mux_path, target_path))
+        result_commands.append(u'mkclean {} {}'.format(cmd.quote(mux_path), cmd.quote(target_path)))
 
         allowed_exit_codes = { 'robocopy': 1, 'mkvmerge': 1 }
         with codecs.open(MUX_BODY, 'a', 'utf-8') as body_file:
