@@ -5,7 +5,7 @@ import functools
 import os
 import re
 
-import ffmpeg
+import cmd
 import lang
 import misc
 import platform
@@ -16,9 +16,9 @@ class File(object):
     _TRACK_PROPS_IDX_CLASS = 0
     _TRACK_PROPS_IDX_FFMPEG_STREAM = 1
     _TRACK_PROPS = {
-        Track.VID: (VideoTrack, ffmpeg.STREAM_VID),
-        Track.AUD: (AudioTrack, ffmpeg.STREAM_AUD),
-        Track.SUB: (SubtitleTrack, ffmpeg.STREAM_SUB),
+        Track.VID: (VideoTrack, cmd.FFMPEG_STREAM_VID),
+        Track.AUD: (AudioTrack, cmd.FFMPEG_STREAM_AUD),
+        Track.SUB: (SubtitleTrack, cmd.FFMPEG_STREAM_SUB),
         Track.CHA: (ChaptersTrack, None),
     }
 
@@ -66,7 +66,7 @@ class File(object):
                     tracks_data.setdefault(Track.CHA, {})[-1] = {}
                 else:
                     stream_id = self._TRACK_PROPS[track_type][self._TRACK_PROPS_IDX_FFMPEG_STREAM]
-                    for track_id, track in ffmpeg.identify_tracks(self._path, stream_id).iteritems():
+                    for track_id, track in cmd.identify_movie_tracks(self._path, stream_id).iteritems():
                         tracks_data.setdefault(track['codec_type'], {})[track_id] = track
 
             self._tracks_by_type = { track_type: [] for track_type in self._TRACK_PROPS.iterkeys() }
@@ -177,7 +177,7 @@ class Movie(object):
     def _set_crf(self):
         for track in self.tracks(Track.VID):
             if track.crf() is None:
-                track.set_crf(ffmpeg.detect_crf(track.source_file()))
+                track.set_crf(cmd.detect_crf(track.source_file()))
 
     def _setup_media(self):
         if self._media_files is None:

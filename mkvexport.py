@@ -10,7 +10,6 @@ import tvdb_api
 
 from modules import cli
 from modules import cmd
-from modules import ffmpeg
 from modules import lang
 from modules import media
 from modules import misc
@@ -301,7 +300,7 @@ def main():
 
         target_directory = os.path.dirname(target_path)
         if not os.path.isdir(target_directory) and target_directory not in created_directories:
-           result_commands.append(cmd.create_dir_command(target_directory))
+           result_commands.extend(cmd.gen_create_dir(target_directory))
            created_directories.add(target_directory)
 
         # TODO support 2pass encoding
@@ -389,12 +388,12 @@ def main():
                 '-colorspace {}'.format(dst_color_space),
             ])
             new_video_path = platform.make_temporary_file('.mkv')
-            result_commands.append(
-                ffmpeg.cmd_convert(video_track.source_file(), ffmpeg_src_options, new_video_path, ffmpeg_dst_options))
+            result_commands.extend(
+                cmd.gen_ffmpeg_convert(video_track.source_file(), ffmpeg_src_options, new_video_path, ffmpeg_dst_options))
             track_sources[video_track.qualified_id()] = [new_video_path, 0]
             mux_temporary_files.append(new_video_path)
 
-        def make_single_track_file(track, stream_id, file_ext=None, ffmpeg_opts=None):
+        def make_single_track_file(track, stream_id, file_ext=None, ffmpeg_opts=None, prefer_ffmpeg=True):
             if file_ext is None:
                 file_ext = track.get_single_track_file_extension()
             if ffmpeg_opts is None:
@@ -402,8 +401,11 @@ def main():
             if track.is_single() and file_ext == platform.file_ext(track.source_file()):
                 return (track.source_file(), False)
             tmp_path = platform.make_temporary_file(file_ext)
-            # TODO extract PGS subtitles with mkvextract if it's mkv because it can handle "Application provided invalid, non monotonically increasing dts"
-            result_commands.append(ffmpeg.cmd_extract_track(track.source_file(), tmp_path, track.id(), [], ffmpeg_opts))
+            if not prefer_ffmpeg and platform.file_ext(track.source_file()) == '.mkv':
+                command = cmd.gen_mkvtoolnix_extract_track(track.source_file(), tmp_path, track.id())
+            else:
+                command = cmd.gen_ffmpeg_extract_track(track.source_file(), tmp_path, track.id(), [], ffmpeg_opts)
+            result_commands.extend(command)
             return (tmp_path, True)
 
         audio_codecs_to_denorm = set([AudioTrack.AC3, AudioTrack.DTS])
@@ -426,7 +428,7 @@ def main():
                 if need_uncompress:
                     stf_ext = '.wav'
                     stf_ffmpeg_opts = ['-f wav', '-rf64 auto']
-                src_track_file, is_src_track_file_temporary = make_single_track_file(track, ffmpeg.STREAM_AUD, stf_ext, stf_ffmpeg_opts)
+                src_track_file, is_src_track_file_temporary = make_single_track_file(track, cmd.FFMPEG_STREAM_AUD, stf_ext, stf_ffmpeg_opts)
                 eac_track_file = platform.make_temporary_file('.wav' if need_recode else platform.file_ext(src_track_file))
                 eac_opts = []
                 if need_downmix:
@@ -436,7 +438,7 @@ def main():
                 result_commands.append(u'call eac3to {} {} {}'.format(
                     cmd.quote(src_track_file), cmd.quote(eac_track_file), ' '.join(eac_opts)))
                 if is_src_track_file_temporary:
-                    result_commands.append(cmd.del_files_command(src_track_file))
+                    result_commands.extend(cmd.gen_del_files(src_track_file))
 
                 dst_track_file = eac_track_file
                 if need_recode:
@@ -444,7 +446,7 @@ def main():
                     qaac_opts = ['--tvbr 91', '--quality 2', '--rate keep', '--no-delay']
                     qaac = u'qaac64 {} {} -o {}'.format(u' '.join(qaac_opts), cmd.quote(eac_track_file), cmd.quote(m4a_track_file))
                     result_commands.append(qaac)
-                    result_commands.append(cmd.del_files_command(eac_track_file))
+                    result_commands.extend(cmd.gen_del_files(eac_track_file))
                     dst_track_file = m4a_track_file
 
                 mux_temporary_files.append(dst_track_file)
@@ -455,7 +457,7 @@ def main():
                 raise cli.Error(u'Unhandled subtitle codec {}'.format(track.codec_id()))
             if track.is_text():
                 # TODO tx3g should be converted to ass without -c:s copy
-                track_file, is_track_file_temporary = make_single_track_file(track, ffmpeg.STREAM_SUB)
+                track_file, is_track_file_temporary = make_single_track_file(track, cmd.FFMPEG_STREAM_SUB)
                 srt_file = platform.make_temporary_file('.srt')
                 result_commands.append(u'python {script} {src_path} {dst_path}'.format(
                     script=cmd.quote(os.path.join(os.path.dirname(__file__), 'any2srt.py')),
@@ -464,19 +466,16 @@ def main():
                 track.set_encoding(lang.norm_encoding('utf-8'))
                 mux_temporary_files.append(srt_file)
                 if is_track_file_temporary:
-                    result_commands.append(cmd.del_files_command(track_file))
+                    result_commands.extend(cmd.gen_del_files(track_file))
             elif track.codec_id() == SubtitleTrack.PGS:
-                track_file, is_track_file_temporary = make_single_track_file(track, ffmpeg.STREAM_SUB)
+                track_file, is_track_file_temporary = make_single_track_file(track, cmd.FFMPEG_STREAM_SUB, prefer_ffmpeg=False)
                 idx_file = platform.make_temporary_file('.idx')
                 sub_file = u'{}.sub'.format(os.path.splitext(idx_file)[0])
-                # TODO do not use my cmd-wrapper, use original jar
-                result_commands.append(u'call bdsup2sub -l {} -o {} {}'.format(
-                    lang.alpha2(track.language()),
-                    cmd.quote(idx_file), cmd.quote(track_file)))
+                result_commands.extend(cmd.gen_bdsup2sub(track_file, idx_file, lang.alpha2(track.language())))
                 track_sources[track.qualified_id()] = [idx_file, 0]
                 mux_temporary_files.extend([idx_file, sub_file])
                 if is_track_file_temporary:
-                    result_commands.append(cmd.del_files_command(track_file))
+                    result_commands.extend(cmd.gen_del_files(track_file))
 
         mux_path = platform.make_temporary_file('.mkv')
 
@@ -525,16 +524,20 @@ def main():
 
         result_commands.append(u' '.join(mux))
         if len(mux_temporary_files) > 0:
-            result_commands.append(cmd.del_files_command(*sorted(set(mux_temporary_files))))
+            result_commands.extend(cmd.gen_del_files(*sorted(set(mux_temporary_files))))
 
         if movie.chapters_path() is not None:
             result_commands.append(u'mkvpropedit --chapters {} {}'.format(
                 cmd.quote(movie.chapters_path()), cmd.quote(mux_path)))
 
         if args.xx:
-            result_commands.append(cmd.del_files_command(
+            result_commands.extend(cmd.gen_del_files(
                 *sorted(set(media_file.path() for media_file in movie.media_files()))))
-        result_commands.append(u'mkclean {} {}'.format(cmd.quote(mux_path), cmd.quote(target_path)))
+
+        clean_mux_path = platform.make_temporary_file('.mkv')
+        result_commands.append(u'mkclean {} {}'.format(cmd.quote(mux_path), cmd.quote(clean_mux_path)))
+        result_commands.extend(cmd.gen_del_files(mux_path))
+        result_commands.extend(cmd.gen_move_file(clean_mux_path, target_path))
 
         allowed_exit_codes = { 'robocopy': 1, 'mkvmerge': 1 }
         with codecs.open(MUX_BODY, 'a', 'utf-8') as body_file:

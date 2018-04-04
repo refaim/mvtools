@@ -8,6 +8,7 @@ import sys
 import tempfile
 import uuid
 
+import cli
 import cmd
 
 def is_windows():
@@ -33,7 +34,7 @@ def execute(command, capture_output=True):
     stdout, stderr = process.communicate()
     if process.returncode != 0 or capture_output and stderr:
         print_string(stderr.decode(locale.getpreferredencoding()), file=sys.stderr)
-        raise Exception('Process execution error!')
+        raise cli.Error('Process execution error!')
     return stdout
 
 def make_temporary_file(extension):
