@@ -21,6 +21,7 @@ def print_string(s, *args, **kwargs):
         encoding = 'utf-8'
     print(s.encode(encoding, errors='ignore'), *args, **kwargs)
 
+# TODO try to delegate shell escaping to subprocess so we can just provide list of arguments
 def execute(command, capture_output=True):
     cmd_encoding = locale.getpreferredencoding()
     if isinstance(command, list):

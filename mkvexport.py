@@ -402,6 +402,7 @@ def main():
             if track.is_single() and file_ext == platform.file_ext(track.source_file()):
                 return (track.source_file(), False)
             tmp_path = platform.make_temporary_file(file_ext)
+            # TODO extract PGS subtitles with mkvextract if it's mkv because it can handle "Application provided invalid, non monotonically increasing dts"
             result_commands.append(ffmpeg.cmd_extract_track(track.source_file(), tmp_path, track.id(), [], ffmpeg_opts))
             return (tmp_path, True)
 
@@ -482,6 +483,7 @@ def main():
         mux = ['mkvmerge']
         mux.extend(['--output', cmd.quote(mux_path)])
         mux.extend(['--no-track-tags', '--no-global-tags', '--disable-track-statistics-tags'])
+        # TODO it does not always help
         # Enable seeking while streaming over network
         mux.extend(['--engage', 'no_cue_duration', '--engage', 'no_cue_relative_position'])
 
