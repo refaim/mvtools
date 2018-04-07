@@ -367,7 +367,7 @@ def main():
 
             dst_color_space = src_colors.correct_space()
             if src_colors.space() != dst_color_space:
-                raise cli.Error(u'Colorspace conversion not implemented')
+                raise cli.Error(u'Colorspace conversion from {} to {} not implemented'.format(src_colors.space(), dst_color_space))
                 # TODO specify input/output color_range
                 # TODO specify each input component separately
                 # TODO The input transfer characteristics, color space, color primaries and color range should be set on the input data
