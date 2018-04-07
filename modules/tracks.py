@@ -102,8 +102,9 @@ class AudioTrack(Track):
     AAC_LC = 'aac_lc'
     AC3 = 'ac3'
     DTS = 'dts_dts'
-    DTSHRA = 'dts_dts_hd_hra'
-    DTSMA = 'dts_dts_hd_ma'
+    DTS_ES = 'dts_dts_es'
+    DTS_HRA = 'dts_dts_hd_hra'
+    DTS_MA = 'dts_dts_hd_ma'
     EAC3 = 'eac3'
     FLAC = 'flac'
     MP2 = 'mp2'
@@ -117,8 +118,9 @@ class AudioTrack(Track):
         AAC_LC: ['aac_lc', '.aac'],
         AC3: ['ac3', '.ac3'],
         DTS: ['dts', '.dts'],
-        DTSHRA: ['dtshra', '.dtshr'],
-        DTSMA: ['dtsma', '.dts'],
+        DTS_ES: ['dts', '.dts'],
+        DTS_HRA: ['dtshra', '.dtshr'],
+        DTS_MA: ['dtsma', '.dts'],
         EAC3: ['eac3', '.eac3'],
         FLAC: ['flac', '.flac'],
         MP2: ['mp2', '.mp2'],
@@ -137,6 +139,10 @@ class AudioTrack(Track):
         if profile:
             result += '_{}'.format(profile.replace('-', '_').replace(' ', '_'))
         return result.lower()
+
+    def set_codec_id(self, value):
+        self._ffm_data['profile'] = None
+        self._ffm_data['codec_name'] = value
 
     def channels(self):
         return int(self._ffm_data['channels'])

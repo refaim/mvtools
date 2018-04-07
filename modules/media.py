@@ -66,7 +66,7 @@ class File(object):
                     tracks_data.setdefault(Track.CHA, {})[-1] = {}
                 else:
                     stream_id = self._TRACK_PROPS[track_type][self._TRACK_PROPS_IDX_FFMPEG_STREAM]
-                    for track_id, track in cmd.identify_movie_tracks(self._path, stream_id).iteritems():
+                    for track_id, track in cmd.ffprobe(self._path, stream_id).iteritems():
                         tracks_data.setdefault(track['codec_type'], {})[track_id] = track
 
             self._tracks_by_type = { track_type: [] for track_type in self._TRACK_PROPS.iterkeys() }
@@ -106,6 +106,7 @@ class Movie(object):
         assert len(list(self.tracks(Track.CHA))) <= 1
 
     def _fill_metadata(self):
+        self._set_codecs()
         self._set_languages()
         self._set_forced()
         self._set_crf()
@@ -118,6 +119,17 @@ class Movie(object):
                 file_tracks.extend(media_file.tracks(file_track_type))
             if len(file_tracks) == len(type_tracks) == 1:
                 yield file_tracks[0]
+
+    def _set_codecs(self):
+        files_info = {}
+        for track in self.tracks(Track.AUD):
+            if track.codec_id() == AudioTrack.DTS:
+                file_path = track.source_file()
+                if file_path not in files_info:
+                    files_info[file_path] = cmd.mediainfo(file_path)
+                track_info = files_info[file_path][track.id()]
+                if 'ES' in track_info['Format_Profile']:
+                    track.set_codec_id(AudioTrack.DTS_ES)
 
     def _set_languages(self):
         if self._ignore_languages:

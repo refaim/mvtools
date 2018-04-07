@@ -54,6 +54,7 @@ def ask_to_select_tracks(movie, track_type, candidates, header):
     def handle_response(text):
         MPV_OPTS = { Track.AUD: u'--audio-file {}', Track.SUB: u'--sub-file {}' }
         if text == 'p':
+            # TODO add chosen audio tracks when choosing subtitles
             # TODO somehow consider track delays
             command = [u'mpv {}'.format(cmd.quote(list(movie.tracks(Track.VID))[0].source_file()))]
             for track in sorted(candidates, key=lambda t: movie.track_index_in_type(t)):
@@ -273,6 +274,7 @@ def main():
                         candidates_by_index[movie.track_index_in_type(track)] = track.qualified_id()
                     header = u'--- {}, {}, {} ---'.format(
                         track_type.capitalize(), target_lang.upper(), forced_string)
+                    # TODO if tv AND if tracks ids and names same as before then choose track automatically
                     chosen_track_index = ask_to_select_tracks(movie, track_type, sorted_candidates, header)
                     chosen_track_id = candidates_by_index[chosen_track_index]
 
@@ -408,10 +410,13 @@ def main():
             result_commands.extend(command)
             return (tmp_path, True)
 
-        audio_codecs_to_denorm = set([AudioTrack.AC3, AudioTrack.DTS])
-        audio_codecs_to_recode = set([AudioTrack.DTSHRA, AudioTrack.DTSMA, AudioTrack.EAC3, AudioTrack.FLAC, AudioTrack.MP2, AudioTrack.PCM_S16L, AudioTrack.TRUE_HD, AudioTrack.VORBIS])
         audio_codecs_to_keep = set([AudioTrack.AAC_LC, AudioTrack.MP3])
         audio_codecs_to_uncompress = set([AudioTrack.AAC_HE, AudioTrack.AAC_LC, AudioTrack.VORBIS])
+        audio_codecs_to_denorm = set([AudioTrack.AC3, AudioTrack.DTS])
+        audio_codecs_to_recode = set([
+            AudioTrack.DTS_ES, AudioTrack.DTS_HRA, AudioTrack.DTS_MA,
+            AudioTrack.EAC3, AudioTrack.FLAC, AudioTrack.MP2,
+            AudioTrack.PCM_S16L, AudioTrack.TRUE_HD, AudioTrack.VORBIS])
         max_audio_channels = 2 if args.a2 else 6
         for track in output_tracks[Track.AUD]:
             if track.codec_unknown():

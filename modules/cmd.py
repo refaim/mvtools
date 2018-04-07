@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import xml.dom.minidom
 
 import platform
 
@@ -70,7 +71,7 @@ def gen_bdsup2sub(src_file, dst_file, language):
         jar=quote(platform.execute('where bdsup2sub.jar').strip()),
         lng=language, dst=quote(dst_file), src=quote(src_file))]
 
-def identify_movie_tracks(media_path, stream_ids):
+def ffprobe(media_path, stream_ids):
     tracks = {}
     ffprobe_opts = [
         u'-v quiet',
@@ -85,6 +86,21 @@ def identify_movie_tracks(media_path, stream_ids):
         for stream in json.loads(platform.execute(ffprobe))['streams']:
             tracks[stream['index']] = stream
     return tracks
+
+def mediainfo(media_path):
+    doc = xml.dom.minidom.parseString(platform.execute(u'mediainfo --Output=XML {}'.format(quote(media_path))))
+    media_info = doc.getElementsByTagName('MediaInfo')[0]
+    media = media_info.getElementsByTagName('media')[0]
+    result = {}
+    for track in media.getElementsByTagName('track'):
+        if track.getAttribute('type') in ('Video', 'Audio', 'Text'):
+            track_data = {}
+            for tag in track.childNodes:
+                if isinstance(tag, xml.dom.minidom.Element):
+                    track_data[tag.nodeName] = tag.childNodes[0].nodeValue
+            track_data['ID'] = int(track_data['ID']) - 1
+            result[track_data['ID']] = track_data
+    return result
 
 def detect_crf(movie_path):
     ffmpeg = u'ffmpeg -i {} -an -vframes 1 -f null - -v 48 2>&1'.format(quote(movie_path))
