@@ -484,6 +484,7 @@ def main():
 
         mux_path = platform.make_temporary_file('.mkv')
 
+        # TODO add cover to files
         mux = ['mkvmerge']
         mux.extend(['--output', cmd.quote(mux_path)])
         mux.extend(['--no-track-tags', '--no-global-tags', '--disable-track-statistics-tags'])
@@ -531,6 +532,7 @@ def main():
         if len(mux_temporary_files) > 0:
             result_commands.extend(cmd.gen_del_files(*sorted(set(mux_temporary_files))))
 
+        # TODO mark mkv file with mkvexport version
         if movie.chapters_path() is not None:
             result_commands.append(u'mkvpropedit --chapters {} {}'.format(
                 cmd.quote(movie.chapters_path()), cmd.quote(mux_path)))

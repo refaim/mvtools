@@ -57,7 +57,7 @@ def gen_ffmpeg_convert(src_file, src_opts, dst_file, dst_opts):
 
 def gen_mkvtoolnix_extract_track(src_file, dst_file, track_id):
     return [u'mkvextract {src_file} tracks {track_id}:{dst_file}'.format(
-        src_file=src_file, track_id=track_id, dst_file=dst_file)]
+        src_file=quote(src_file), track_id=track_id, dst_file=quote(dst_file))]
 
 def gen_ffmpeg_extract_track(src_file, dst_file, track_id, src_opts=None, dst_opts=None):
     if src_opts is None: src_opts = []
@@ -98,7 +98,7 @@ def mediainfo(media_path):
             for tag in track.childNodes:
                 if isinstance(tag, xml.dom.minidom.Element):
                     track_data[tag.nodeName] = tag.childNodes[0].nodeValue
-            track_data['ID'] = int(track_data['ID']) - 1
+            track_data['ID'] = int(track_data.get('ID', 1)) - 1
             result[track_data['ID']] = track_data
     return result
 

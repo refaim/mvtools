@@ -211,7 +211,7 @@ class VideoTrack(Track):
         rate_string = self._ffm_data['r_frame_rate']
         a, b = [float(n) for n in rate_string.split('/')]
         rate_float = a / b
-        if equals(rate_float, 23.976, 0.1):
+        if any(equals(rate_float, x, 0.1) for x in [23.976, 29.97]):
             return self.NTSC
         if equals(rate_float, 25, 0.1):
             return self.PAL
