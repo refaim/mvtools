@@ -140,6 +140,7 @@ def main():
     parser.add_argument('-vt', help='force tune')
     parser.add_argument('-va', default=None, choices=['16:9'], help='set video display aspect ratio')
     parser.add_argument('-vs', default=None, choices=['720p', '1080p', '1440p'], help='scale video')
+    parser.add_argument('-ks', default=False, action='store_true', help='keep current colorspace')
 
     parser.add_argument('-cr', default=False, action='store_true', help='crop video')
     parser.add_argument('-cf', type=cli.argparse_path, default=None, help='path to crop map file')
@@ -366,6 +367,8 @@ def main():
             assert src_colors.range() in (Colors.RANGE_PC, Colors.RANGE_TV), src_colors.range()
 
             dst_color_space = src_colors.correct_space()
+            if args.ks:
+                dst_color_space = src_colors.space()
             if src_colors.space() != dst_color_space:
                 raise cli.Error(u'Colorspace conversion from {} to {} not implemented'.format(src_colors.space(), dst_color_space))
                 # TODO specify input/output color_range
