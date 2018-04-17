@@ -128,7 +128,7 @@ class Movie(object):
                 if file_path not in files_info:
                     files_info[file_path] = cmd.mediainfo(file_path)
                 track_info = files_info[file_path][track.id()]
-                if 'ES' in track_info['Format_Profile']:
+                if 'ES' in track_info.get('Format_Profile', ''):
                     track.set_codec_id(AudioTrack.DTS_ES)
 
     def _set_languages(self):
