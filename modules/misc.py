@@ -1,3 +1,6 @@
+import random
+import string
+
 def try_int(value):
     try:
         return int(value)
@@ -17,6 +20,11 @@ def safe_unsigned_max(sequence):
 def make_strings_dict(data):
     result = {}
     for key, values in data.iteritems():
-        for string in values + [key]:
-            result[string.lower()] = key
+        for s in values + [key]:
+            result[s.lower()] = key
     return result
+
+def random_printable(length):
+    data = list(string.ascii_letters + string.digits)
+    random.shuffle(data)
+    return u''.join(random.sample(data, length))

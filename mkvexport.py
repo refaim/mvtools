@@ -158,6 +158,7 @@ def main():
     parser.add_argument('-tv', default=None, help='TV series name')
     parser.add_argument('-il', default=False, action='store_true', help='Ignore track language data')
     parser.add_argument('-xx', default=False, action='store_true', help='Remove original files after processing')
+    parser.add_argument('-ma', default=False, action='store_true', help='Append mux file instead of overwrite')
 
     args = parser.parse_args()
     if args.cf and args.sc:
@@ -230,14 +231,14 @@ def main():
         ((Track.SUB, True), args.fl),
     ])
 
-    try:
-        os.remove(MUX_BODY)
-    except:
-        pass
-    shutil.copyfile(MUX_HEAD, MUX_BODY)
+    if not (args.ma and os.path.isfile(MUX_BODY)):
+        try:
+            os.remove(MUX_BODY)
+        except:
+            pass
+        shutil.copyfile(MUX_HEAD, MUX_BODY)
 
     created_directories = set()
-    command_index = 1
     # TODO catch some of my exceptions, report skipped file, ask for action, log skipped file
     common_crop_args = None
     for target_path, movie in sorted(movies.iteritems(), key=lambda m: m[1].main_path()):
@@ -557,16 +558,12 @@ def main():
                     if program in command.lower():
                         fail_exit_code = code + 1
                 prepared_commands = None
-                stop_statement = u'call :stop {}'.format(command_index)
-                command_index += 1
+                stop_statement = u'call :stop {}'.format(misc.random_printable(8))
                 if fail_exit_code == 1: prepared_commands = [u'{} || {}'.format(command.strip(), stop_statement)]
                 else: prepared_commands = [command.strip(), u'if errorlevel {} {}'.format(fail_exit_code, stop_statement)]
                 for prep_command in prepared_commands:
                     body_file.write(u'{}\r\n'.format(prep_command))
             body_file.write(u'\r\n')
-
-    with codecs.open(MUX_BODY, 'a', 'utf-8') as body_file:
-        body_file.write(u'call :stop 0\r\n')
 
     return 0
 
