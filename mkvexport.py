@@ -364,7 +364,7 @@ def main():
                 ffmpeg_filters.append('scale=-16:1440')
 
             src_colors = video_track.colors()
-            assert video_track.pix_fmt() in (VideoTrack.YUV420P, VideoTrack.YUVJ420P), video_track.pix_fmt()
+            assert video_track.pix_fmt() in (VideoTrack.YUV420P, VideoTrack.YUVJ420P, VideoTrack.YUV420P10LE), video_track.pix_fmt()
             assert src_colors.range() in (Colors.RANGE_PC, Colors.RANGE_TV), src_colors.range()
 
             dst_color_space = src_colors.correct_space()

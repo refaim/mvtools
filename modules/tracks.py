@@ -157,6 +157,7 @@ class VideoTrack(Track):
 
     YUV420P = 'yuv420p'
     YUVJ420P = 'yuvj420p'
+    YUV420P10LE = 'yuv420p10le'
     CODEC_H264 = 'h264'
     PROFILE_HIGH = 'High'
     LEVEL_41 = 41
@@ -249,7 +250,7 @@ class Colors(object):
 
     def range(self):
         result = self._ffm_data.get('color_range')
-        if result is None and self._ffm_data['pix_fmt'] == VideoTrack.YUV420P:
+        if result is None and self._ffm_data['pix_fmt'] in (VideoTrack.YUV420P, VideoTrack.YUV420P10LE):
             result = self.RANGE_TV
         return result
 
