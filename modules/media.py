@@ -178,15 +178,19 @@ class Movie(object):
                 track.set_forced(False)
 
         relevant_tracks = [track for track in self.tracks(Track.SUB)
-            if track.language() != 'chi' and 'sdh' not in track.name().lower()]
+            if not track.is_forced() and track.language() != 'chi' and 'sdh' not in track.name().lower()]
+        track_groups = []
+        track_groups.append([track for track in relevant_tracks if track.is_binary()])
+        track_groups.append([track for track in relevant_tracks if track.is_text()])
         metrics = ((lambda t: t.frames_len(), 50.0), (lambda t: t.num_captions(), 50.0))
         for value_getter, threshold_percentage in metrics:
-            max_value = misc.safe_unsigned_max(value_getter(track) for track in relevant_tracks)
-            if max_value is not None:
-                forced_threshold = max_value / 100.0 * threshold_percentage
-                for track in relevant_tracks:
-                    if (max_value - value_getter(track)) > forced_threshold:
-                        track.set_forced(True)
+            for track_group in track_groups:
+                max_value = misc.safe_unsigned_max(value_getter(track) for track in track_group)
+                if max_value is not None:
+                    forced_threshold = max_value / 100.0 * threshold_percentage
+                    for track in track_group:
+                        if (max_value - value_getter(track)) > forced_threshold:
+                            track.set_forced(True)
 
     def _set_crf(self):
         for track in self.tracks(Track.VID):
