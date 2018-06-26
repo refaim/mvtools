@@ -33,6 +33,8 @@ class File(object):
         '*.flv': (Track.VID, Track.AUD),
         '*.m4a': (Track.AUD,),
         '*.m4v': (Track.VID, Track.AUD, Track.SUB),
+        '*.mka': (Track.AUD,),
+        '*.mks': (Track.SUB),
         '*.mkv': (Track.VID, Track.AUD, Track.SUB),
         '*.mp4': (Track.VID, Track.AUD, Track.SUB),
         '*.mpg': (Track.VID, Track.AUD, Track.SUB),
