@@ -542,14 +542,14 @@ def main():
             result_commands.append(u'mkvpropedit --chapters {} {}'.format(
                 cmd.quote(movie.chapters_path()), cmd.quote(mux_path)))
 
-        if args.xx:
-            result_commands.extend(cmd.gen_del_files(
-                *sorted(set(media_file.path() for media_file in movie.media_files()))))
-
         clean_mux_path = platform.make_temporary_file('.mkv')
         result_commands.append(u'mkclean {} {}'.format(cmd.quote(mux_path), cmd.quote(clean_mux_path)))
         result_commands.extend(cmd.gen_del_files(mux_path))
         result_commands.extend(cmd.gen_move_file(clean_mux_path, target_path))
+
+        if args.xx:
+            result_commands.extend(cmd.gen_del_files(
+                *sorted(set(media_file.path() for media_file in movie.media_files()))))
 
         allowed_exit_codes = { 'robocopy': 1, 'mkvmerge': 1 }
         with codecs.open(MUX_BODY, 'a', 'utf-8') as body_file:
