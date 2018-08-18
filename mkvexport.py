@@ -86,12 +86,12 @@ def is_movie_satellite(movie_path, candidate_path):
     cd, cn = platform.split_path(candidate_path)
     return md.lower() == cd.lower() and cn.lower().startswith(os.path.splitext(mn)[0].lower())
 
-def find_movies(search_path, ignore_languages):
+def find_movies(search_path, ignore_languages, detect_satellites):
     found_files = []
     if os.path.isfile(search_path):
         search_dir = os.path.dirname(search_path)
         for name in os.listdir(search_dir):
-            if is_movie_satellite(search_path, os.path.join(search_dir, name)):
+            if detect_satellites and is_movie_satellite(search_path, os.path.join(search_dir, name)):
                 found_files.append(os.path.join(search_dir, name))
     elif os.path.isdir(search_path):
         for search_dir, _, files in os.walk(search_path):
@@ -109,7 +109,7 @@ def find_movies(search_path, ignore_languages):
             group = []
             if video in remaining_media:
                 remaining_media.remove(video)
-                group = [path for path in remaining_media if is_movie_satellite(video, path)]
+                group = [path for path in remaining_media if detect_satellites and is_movie_satellite(video, path)]
                 media_groups.append([video] + group)
             remaining_media -= set(group)
 
@@ -159,6 +159,7 @@ def main():
     parser.add_argument('-il', default=False, action='store_true', help='Ignore track language data')
     parser.add_argument('-xx', default=False, action='store_true', help='Remove original files after processing')
     parser.add_argument('-ma', default=False, action='store_true', help='Append mux file instead of overwrite')
+    parser.add_argument('-ds', default=False, action='store_true', help='Disable movie sattelites detection')
 
     args = parser.parse_args()
     if args.cf and args.sc:
@@ -189,7 +190,7 @@ def main():
     movies = {}
     crop_args_map = None if raw_crops_map is None else {}
     for argspath in args.sources:
-        for movie_object in find_movies(argspath, args.il):
+        for movie_object in find_movies(argspath, args.il, not args.ds):
             cur_path = os.path.normpath(os.path.relpath(movie_object.main_path(), platform.getcwd()))
             if raw_crops_map is not None:
                 crop_args_map[movie_object.main_path()] = raw_crops_map[os.path.splitext(cur_path)[0]]
