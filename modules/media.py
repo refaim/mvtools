@@ -24,6 +24,7 @@ class File(object):
 
     CONTAINER_TRACK_TYPES = {
         '*.ac3': (Track.AUD,),
+        '*.ass': (Track.SUB,),
         '*.avi': (Track.VID, Track.AUD),
         '*.dts': (Track.AUD,),
         '*.dtshr': (Track.AUD,),
@@ -39,6 +40,7 @@ class File(object):
         '*.mp4': (Track.VID, Track.AUD, Track.SUB),
         '*.mpg': (Track.VID, Track.AUD, Track.SUB),
         '*.srt': (Track.SUB,),
+        '*.ssa': (Track.SUB,),
         '*.sup': (Track.SUB,),
         '*.ts': (Track.VID, Track.AUD, Track.SUB),
         '*.wmv': (Track.VID, Track.AUD, Track.SUB),
