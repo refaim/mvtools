@@ -416,11 +416,11 @@ def main():
             return (tmp_path, True)
 
         audio_codecs_to_keep = set([AudioTrack.AAC_LC, AudioTrack.MP3])
-        audio_codecs_to_uncompress = set([AudioTrack.AAC_HE, AudioTrack.AAC_LC, AudioTrack.VORBIS])
+        audio_codecs_to_uncompress = set([AudioTrack.AAC_HE, AudioTrack.AAC_LC, AudioTrack.OPUS, AudioTrack.VORBIS])
         audio_codecs_to_denorm = set([AudioTrack.AC3, AudioTrack.DTS])
         audio_codecs_to_recode = set([
             AudioTrack.DTS_ES, AudioTrack.DTS_HRA, AudioTrack.DTS_MA,
-            AudioTrack.EAC3, AudioTrack.FLAC, AudioTrack.MP2,
+            AudioTrack.EAC3, AudioTrack.FLAC, AudioTrack.MP2, AudioTrack.OPUS,
             AudioTrack.PCM_S16L, AudioTrack.TRUE_HD, AudioTrack.VORBIS])
         max_audio_channels = 2 if args.a2 else 6
         for track in output_tracks[Track.AUD]:

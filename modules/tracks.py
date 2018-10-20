@@ -109,6 +109,7 @@ class AudioTrack(Track):
     FLAC = 'flac'
     MP2 = 'mp2'
     MP3 = 'mp3'
+    OPUS = 'opus'
     PCM_S16L = 'pcm_s16le'
     TRUE_HD = 'truehd'
     VORBIS = 'vorbis'
@@ -125,6 +126,7 @@ class AudioTrack(Track):
         FLAC: ['flac', '.flac'],
         MP2: ['mp2', '.mp2'],
         MP3: ['mp3', '.mp3'],
+        OPUS: ['opus', '.opus'],
         PCM_S16L: ['pcm', '.wav'],
         TRUE_HD: ['thd', '.dts'],
         VORBIS: ['ogg', '.ogg'],
