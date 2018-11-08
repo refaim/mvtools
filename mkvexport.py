@@ -467,8 +467,10 @@ def main():
             if track.codec_unknown():
                 raise cli.Error(u'Unhandled subtitle codec {}'.format(track.codec_id()))
             if track.is_text():
-                # TODO tx3g should be converted to ass without -c:s copy
-                track_file, is_track_file_temporary = make_single_track_file(track, cmd.FFMPEG_STREAM_SUB)
+                ffmpeg_opts = None
+                if track.codec_id() == SubtitleTrack.MOV:
+                    ffmpeg_opts = []
+                track_file, is_track_file_temporary = make_single_track_file(track, cmd.FFMPEG_STREAM_SUB, ffmpeg_opts=ffmpeg_opts)
                 srt_file = platform.make_temporary_file('.srt')
                 result_commands.append(u'python {script} {src_path} {dst_path}'.format(
                     script=cmd.quote(os.path.join(os.path.dirname(__file__), 'any2srt.py')),
