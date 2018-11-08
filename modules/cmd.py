@@ -25,20 +25,23 @@ def quote(path):
 def escape(path):
     return re.sub(r'\^?&', u'^&', path)
 
-def gen_del_files(*args):
-    return [u'del /q {}'.format(' '.join(quote(p) for p in args))]
+def gen_del_files(delete_securely=False, *args):
+    template = u'sdelete -r -nobanner {}' if delete_securely else u'del /q {}'
+    return [template.format(' '.join(quote(p) for p in args))]
 
-def gen_move_file(src_file, dst_file):
+def gen_move_file(src_file, dst_file, delete_securely=False):
     return [
-        u'robocopy {src_folder} {dst_folder} {src_name} /Z /MOV /NS /NC /NDL /NJH /NJS'.format(
+        u'robocopy {src_folder} {dst_folder} {src_name} /Z /NS /NC /NDL /NJH /NJS'.format(
             src_folder=quote(os.path.dirname(src_file)),
             dst_folder=quote(os.path.dirname(dst_file)),
             src_name=quote(os.path.basename(src_file))),
-        u'if exist {dst_file} del /q {dst_file}'.format(
-            dst_file=quote(dst_file)),
+        u'if exist {dst_file} {del_command}'.format(
+            dst_file=quote(dst_file),
+            del_command=gen_del_files(delete_securely, dst_file)[0]),
+        gen_del_files(delete_securely, src_file)[0],
         u'ren {src_file} {dst_name}'.format(
             src_file=quote(os.path.join(os.path.dirname(dst_file), os.path.basename(src_file))),
-            dst_name=quote(os.path.basename(dst_file)))
+            dst_name=quote(os.path.basename(dst_file))),
     ]
 
 def gen_create_dir(dir_path):
