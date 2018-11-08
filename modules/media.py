@@ -44,6 +44,7 @@ class File(object):
         '*.sup': (Track.SUB,),
         '*.ts': (Track.VID, Track.AUD, Track.SUB),
         '*.webm': (Track.VID, Track.AUD),
+        '*.wma': (Track.AUD,),
         '*.wmv': (Track.VID, Track.AUD, Track.SUB),
         '*chapters*.txt': (Track.CHA,),
         '*chapters*.xml': (Track.CHA,),
