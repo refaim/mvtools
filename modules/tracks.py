@@ -101,6 +101,7 @@ class AudioTrack(Track):
     AAC_HE = 'aac_he_aac'
     AAC_LC = 'aac_lc'
     AC3 = 'ac3'
+    AMR = 'amr_nb'
     DTS = 'dts_dts'
     DTS_ES = 'dts_dts_es'
     DTS_HRA = 'dts_dts_hd_hra'
@@ -119,6 +120,7 @@ class AudioTrack(Track):
         AAC_HE: ['aac_he', '.aac'],
         AAC_LC: ['aac_lc', '.aac'],
         AC3: ['ac3', '.ac3'],
+        AMR: ['amr', '.amr'],
         DTS: ['dts', '.dts'],
         DTS_ES: ['dts', '.dts'],
         DTS_HRA: ['dtshra', '.dtshr'],
@@ -192,6 +194,9 @@ class VideoTrack(Track):
     def height(self):
         return self._ffm_data['height']
 
+    def is_hd(self):
+        return self.width() >= 1200 or self.height() >= 700
+
     def profile(self):
         return self._ffm_data['profile']
 
@@ -222,7 +227,8 @@ class VideoTrack(Track):
             return self.PAL
         if any(equals(rate_float, x, 0.1) for x in [50, 60]):
             return self.DEINT
-        assert False, rate_string
+        assert not self.is_hd()
+        return None
 
     def field_order(self):
         if self._field_order is None:
@@ -258,15 +264,18 @@ class Colors(object):
             result = self.RANGE_TV
         return result
 
+    def is_hd(self):
+        return self._width >= 1200 or self._height >= 700
+
     def correct_space(self):
-        result = None
-        if self._height >= 700:
-            result = self.BT_709
-        elif self._standard == VideoTrack.PAL:
-            result = self.BT_601_PAL
-        elif self._standard == VideoTrack.NTSC:
-            result = self.BT_601_NTSC
-        return result
+        if self.is_hd():
+            return self.BT_709
+        if self._standard == VideoTrack.PAL:
+            return self.BT_601_PAL
+        if self._standard == VideoTrack.NTSC:
+            return self.BT_601_NTSC
+        assert not self.is_hd()
+        return None
 
     def _guess_metric(self, metric):
         result = self._ffm_data.get(metric)

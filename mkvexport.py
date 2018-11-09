@@ -278,7 +278,7 @@ def main():
                         candidates_by_index[movie.track_index_in_type(track)] = track.qualified_id()
                     header = u'--- {}, {}, {} ---'.format(
                         track_type.capitalize(), target_lang.upper(), forced_string)
-                    # TODO if tv AND if tracks ids and names same as before then choose track automatically
+                    # TODO if tv AND if tracks ids, names and codecs same as before then choose track automatically
                     chosen_track_index = ask_to_select_tracks(movie, track_type, sorted_candidates, header)
                     chosen_track_id = candidates_by_index[chosen_track_index]
 
@@ -308,6 +308,24 @@ def main():
         if not os.path.isdir(target_directory) and target_directory not in created_directories:
            result_commands.extend(cmd.gen_create_dir(target_directory))
            created_directories.add(target_directory)
+
+        def make_single_track_file(track, stream_id, file_ext=None, ffmpeg_opts=None, prefer_ffmpeg=True):
+            if file_ext is None:
+                file_ext = track.get_single_track_file_extension()
+            if ffmpeg_opts is None:
+                ffmpeg_opts = ['-c:{} copy'.format(stream_id)]
+            if file_ext == platform.file_ext(track.source_file()) and track.is_single():
+                return (track.source_file(), False)
+            tmp_path = platform.make_temporary_file(file_ext)
+            if not prefer_ffmpeg and platform.file_ext(track.source_file()) == '.mkv':
+                command = cmd.gen_mkvtoolnix_extract_track(track.source_file(), tmp_path, track.id())
+            else:
+                command = cmd.gen_ffmpeg_extract_track(track.source_file(), tmp_path, track.id(), [], ffmpeg_opts)
+            result_commands.extend(command)
+            return (tmp_path, True)
+
+        # TODO detect by metadata, not by file extension
+        video_source_supported_by_mkvmerge = platform.file_ext(video_track.source_file()) not in set(['.3gp', '.wmv'])
 
         # TODO support 2pass encoding
         # TODO what if there is crf already?
@@ -384,43 +402,37 @@ def main():
             ffmpeg_dst_options = ['-an', '-sn', '-dn']
             if ffmpeg_filters:
                 ffmpeg_dst_options.append('-filter:v {}'.format(','.join(ffmpeg_filters)))
-            # TODO do not specify color primaries if source SD and values unknown
             ffmpeg_dst_options.extend([
                 '-c:v libx264', '-preset veryslow', '-pix_fmt {}'.format(VideoTrack.YUV420P),
                 '-tune {}'.format(tune_params[TUNES_IDX_REAL_TUNE]),
                 '-profile:v high', '-level:v 4.1', '-crf {}'.format(tune_params[TUNES_IDX_CRF]),
                 '-map_metadata -1', '-map_chapters -1',
-                '-color_range {}'.format(src_colors.range()), # TODO "16-235 is a typical NTSC luma range. PAL always uses 0-255 luma range."
-                '-color_primaries {}'.format(dst_color_space),
-                '-color_trc {}'.format('gamma28' if dst_color_space == Colors.BT_601_PAL else dst_color_space),
-                '-colorspace {}'.format(dst_color_space),
             ])
+            if dst_color_space is not None:
+                ffmpeg_dst_options.extend([
+                    '-color_range {}'.format(src_colors.range()), # TODO "16-235 is a typical NTSC luma range. PAL always uses 0-255 luma range."
+                    '-color_primaries {}'.format(dst_color_space),
+                    '-color_trc {}'.format('gamma28' if dst_color_space == Colors.BT_601_PAL else dst_color_space),
+                    '-colorspace {}'.format(dst_color_space),
+                ])
+            else:
+                assert not video_track.is_hd()
+
             new_video_path = platform.make_temporary_file('.mkv')
             result_commands.extend(
                 cmd.gen_ffmpeg_convert(video_track.source_file(), ffmpeg_src_options, new_video_path, ffmpeg_dst_options))
             track_sources[video_track.qualified_id()] = [new_video_path, 0]
             mux_temporary_files.append(new_video_path)
-
-        def make_single_track_file(track, stream_id, file_ext=None, ffmpeg_opts=None, prefer_ffmpeg=True):
-            if file_ext is None:
-                file_ext = track.get_single_track_file_extension()
-            if ffmpeg_opts is None:
-                ffmpeg_opts = ['-c:{} copy'.format(stream_id)]
-            if track.is_single() and file_ext == platform.file_ext(track.source_file()):
-                return (track.source_file(), False)
-            tmp_path = platform.make_temporary_file(file_ext)
-            if not prefer_ffmpeg and platform.file_ext(track.source_file()) == '.mkv':
-                command = cmd.gen_mkvtoolnix_extract_track(track.source_file(), tmp_path, track.id())
-            else:
-                command = cmd.gen_ffmpeg_extract_track(track.source_file(), tmp_path, track.id(), [], ffmpeg_opts)
-            result_commands.extend(command)
-            return (tmp_path, True)
+        elif not video_source_supported_by_mkvmerge:
+            new_video_path, _ = make_single_track_file(video_track, cmd.FFMPEG_STREAM_VID, '.mkv')
+            track_sources[video_track.qualified_id()] = [new_video_path, 0]
+            mux_temporary_files.append(new_video_path)
 
         audio_codecs_to_keep = set([AudioTrack.AAC_LC, AudioTrack.MP3])
-        audio_codecs_to_uncompress = set([AudioTrack.AAC_HE, AudioTrack.AAC_LC, AudioTrack.OPUS, AudioTrack.VORBIS, AudioTrack.WMAV2])
+        audio_codecs_to_uncompress = set([AudioTrack.AAC_HE, AudioTrack.AAC_LC, AudioTrack.AMR, AudioTrack.OPUS, AudioTrack.VORBIS, AudioTrack.WMAV2])
         audio_codecs_to_denorm = set([AudioTrack.AC3, AudioTrack.DTS])
         audio_codecs_to_recode = set([
-            AudioTrack.DTS_ES, AudioTrack.DTS_HRA, AudioTrack.DTS_MA,
+            AudioTrack.AMR, AudioTrack.DTS_ES, AudioTrack.DTS_HRA, AudioTrack.DTS_MA,
             AudioTrack.EAC3, AudioTrack.FLAC, AudioTrack.MP2, AudioTrack.OPUS,
             AudioTrack.PCM_S16L, AudioTrack.TRUE_HD, AudioTrack.VORBIS, AudioTrack.WMAV2])
         max_audio_channels = 2 if args.a2 else 6
@@ -500,8 +512,10 @@ def main():
         track_ids_by_files = {}
         for qualified_id, (source_file, source_file_track_id) in track_sources.iteritems():
             track_ids_by_files.setdefault(source_file, {})[qualified_id] = source_file_track_id
-        track_ids_by_files.setdefault(video_track.source_file(), {})
+        if video_source_supported_by_mkvmerge:
+            track_ids_by_files.setdefault(video_track.source_file(), {})
 
+        # TODO tracks need to be extracted from 3gp and wmv containers before passing to mkvmerge
         source_file_ids = {}
         for i, (source_file, track_ids_map) in enumerate(track_ids_by_files.iteritems()):
             source_file_ids[source_file] = i
