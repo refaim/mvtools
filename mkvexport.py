@@ -149,6 +149,7 @@ def main():
     parser.add_argument('-al', nargs='*', type=cli.argparse_lang, default=[], help='ordered list of audio 3-letter language codes to keep')
     parser.add_argument('-ar', default=False, action='store_true', help='recode audio')
     parser.add_argument('-a2', default=False, action='store_true', help='downmix multi-channel audio to stereo')
+    parser.add_argument('-aw', default=False, action='store_true', help='convert audio to wavfile before encoding')
 
     parser.add_argument('-sl', nargs='*', type=cli.argparse_lang, default=[], help='ordered list of full subtitle 3-letter language codes to keep')
     parser.add_argument('-fl', nargs='*', type=cli.argparse_lang, default=[], help='ordered list of forced subtitle  3-letter language codes to keep')
@@ -443,7 +444,7 @@ def main():
             need_denorm = track.codec_id() in audio_codecs_to_denorm
             need_downmix = track.channels() > max_audio_channels
             need_recode = need_downmix or track.codec_id() in audio_codecs_to_recode or args.ar and track.codec_id() not in audio_codecs_to_keep
-            need_uncompress = track.codec_id() in audio_codecs_to_uncompress
+            need_uncompress = track.codec_id() in audio_codecs_to_uncompress or args.aw
 
             if need_denorm or need_downmix or need_recode:
                 stf_ext = None
