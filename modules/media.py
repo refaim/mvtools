@@ -22,46 +22,78 @@ class File(object):
         Track.CHA: (ChaptersTrack, None),
     }
 
-    CONTAINER_TRACK_TYPES = {
-        '*.3gp': (Track.VID, Track.AUD),
-        '*.ac3': (Track.AUD,),
-        '*.ass': (Track.SUB,),
-        '*.avi': (Track.VID, Track.AUD),
-        '*.dts': (Track.AUD,),
-        '*.dtshr': (Track.AUD,),
-        '*.dtsma': (Track.AUD,),
-        '*.eac3': (Track.AUD,),
-        '*.flac': (Track.AUD,),
-        '*.flv': (Track.VID, Track.AUD),
-        '*.m4a': (Track.AUD,),
-        '*.m4v': (Track.VID, Track.AUD, Track.SUB),
-        '*.mka': (Track.AUD,),
-        '*.mks': (Track.SUB),
-        '*.mkv': (Track.VID, Track.AUD, Track.SUB),
-        '*.mp4': (Track.VID, Track.AUD, Track.SUB),
-        '*.mpeg': (Track.VID, Track.AUD, Track.SUB),
-        '*.mpg': (Track.VID, Track.AUD, Track.SUB),
-        '*.srt': (Track.SUB,),
-        '*.ssa': (Track.SUB,),
-        '*.sup': (Track.SUB,),
-        '*.ts': (Track.VID, Track.AUD, Track.SUB),
-        '*.webm': (Track.VID, Track.AUD),
-        '*.wma': (Track.AUD,),
-        '*.wmv': (Track.VID, Track.AUD, Track.SUB),
-        '*chapters*.txt': (Track.CHA,),
-        '*chapters*.xml': (Track.CHA,),
+    FORMAT_3GP = '3gp'
+    FORMAT_AC3 = 'ac3'
+    FORMAT_AMR = 'amr'
+    FORMAT_AVI = 'avi'
+    FORMAT_CHA = 'cha'
+    FORMAT_FLAC = 'flac'
+    FORMAT_FLV = 'flv'
+    FORMAT_M4A = 'm4a'
+    FORMAT_MKV = 'mkv'
+    FORMAT_MOV = 'mov'
+    FORMAT_MP3 = 'mp3'
+    FORMAT_MP4 = 'mp4'
+    FORMAT_MPG = 'mpg'
+    FORMAT_SRT = 'srt'
+    FORMAT_SSA = 'ssa'
+    FORMAT_SUP = 'sup'
+    FORMAT_WAV = 'wav'
+    FORMAT_WEBM = 'webm'
+    FORMAT_WMV = 'wmv'
+
+    _FORMATS_INFO = {
+        FORMAT_3GP: (['*.3gp'], [Track.VID, Track.AUD], [('MPEG-4', '3GPP Media Release 4'), ('MPEG-4', '3GPP Media Release 5')]),
+        FORMAT_AC3: (['*.ac3'], [Track.AUD], [('AC-3', None)]),
+        FORMAT_AMR: (['*.amr'], [Track.AUD], [('AMR', None)]),
+        FORMAT_AVI: (['*.avi'], [Track.VID, Track.AUD], [('AVI', None)]),
+        FORMAT_CHA: (['*chapters*.txt', '*chapters*.xml'], [Track.CHA], []),
+        FORMAT_FLAC: (['*.flac'], [Track.AUD], [('FLAC', None)]),
+        FORMAT_FLV: (['*.flv'], [Track.VID, Track.AUD], [('Flash Video', None)]),
+        FORMAT_M4A: (['*.m4a'], [Track.AUD], [('MPEG-4', 'Apple audio with iTunes info')]),
+        FORMAT_MKV: (['*.mkv'], [Track.VID, Track.AUD, Track.SUB], [('Matroska', None)]),
+        FORMAT_MOV: (['*.mov'], [Track.VID, Track.AUD, Track.SUB], [('MPEG-4', 'QuickTime')]),
+        FORMAT_MP3: (['*.mp3'], [Track.AUD], [('MPEG Audio', None)]),
+        FORMAT_MP4: (['*.mp4'], [Track.VID, Track.AUD, Track.SUB], [('MPEG-4', 'Base Media'), ('MPEG-4', 'Base Media / Version 2')]),
+        FORMAT_MPG: (['*.mpg', '*.mpeg'], [Track.VID, Track.AUD, Track.SUB], [('MPEG-PS', None)]),
+        FORMAT_SRT: (['*.srt'], [Track.SUB], [('SubRip', None)]),
+        FORMAT_SSA: (['*.ssa', '*.ass'], [Track.SUB], []),
+        FORMAT_SUP: (['*.sup'], [Track.SUB], []),
+        FORMAT_WAV: (['*.wav'], [Track.AUD], [('Wave', None)]),
+        FORMAT_WEBM: (['*.webm'], [Track.VID, Track.AUD], [('WebM', None)]),
+        FORMAT_WMV: (['*.wma', '*.wmv'], [Track.VID, Track.AUD, Track.SUB], [('Windows Media', None)]),
     }
+    _format_signatures = None
+
+    # TODO move to _FORMATS_INFO
+    # '*.dts': (Track.AUD,),
+    # '*.dtshr': (Track.AUD,),
+    # '*.dtsma': (Track.AUD,),
+    # '*.eac3': (Track.AUD,),
+    # '*.m4v': (Track.VID, Track.AUD, Track.SUB),
+    # '*.mka': (Track.AUD,),
+    # '*.mks': (Track.SUB),
+    # '*.ts': (Track.VID, Track.AUD, Track.SUB),
 
     @classmethod
     def possible_track_types(cls, file_path):
-        for wildcard in cls.CONTAINER_TRACK_TYPES:
-            if fnmatch.fnmatch(file_path, wildcard):
-                return list(cls.CONTAINER_TRACK_TYPES[wildcard])
+        for file_format, (wildcards, track_types, signatures) in cls._FORMATS_INFO.iteritems():
+            for wildcard in wildcards:
+                if fnmatch.fnmatch(file_path, wildcard):
+                    return track_types
         return []
 
-    def __init__(self, file_path):
+    def __init__(self, file_path, container_format, container_format_profile):
         self._path = file_path
         self._tracks_by_type = None
+
+        if File._format_signatures is None:
+            formats = {}
+            for file_format, (_, _, signatures) in self._FORMATS_INFO.iteritems():
+                for signature in signatures:
+                    formats[signature] = file_format
+            File._format_signatures = formats
+        self._format = File._format_signatures[(container_format, container_format_profile)]
 
     def path(self):
         return self._path
@@ -81,7 +113,7 @@ class File(object):
             for track_type, tracks_of_type in tracks_data.iteritems():
                 for track_id, track_data in tracks_of_type.iteritems():
                     track_class = self._TRACK_PROPS[track_type][self._TRACK_PROPS_IDX_CLASS]
-                    self._tracks_by_type[track_type].append(track_class(self._path, track_data))
+                    self._tracks_by_type[track_type].append(track_class(self._path, self._format, track_data))
                 self._tracks_by_type[track_type].sort(key=lambda track: track.qualified_id())
         return self._tracks_by_type
 
@@ -101,15 +133,24 @@ class Movie(object):
         return u' '.join(result)
 
     def __init__(self, media_paths, ignore_languages):
+        self._ignore_languages = ignore_languages
         self._media_paths = list(media_paths)
         self._media_files = None
         self._main_path = self._media_paths[0]
-        self._ignore_languages = ignore_languages
+        self._file_info_cache = {}
+
+    def _get_file_info(self, path):
+        if path not in self._file_info_cache:
+            self._file_info_cache[path] = cmd.mediainfo(path)
+        return self._file_info_cache[path]
 
     def _parse_media(self):
         sort_prefix = os.path.commonprefix([path for path in self._media_paths])
         self._media_paths.sort(key=functools.partial(self.sort_key, sort_prefix))
-        self._media_files = [File(path) for path in self._media_paths]
+        self._media_files = []
+        for path in self._media_paths:
+            info = self._get_file_info(path)['general']
+            self._media_files.append(File(path, info['format'], info['format_profile']))
         assert len(list(self.tracks(Track.VID))) >= 1
         assert len(list(self.tracks(Track.CHA))) <= 1
 
@@ -129,13 +170,9 @@ class Movie(object):
                 yield file_tracks[0]
 
     def _set_codecs(self):
-        files_info = {}
         for track in self.tracks(Track.AUD):
             if track.codec_id() == AudioTrack.DTS:
-                file_path = track.source_file()
-                if file_path not in files_info:
-                    files_info[file_path] = cmd.mediainfo(file_path)
-                track_info = files_info[file_path][track.id()]
+                track_info = self._get_file_info(track.source_file())['tracks'][track.id()]
                 if 'ES' in track_info.get('Format_Profile', ''):
                     track.set_codec_id(AudioTrack.DTS_ES)
 

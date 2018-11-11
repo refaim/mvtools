@@ -325,8 +325,7 @@ def main():
             result_commands.extend(command)
             return (tmp_path, True)
 
-        # TODO detect by metadata, not by file extension
-        video_source_supported_by_mkvmerge = platform.file_ext(video_track.source_file()) not in set(['.3gp', '.wmv'])
+        video_source_supported_by_mkvmerge = video_track.container_format() not in set([media.File.FORMAT_3GP, media.File.FORMAT_WMV])
 
         # TODO support 2pass encoding
         # TODO what if there is crf already?

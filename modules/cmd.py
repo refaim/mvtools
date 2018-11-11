@@ -94,16 +94,21 @@ def mediainfo(media_path):
     doc = xml.dom.minidom.parseString(platform.execute(u'mediainfo --Output=XML {}'.format(quote(media_path))))
     media_info = doc.getElementsByTagName('MediaInfo')[0]
     media = media_info.getElementsByTagName('media')[0]
-    result = {}
+    tracks = {}
+    general = {}
     for track in media.getElementsByTagName('track'):
-        if track.getAttribute('type') in ('Video', 'Audio', 'Text'):
-            track_data = {}
-            for tag in track.childNodes:
-                if isinstance(tag, xml.dom.minidom.Element):
-                    track_data[tag.nodeName] = tag.childNodes[0].nodeValue
+        track_data = {}
+        for tag in track.childNodes:
+            if isinstance(tag, xml.dom.minidom.Element):
+                track_data[tag.nodeName] = tag.childNodes[0].nodeValue
+        track_type = track.getAttribute('type')
+        if track_type == 'General':
+            general['format'] = track_data['Format']
+            general['format_profile'] = track_data.get('Format_Profile')
+        elif track_type in ('Video', 'Audio', 'Text'):
             track_data['ID'] = int(track_data.get('ID', 1)) - 1
-            result[track_data['ID']] = track_data
-    return result
+            tracks[track_data['ID']] = track_data
+    return {'tracks': tracks, 'general': general}
 
 def detect_crf(movie_path):
     ffmpeg = u'ffmpeg -i {} -an -vframes 1 -f null - -v 48 2>&1'.format(quote(movie_path))
