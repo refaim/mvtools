@@ -54,6 +54,7 @@ class File(object):
         FORMAT_FLAC: (['*.flac'], [Track.AUD], [('FLAC', None)]),
         FORMAT_FLV: (['*.flv'], [Track.VID, Track.AUD], [('Flash Video', None)]),
         FORMAT_M4A: (['*.m4a'], [Track.AUD], [('MPEG-4', 'Apple audio with iTunes info')]),
+        # TODO Add signature
         FORMAT_M4V: (['*.m4v'], [Track.VID, Track.AUD, Track.SUB], []),
         FORMAT_MKV: (['*.mkv'], [Track.VID, Track.AUD, Track.SUB], [('Matroska', None)]),
         FORMAT_MOV: (['*.mov'], [Track.VID, Track.AUD, Track.SUB], [('MPEG-4', 'QuickTime')]),
