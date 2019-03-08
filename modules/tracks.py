@@ -116,6 +116,7 @@ class AudioTrack(Track):
     MP3 = 'mp3'
     OPUS = 'opus'
     PCM_S16L = 'pcm_s16le'
+    SPEEX = 'speex'
     TRUE_HD = 'truehd'
     VORBIS = 'vorbis'
     WMAV2 = 'wmav2'
@@ -135,6 +136,7 @@ class AudioTrack(Track):
         MP3: ['mp3', '.mp3'],
         OPUS: ['opus', '.opus'],
         PCM_S16L: ['pcm', '.wav'],
+        SPEEX: ['speex', '.spx'],
         TRUE_HD: ['thd', '.dts'],
         VORBIS: ['ogg', '.ogg'],
         WMAV2: ['wma', '.wma'],

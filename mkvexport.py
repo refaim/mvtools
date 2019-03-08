@@ -429,12 +429,12 @@ def main():
             mux_temporary_files.append(new_video_path)
 
         audio_codecs_to_keep = set([AudioTrack.AAC_LC, AudioTrack.MP3])
-        audio_codecs_to_uncompress = set([AudioTrack.AAC_HE, AudioTrack.AAC_LC, AudioTrack.AMR, AudioTrack.OPUS, AudioTrack.VORBIS, AudioTrack.WMAV2])
+        audio_codecs_to_uncompress = set([AudioTrack.AAC_HE, AudioTrack.AAC_LC, AudioTrack.AMR, AudioTrack.OPUS, AudioTrack.SPEEX, AudioTrack.VORBIS, AudioTrack.WMAV2])
         audio_codecs_to_denorm = set([AudioTrack.AC3, AudioTrack.DTS])
         audio_codecs_to_recode = set([
             AudioTrack.AMR, AudioTrack.DTS_ES, AudioTrack.DTS_HRA, AudioTrack.DTS_MA,
             AudioTrack.EAC3, AudioTrack.FLAC, AudioTrack.MP2, AudioTrack.OPUS,
-            AudioTrack.PCM_S16L, AudioTrack.TRUE_HD, AudioTrack.VORBIS, AudioTrack.WMAV2])
+            AudioTrack.PCM_S16L, AudioTrack.SPEEX, AudioTrack.TRUE_HD, AudioTrack.VORBIS, AudioTrack.WMAV2])
         max_audio_channels = 2 if args.a2 else 6
         for track in output_tracks[Track.AUD]:
             if track.codec_unknown():
