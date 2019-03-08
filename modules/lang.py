@@ -479,6 +479,7 @@ _ENCODINGS = {
     'CP1251': ['windows-1251'],
     'US-ASCII': ['ascii'],
     'UTF-8': ['utf8', 'utf-8-sig'],
+    'UTF-16': ['utf-16'],
 }
 _ENCODING_STRINGS = misc.make_strings_dict(_ENCODINGS)
 
