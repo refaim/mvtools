@@ -27,9 +27,11 @@ class File(object):
     FORMAT_AMR = 'amr'
     FORMAT_AVI = 'avi'
     FORMAT_CHA = 'cha'
+    FORMAT_EAC3 = 'eac3'
     FORMAT_FLAC = 'flac'
     FORMAT_FLV = 'flv'
     FORMAT_M4A = 'm4a'
+    FORMAT_M4V = 'm4v'
     FORMAT_MKV = 'mkv'
     FORMAT_MOV = 'mov'
     FORMAT_MP3 = 'mp3'
@@ -46,11 +48,13 @@ class File(object):
         FORMAT_3GP: (['*.3gp'], [Track.VID, Track.AUD], [('MPEG-4', '3GPP Media Release 4'), ('MPEG-4', '3GPP Media Release 5')]),
         FORMAT_AC3: (['*.ac3'], [Track.AUD], [('AC-3', None)]),
         FORMAT_AMR: (['*.amr'], [Track.AUD], [('AMR', None)]),
-        FORMAT_AVI: (['*.avi'], [Track.VID, Track.AUD], [('AVI', None)]),
-        FORMAT_CHA: (['*chapters*.txt', '*chapters*.xml'], [Track.CHA], []),
+        FORMAT_AVI: (['*.avi'], [Track.VID, Track.AUD], [('AVI', None), ('AVI', 'OpenDML')]),
+        FORMAT_CHA: (['*chapters*.txt', '*chapters*.xml'], [Track.CHA], [('Chapters', None)]),
+        FORMAT_EAC3: (['*.eac3'], [Track.AUD], [('E-AC-3', None)]),
         FORMAT_FLAC: (['*.flac'], [Track.AUD], [('FLAC', None)]),
         FORMAT_FLV: (['*.flv'], [Track.VID, Track.AUD], [('Flash Video', None)]),
         FORMAT_M4A: (['*.m4a'], [Track.AUD], [('MPEG-4', 'Apple audio with iTunes info')]),
+        FORMAT_M4V: (['*.m4v'], [Track.VID, Track.AUD, Track.SUB], []),
         FORMAT_MKV: (['*.mkv'], [Track.VID, Track.AUD, Track.SUB], [('Matroska', None)]),
         FORMAT_MOV: (['*.mov'], [Track.VID, Track.AUD, Track.SUB], [('MPEG-4', 'QuickTime')]),
         FORMAT_MP3: (['*.mp3'], [Track.AUD], [('MPEG Audio', None)]),
@@ -69,8 +73,6 @@ class File(object):
     # '*.dts': (Track.AUD,),
     # '*.dtshr': (Track.AUD,),
     # '*.dtsma': (Track.AUD,),
-    # '*.eac3': (Track.AUD,),
-    # '*.m4v': (Track.VID, Track.AUD, Track.SUB),
     # '*.mka': (Track.AUD,),
     # '*.mks': (Track.SUB),
     # '*.ts': (Track.VID, Track.AUD, Track.SUB),
