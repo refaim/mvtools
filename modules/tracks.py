@@ -89,7 +89,8 @@ class Track(object):
         return self._duration
 
     def frames_len(self):
-        return misc.try_int(self._tags().get('NUMBER_OF_FRAMES-eng', None))
+        n = self._tags().get('NUMBER_OF_FRAMES-eng', None) or self._ffm_data.get('nb_frames', None)
+        return misc.try_int(n)
 
     def is_forced(self):
         forced = self._ffm_data['disposition']['forced']
