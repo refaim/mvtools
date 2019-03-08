@@ -103,7 +103,16 @@ def mediainfo(media_path):
                 track_data[tag.nodeName] = tag.childNodes[0].nodeValue
         track_type = track.getAttribute('type')
         if track_type == 'General':
-            general['format'] = track_data['Format']
+            track_format = track_data.get('Format')
+            if track_format is None:
+                _, extension = os.path.splitext(media_path.lower())
+                if extension == '.srt':
+                    track_format = 'SubRip'
+                elif extension == '.sup':
+                    track_format = 'PGS'
+                elif 'chapters' in media_path.lower():
+                    track_format = 'Chapters'
+            general['format'] = track_format
             general['format_profile'] = track_data.get('Format_Profile')
         elif track_type in ('Video', 'Audio', 'Text'):
             track_data['ID'] = int(track_data.get('ID', 1)) - 1
