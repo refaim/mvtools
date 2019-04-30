@@ -40,6 +40,7 @@ class File(object):
     FORMAT_SRT = 'srt'
     FORMAT_SSA = 'ssa'
     FORMAT_SUP = 'sup'
+    FORMAT_TS = 'ts'
     FORMAT_WAV = 'wav'
     FORMAT_WEBM = 'webm'
     FORMAT_WMV = 'wmv'
@@ -59,11 +60,12 @@ class File(object):
         FORMAT_MKV: (['*.mkv'], [Track.VID, Track.AUD, Track.SUB], [('Matroska', None)]),
         FORMAT_MOV: (['*.mov'], [Track.VID, Track.AUD, Track.SUB], [('MPEG-4', 'QuickTime')]),
         FORMAT_MP3: (['*.mp3'], [Track.AUD], [('MPEG Audio', None)]),
-        FORMAT_MP4: (['*.mp4'], [Track.VID, Track.AUD, Track.SUB], [('MPEG-4', 'Base Media'), ('MPEG-4', 'Base Media / Version 2')]),
+        FORMAT_MP4: (['*.mp4'], [Track.VID, Track.AUD, Track.SUB], [('MPEG-4', None), ('MPEG-4', 'Base Media'), ('MPEG-4', 'Base Media / Version 2')]),
         FORMAT_MPG: (['*.mpg', '*.mpeg'], [Track.VID, Track.AUD, Track.SUB], [('MPEG-PS', None)]),
         FORMAT_SRT: (['*.srt'], [Track.SUB], [('SubRip', None)]),
         FORMAT_SSA: (['*.ssa', '*.ass'], [Track.SUB], []),
         FORMAT_SUP: (['*.sup'], [Track.SUB], [('PGS', None)]),
+        FORMAT_TS: (['*.ts'], [Track.VID, Track.AUD, Track.SUB], [('MPEG-TS', None)]),
         FORMAT_WAV: (['*.wav'], [Track.AUD], [('Wave', None)]),
         FORMAT_WEBM: (['*.webm'], [Track.VID, Track.AUD], [('WebM', None)]),
         FORMAT_WMV: (['*.wma', '*.wmv'], [Track.VID, Track.AUD, Track.SUB], [('Windows Media', None)]),
@@ -76,7 +78,6 @@ class File(object):
     # '*.dtsma': (Track.AUD,),
     # '*.mka': (Track.AUD,),
     # '*.mks': (Track.SUB),
-    # '*.ts': (Track.VID, Track.AUD, Track.SUB),
 
     @classmethod
     def possible_track_types(cls, file_path):
