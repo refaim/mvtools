@@ -414,7 +414,7 @@ def main():
                 '-profile:v high', '-level:v 4.1', '-crf {}'.format(tune_params[TUNES_IDX_CRF]),
                 '-map_metadata -1', '-map_chapters -1',
             ])
-            if dst_color_space is not None:
+            if dst_color_space is not None and (video_track.is_hd() or src_colors.space() is not None):
                 ffmpeg_dst_options.extend([
                     '-color_range {}'.format(src_colors.range()), # TODO "16-235 is a typical NTSC luma range. PAL always uses 0-255 luma range."
                     '-color_primaries {}'.format(dst_color_space),
