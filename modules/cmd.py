@@ -14,14 +14,13 @@ def quote(path):
         return path
 
     q = u''
-    if ' ' in path:
+    if any(c in path for c in (' ', ',', ';')):
         q = u"'"
         if platform.is_windows() or "'" in path:
             assert '"' not in path
             q = u'"'
     return q + path + q
 
-# TODO escape ';' and find out what characters need to escape
 def escape(path):
     return re.sub(r'\^?&', u'^&', path)
 
