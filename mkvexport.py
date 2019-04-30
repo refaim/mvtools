@@ -29,6 +29,12 @@ TUNES = collections.OrderedDict((
     ('film_supertrash', (25, 'film')),
 ))
 
+CHANNEL_SCHEMES = {
+    '1.0': 1,
+    '2.0': 2,
+    '5.1': 6,
+}
+
 ACTIONS_IDX_TEXT = 0
 ACTIONS_IDX_ENABLED = 1
 ACTIONS_IDX_FUNC = 2
@@ -148,7 +154,7 @@ def main():
 
     parser.add_argument('-al', nargs='*', type=cli.argparse_lang, default=[], help='ordered list of audio 3-letter language codes to keep')
     parser.add_argument('-ar', default=False, action='store_true', help='recode audio')
-    parser.add_argument('-a2', default=False, action='store_true', help='downmix multi-channel audio to stereo')
+    parser.add_argument('-ad', default='5.1', choices=CHANNEL_SCHEMES.keys(), help='downmix to N channels')
     parser.add_argument('-aw', default=False, action='store_true', help='convert audio to wavfile before encoding')
 
     parser.add_argument('-sl', nargs='*', type=cli.argparse_lang, default=[], help='ordered list of full subtitle 3-letter language codes to keep')
@@ -429,13 +435,20 @@ def main():
             mux_temporary_files.append(new_video_path)
 
         audio_codecs_to_keep = set([AudioTrack.AAC_LC, AudioTrack.MP3])
-        audio_codecs_to_uncompress = set([AudioTrack.AAC_HE, AudioTrack.AAC_LC, AudioTrack.AMR, AudioTrack.OPUS, AudioTrack.SPEEX, AudioTrack.VORBIS, AudioTrack.WMAV2])
         audio_codecs_to_denorm = set([AudioTrack.AC3, AudioTrack.DTS])
+        audio_codecs_to_uncompress = set([
+            AudioTrack.AAC_HE, AudioTrack.AAC_HE_V2, AudioTrack.AAC_LC,
+            AudioTrack.AMR, AudioTrack.OPUS, AudioTrack.SPEEX,
+            AudioTrack.VORBIS, AudioTrack.WMAPRO, AudioTrack.WMAV2,
+        ])
         audio_codecs_to_recode = set([
             AudioTrack.AMR, AudioTrack.DTS_ES, AudioTrack.DTS_HRA, AudioTrack.DTS_MA,
             AudioTrack.EAC3, AudioTrack.FLAC, AudioTrack.MP2, AudioTrack.OPUS,
-            AudioTrack.PCM_S16L, AudioTrack.SPEEX, AudioTrack.TRUE_HD, AudioTrack.VORBIS, AudioTrack.WMAV2])
-        max_audio_channels = 2 if args.a2 else 6
+            AudioTrack.PCM_S16L, AudioTrack.SPEEX, AudioTrack.TRUE_HD, AudioTrack.VORBIS,
+            AudioTrack.WMAPRO, AudioTrack.WMAV2,
+        ])
+
+        max_audio_channels = CHANNEL_SCHEMES[args.ad]
         for track in output_tracks[Track.AUD]:
             if track.codec_unknown():
                 raise cli.Error(u'Unhandled audio codec {}'.format(track.codec_id()))
@@ -446,16 +459,25 @@ def main():
             need_uncompress = track.codec_id() in audio_codecs_to_uncompress or args.aw
 
             if need_denorm or need_downmix or need_recode:
+
                 stf_ext = None
                 stf_ffmpeg_opts = None
                 if need_uncompress:
                     stf_ext = '.wav'
                     stf_ffmpeg_opts = ['-f wav', '-rf64 auto']
                 src_track_file, is_src_track_file_temporary = make_single_track_file(track, cmd.FFMPEG_STREAM_AUD, stf_ext, stf_ffmpeg_opts)
+
                 eac_track_file = platform.make_temporary_file('.wav' if need_recode else platform.file_ext(src_track_file))
                 eac_opts = []
                 if need_downmix:
-                    eac_opts.append('-downStereo' if max_audio_channels == 2 else '-down6')
+                    if max_audio_channels == 1:
+                        pass # will be processed later
+                    elif max_audio_channels == 2:
+                        eac_opts.append('-downStereo')
+                    elif max_audio_channels == 6:
+                        eac_opts.append('-down6')
+                    else:
+                        raise cli.Error(u'Unhandled channels num {}'.format(max_audio_channels))
                 if track.delay() != 0:
                     eac_opts.append('{}{}ms'.format('+' if track.delay() > 0 else '-', abs(track.delay())))
                 result_commands.append(u'call eac3to {} {} {}'.format(
@@ -464,12 +486,18 @@ def main():
                     result_commands.extend(cmd.gen_del_files(args.sd, src_track_file))
 
                 dst_track_file = eac_track_file
+                if need_downmix and max_audio_channels == 1:
+                    mono_track_file = platform.make_temporary_file('.wav')
+                    result_commands.extend(cmd.gen_ffmpeg_convert(eac_track_file, [], mono_track_file, ['-ac 1']))
+                    result_commands.extend(cmd.gen_del_files(args.sd, eac_track_file))
+                    dst_track_file = mono_track_file
+
                 if need_recode:
                     m4a_track_file = platform.make_temporary_file('.m4a')
                     qaac_opts = ['--tvbr 91', '--quality 2', '--rate keep', '--no-delay']
-                    qaac = u'qaac64 {} {} -o {}'.format(u' '.join(qaac_opts), cmd.quote(eac_track_file), cmd.quote(m4a_track_file))
+                    qaac = u'qaac64 {} {} -o {}'.format(u' '.join(qaac_opts), cmd.quote(dst_track_file), cmd.quote(m4a_track_file))
                     result_commands.append(qaac)
-                    result_commands.extend(cmd.gen_del_files(args.sd, eac_track_file))
+                    result_commands.extend(cmd.gen_del_files(args.sd, dst_track_file))
                     dst_track_file = m4a_track_file
 
                 mux_temporary_files.append(dst_track_file)

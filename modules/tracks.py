@@ -104,6 +104,7 @@ class Track(object):
 
 class AudioTrack(Track):
     AAC_HE = 'aac_he_aac'
+    AAC_HE_V2 = 'aac_he_aacv2'
     AAC_LC = 'aac_lc'
     AC3 = 'ac3'
     AMR = 'amr_nb'
@@ -120,10 +121,12 @@ class AudioTrack(Track):
     SPEEX = 'speex'
     TRUE_HD = 'truehd'
     VORBIS = 'vorbis'
+    WMAPRO = 'wmapro'
     WMAV2 = 'wmav2'
 
     _CODEC_PROPS = {
         AAC_HE: ['aac_he', '.aac'],
+        AAC_HE_V2: ['aac_he_aacv2', '.aac'],
         AAC_LC: ['aac_lc', '.aac'],
         AC3: ['ac3', '.ac3'],
         AMR: ['amr', '.amr'],
@@ -140,6 +143,7 @@ class AudioTrack(Track):
         SPEEX: ['speex', '.spx'],
         TRUE_HD: ['thd', '.dts'],
         VORBIS: ['ogg', '.ogg'],
+        WMAPRO: ['wma', '.wma'],
         WMAV2: ['wma', '.wma'],
     }
 
