@@ -172,6 +172,7 @@ class VideoTrack(Track):
     NTSC = 'not_ffmpeg_const_ntsc'
     DEINT = 'not_ffmpeg_const_deinterlaced'
     WEBCAM = 'not_ffmpeg_const_webcam'
+    PORN = 'not_ffmpeg_const_porn'
 
     YUV420P = 'yuv420p'
     YUVJ420P = 'yuvj420p'
@@ -239,6 +240,8 @@ class VideoTrack(Track):
             return self.PAL
         if any(equals(rate_float, x, 1.0) for x in [15.0, 38.795]):
             return self.WEBCAM
+        if any(equals(rate_float, x, 0.1) for x in [50, 120]) and self.is_hd():
+            return self.PORN
         if any(equals(rate_float, x, 0.1) for x in [50, 60]):
             return self.DEINT
         assert not self.is_hd()
