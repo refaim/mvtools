@@ -107,6 +107,7 @@ class AudioTrack(Track):
     AAC_HE_V2 = 'aac_he_aacv2'
     AAC_LC = 'aac_lc'
     AC3 = 'ac3'
+    ADPCM_IMA_WAV = 'adpcm_ima_wav'
     AMR = 'amr_nb'
     DTS = 'dts_dts'
     DTS_ES = 'dts_dts_es'
@@ -129,6 +130,7 @@ class AudioTrack(Track):
         AAC_HE_V2: ['aac_he_aacv2', '.aac'],
         AAC_LC: ['aac_lc', '.aac'],
         AC3: ['ac3', '.ac3'],
+        ADPCM_IMA_WAV: ['adpcm', '.wav'],
         AMR: ['amr', '.amr'],
         DTS: ['dts', '.dts'],
         DTS_ES: ['dts', '.dts'],
@@ -238,9 +240,9 @@ class VideoTrack(Track):
             return self.NTSC
         if equals(rate_float, 25, 0.1):
             return self.PAL
-        if any(equals(rate_float, x, 1.0) for x in [15.0, 38.795]):
+        if any(equals(rate_float, x, 1.0) for x in [15.0, 35.0, 38.795]):
             return self.WEBCAM
-        if any(equals(rate_float, x, 0.1) for x in [50, 120]) and self.is_hd():
+        if any(equals(rate_float, x, 0.1) for x in [50, 120, 90000]) and self.is_hd():
             return self.PORN
         if any(equals(rate_float, x, 0.1) for x in [50, 60]):
             return self.DEINT

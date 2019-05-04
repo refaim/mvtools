@@ -68,7 +68,7 @@ class File(object):
         FORMAT_TS: (['*.ts'], [Track.VID, Track.AUD, Track.SUB], [('MPEG-TS', None)]),
         FORMAT_WAV: (['*.wav'], [Track.AUD], [('Wave', None)]),
         FORMAT_WEBM: (['*.webm'], [Track.VID, Track.AUD], [('WebM', None)]),
-        FORMAT_WMV: (['*.wma', '*.wmv'], [Track.VID, Track.AUD, Track.SUB], [('Windows Media', None)]),
+        FORMAT_WMV: (['*.asf', '*.wma', '*.wmv'], [Track.VID, Track.AUD, Track.SUB], [('Windows Media', None)]),
     }
     _format_signatures = None
 
