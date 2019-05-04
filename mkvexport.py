@@ -331,7 +331,7 @@ def main():
             result_commands.extend(command)
             return (tmp_path, True)
 
-        video_source_supported_by_mkvmerge = video_track.container_format() not in set([media.File.FORMAT_3GP, media.File.FORMAT_WMV])
+        source_container_supported_by_mkvmerge = video_track.container_format() not in set([media.File.FORMAT_3GP, media.File.FORMAT_WMV])
 
         # TODO support 2pass encoding
         # TODO what if there is crf already?
@@ -429,7 +429,7 @@ def main():
                 cmd.gen_ffmpeg_convert(video_track.source_file(), ffmpeg_src_options, new_video_path, ffmpeg_dst_options))
             track_sources[video_track.qualified_id()] = [new_video_path, 0]
             mux_temporary_files.append(new_video_path)
-        elif not video_source_supported_by_mkvmerge:
+        elif not source_container_supported_by_mkvmerge:
             new_video_path, _ = make_single_track_file(video_track, cmd.FFMPEG_STREAM_VID, '.mkv')
             track_sources[video_track.qualified_id()] = [new_video_path, 0]
             mux_temporary_files.append(new_video_path)
@@ -453,12 +453,13 @@ def main():
             if track.codec_unknown():
                 raise cli.Error(u'Unhandled audio codec {}'.format(track.codec_id()))
 
+            need_extract = not source_container_supported_by_mkvmerge
             need_denorm = track.codec_id() in audio_codecs_to_denorm
             need_downmix = track.channels() > max_audio_channels
             need_recode = need_downmix or track.codec_id() in audio_codecs_to_recode or args.ar and track.codec_id() not in audio_codecs_to_keep
             need_uncompress = track.codec_id() in audio_codecs_to_uncompress or args.aw
 
-            if need_denorm or need_downmix or need_recode:
+            if need_extract or need_denorm or need_downmix or need_recode:
 
                 stf_ext = None
                 stf_ffmpeg_opts = None
@@ -467,23 +468,25 @@ def main():
                     stf_ffmpeg_opts = ['-f wav', '-rf64 auto']
                 src_track_file, is_src_track_file_temporary = make_single_track_file(track, cmd.FFMPEG_STREAM_AUD, stf_ext, stf_ffmpeg_opts)
 
-                eac_track_file = platform.make_temporary_file('.wav' if need_recode else platform.file_ext(src_track_file))
-                eac_opts = []
-                if need_downmix:
-                    if max_audio_channels == 1:
-                        pass # will be processed later
-                    elif max_audio_channels == 2:
-                        eac_opts.append('-downStereo')
-                    elif max_audio_channels == 6:
-                        eac_opts.append('-down6')
-                    else:
-                        raise cli.Error(u'Unhandled channels num {}'.format(max_audio_channels))
-                if track.delay() != 0:
-                    eac_opts.append('{}{}ms'.format('+' if track.delay() > 0 else '-', abs(track.delay())))
-                result_commands.append(u'call eac3to {} {} {}'.format(
-                    cmd.quote(src_track_file), cmd.quote(eac_track_file), ' '.join(eac_opts)))
-                if is_src_track_file_temporary:
-                    result_commands.extend(cmd.gen_del_files(args.sd, src_track_file))
+                eac_track_file = src_track_file
+                if need_denorm or need_downmix or need_recode:
+                    eac_track_file = platform.make_temporary_file('.wav' if need_recode else platform.file_ext(src_track_file))
+                    eac_opts = []
+                    if need_downmix:
+                        if max_audio_channels == 1:
+                            pass # will be processed later
+                        elif max_audio_channels == 2:
+                            eac_opts.append('-downStereo')
+                        elif max_audio_channels == 6:
+                            eac_opts.append('-down6')
+                        else:
+                            raise cli.Error(u'Unhandled channels num {}'.format(max_audio_channels))
+                    if track.delay() != 0:
+                        eac_opts.append('{}{}ms'.format('+' if track.delay() > 0 else '-', abs(track.delay())))
+                    result_commands.append(u'call eac3to {} {} {}'.format(
+                        cmd.quote(src_track_file), cmd.quote(eac_track_file), ' '.join(eac_opts)))
+                    if is_src_track_file_temporary:
+                        result_commands.extend(cmd.gen_del_files(args.sd, src_track_file))
 
                 dst_track_file = eac_track_file
                 if need_downmix and max_audio_channels == 1:
@@ -540,7 +543,7 @@ def main():
         track_ids_by_files = {}
         for qualified_id, (source_file, source_file_track_id) in track_sources.iteritems():
             track_ids_by_files.setdefault(source_file, {})[qualified_id] = source_file_track_id
-        if video_source_supported_by_mkvmerge:
+        if source_container_supported_by_mkvmerge:
             track_ids_by_files.setdefault(video_track.source_file(), {})
 
         # TODO tracks need to be extracted from 3gp and wmv containers before passing to mkvmerge
