@@ -38,6 +38,7 @@ class File(object):
     FORMAT_MP3 = 'mp3'
     FORMAT_MP4 = 'mp4'
     FORMAT_MPG = 'mpg'
+    FORMAT_RM = 'rm'
     FORMAT_SRT = 'srt'
     FORMAT_SSA = 'ssa'
     FORMAT_SUP = 'sup'
@@ -56,13 +57,13 @@ class File(object):
         FORMAT_FLAC: (['*.flac'], [Track.AUD], [('FLAC', None)]),
         FORMAT_FLV: (['*.flv'], [Track.VID, Track.AUD], [('Flash Video', None)]),
         FORMAT_M4A: (['*.m4a'], [Track.AUD], [('MPEG-4', 'Apple audio with iTunes info')]),
-        # TODO Add signature
         FORMAT_M4V: (['*.m4v'], [Track.VID, Track.AUD, Track.SUB], []),
         FORMAT_MKV: (['*.mkv'], [Track.VID, Track.AUD, Track.SUB], [('Matroska', None)]),
         FORMAT_MOV: (['*.mov'], [Track.VID, Track.AUD, Track.SUB], [('MPEG-4', 'QuickTime')]),
         FORMAT_MP3: (['*.mp3'], [Track.AUD], [('MPEG Audio', None)]),
-        FORMAT_MP4: (['*.mp4'], [Track.VID, Track.AUD, Track.SUB], [('MPEG-4', None), ('MPEG-4', 'Base Media'), ('MPEG-4', 'Base Media / Version 2')]),
-        FORMAT_MPG: (['*.mpg', '*.mpeg'], [Track.VID, Track.AUD, Track.SUB], [('MPEG-PS', None)]),
+        FORMAT_MP4: (['*.mp4'], [Track.VID, Track.AUD, Track.SUB], [('MPEG-4', None), ('MPEG-4', 'Base Media'), ('MPEG-4', 'Base Media / Version 2'), ('MPEG-4', 'Sony PSP')]),
+        FORMAT_MPG: (['*.mpg', '*.mpeg', '*.vob'], [Track.VID, Track.AUD, Track.SUB], [('MPEG-PS', None)]),
+        FORMAT_RM: (['*.rm', '*.rmvb'], [Track.VID, Track.AUD], [('RealMedia', None)]),
         FORMAT_SRT: (['*.srt'], [Track.SUB], [('SubRip', None)]),
         FORMAT_SSA: (['*.ssa', '*.ass'], [Track.SUB], []),
         FORMAT_SUP: (['*.sup'], [Track.SUB], [('PGS', None)]),

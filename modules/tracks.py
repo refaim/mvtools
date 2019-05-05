@@ -120,6 +120,8 @@ class AudioTrack(Track):
         AudioCodec.ADPCM_MS: ['adpcm_ms', 'adpcm', '.wav'],
         AudioCodec.ADPCM_SWF: ['adpcm_swf', 'adpcm', '.wav'],
         AudioCodec.AMR: ['amr_nb', 'amr', '.amr'],
+        AudioCodec.ASAO: ['nellymoser', 'asao', '.flv'],
+        AudioCodec.COOK: ['cook', 'cook', '.ra'],
         AudioCodec.DTS: ['dts_dts', 'dts', '.dts'],
         AudioCodec.DTS_ES: ['dts_dts_es', 'dts', '.dts'],
         AudioCodec.DTS_HRA: ['dts_dts_hd_hra', 'dtshra', '.dtshr'],
@@ -129,6 +131,7 @@ class AudioTrack(Track):
         AudioCodec.MP2: ['mp2', 'mp2', '.mp2'],
         AudioCodec.MP3: ['mp3', 'mp3', '.mp3'],
         AudioCodec.OPUS: ['opus', 'opus', '.opus'],
+        AudioCodec.PCM_MULAW: ['pcm_mulaw', 'pcm', '.wav'],
         AudioCodec.PCM_S16L: ['pcm_s16le', 'pcm', '.wav'],
         AudioCodec.SPEEX: ['speex', 'speex', '.spx'],
         AudioCodec.TRUE_HD: ['truehd', 'thd', '.dts'],
@@ -176,16 +179,25 @@ class VideoTrack(Track):
 
     _CODEC_PROPS = {
         VideoCodec.FLV1: ['flv1', 'flv', '.mkv'],
+        VideoCodec.H263: ['h263', 'h263', '.mkv'],
+        VideoCodec.H264: ['h264', 'h264', '.mkv'],
+        VideoCodec.H265: ['hevc', 'h265', '.mkv'],
+        VideoCodec.MJPEG: ['mjpeg', 'mjpeg', '.mkv'],
         VideoCodec.MPEG1: ['mpeg1video', 'mpeg1', '.mkv'],
+        VideoCodec.MPEG2: ['mpeg2video', 'mpeg2', '.mkv'],
         VideoCodec.MPEG4: ['mpeg4', 'mpeg4', '.mkv'],
+        VideoCodec.MSMPEG4V1: ['msmpeg4v1', 'mpeg4', '.mkv'],
         VideoCodec.MSMPEG4V2: ['msmpeg4v2', 'mpeg4', '.mkv'],
         VideoCodec.MSMPEG4V3: ['msmpeg4v3', 'mpeg4', '.mkv'],
-        VideoCodec.WMV1: ['wmv1', 'wmv', '.mkv'],
-        VideoCodec.WMV2: ['wmv2', 'wmv', '.mkv'],
-        VideoCodec.WMV3: ['wmv3', 'wmv', '.mkv'],
-        VideoCodec.H263: ['h263', 'x263', '.mkv'],
-        VideoCodec.H264: ['h264', 'x264', '.mkv'],
-        VideoCodec.H265: ['hevc', 'x264', '.mkv'],
+        VideoCodec.RV30: ['rv30', 'rv30', '.mkv'],
+        VideoCodec.RV40: ['rv40', 'rv40', '.mkv'],
+        VideoCodec.VC1: ['vc1', 'vc1', '.mkv'],
+        VideoCodec.VP6: ['vp6', 'vp6', '.mkv'],
+        VideoCodec.VP6F: ['vp6f', 'vp6f', '.mkv'],
+        VideoCodec.VP8: ['vp8', 'vp8', '.mkv'],
+        VideoCodec.WMV1_WMV7: ['wmv1', 'wmv', '.mkv'],
+        VideoCodec.WMV2_WMV8: ['wmv2', 'wmv', '.mkv'],
+        VideoCodec.WMV3_WMV9: ['wmv3', 'wmv', '.mkv'],
     }
 
     @staticmethod
@@ -245,7 +257,7 @@ class VideoTrack(Track):
             return VideoFpsStandard.NTSC
         if equals(rate_float, 25, 0.1):
             return VideoFpsStandard.PAL
-        if any(equals(rate_float, x, 1.0) for x in [15.0, 20.0, 27.3, 35.0, 38.795]):
+        if any(equals(rate_float, x, 1.0) for x in [15.0, 20.0, 27.3, 29.75, 35.0, 38.795, 125]):
             return VideoFpsStandard.WEBCAM
         if any(equals(rate_float, x, 0.1) for x in [30.3, 50, 120, 90000]) and self.is_hd():
             return VideoFpsStandard.PORN

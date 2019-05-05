@@ -2,16 +2,25 @@ from modules.misc import MyEnum
 
 class VideoCodec(MyEnum):
     FLV1 = MyEnum.auto()
-    MPEG1 = MyEnum.auto()
-    MPEG4 = MyEnum.auto()
-    MSMPEG4V2 = MyEnum.auto()
-    MSMPEG4V3 = MyEnum.auto()
-    WMV1 = MyEnum.auto()
-    WMV2 = MyEnum.auto()
-    WMV3 = MyEnum.auto()
     H263 = MyEnum.auto()
     H264 = MyEnum.auto()
     H265 = MyEnum.auto()
+    MJPEG = MyEnum.auto()
+    MPEG1 = MyEnum.auto()
+    MPEG2 = MyEnum.auto()
+    MPEG4 = MyEnum.auto()
+    MSMPEG4V1 = MyEnum.auto()
+    MSMPEG4V2 = MyEnum.auto()
+    MSMPEG4V3 = MyEnum.auto()
+    RV30 = MyEnum.auto()
+    RV40 = MyEnum.auto()
+    VC1 = MyEnum.auto()
+    VP6 = MyEnum.auto()
+    VP6F = MyEnum.auto()
+    VP8 = MyEnum.auto()
+    WMV1_WMV7 = MyEnum.auto()
+    WMV2_WMV8 = MyEnum.auto()
+    WMV3_WMV9 = MyEnum.auto()
 
 class VideoCodecProfile(MyEnum):
     BASELINE = MyEnum.auto()
@@ -67,11 +76,13 @@ class PictureFormat(MyEnum):
     YUV420P10LE = MyEnum.auto()
 
 class AudioCodec(MyEnum):
-    AAC_HE = MyEnum.auto()
-    AAC_HE_V2 = MyEnum.auto()
+    AAC_HE = MyEnum.auto()  # AAC+
+    AAC_HE_V2 = MyEnum.auto()  # eAAC+
     AAC_LC = MyEnum.auto()
     AC3 = MyEnum.auto()
     AMR = MyEnum.auto()
+    ASAO = MyEnum.auto()
+    COOK = MyEnum.auto()
     DTS = MyEnum.auto()
     DTS_ES = MyEnum.auto()
     DTS_HRA = MyEnum.auto()
@@ -85,6 +96,7 @@ class AudioCodec(MyEnum):
     MP3 = MyEnum.auto()
     OPUS = MyEnum.auto()
     PCM_S16L = MyEnum.auto()
+    PCM_MULAW = MyEnum.auto()
     SPEEX = MyEnum.auto()
     TRUE_HD = MyEnum.auto()
     VORBIS = MyEnum.auto()

@@ -504,15 +504,15 @@ def main():
         audio_codecs_to_denorm = {AudioCodec.AC3, AudioCodec.DTS}
         audio_codecs_to_uncompress = {
             AudioCodec.AAC_HE, AudioCodec.AAC_HE_V2, AudioCodec.AAC_LC,
-            AudioCodec.AMR, AudioCodec.OPUS, AudioCodec.SPEEX,
-            AudioCodec.ADPCM_SWF,
+            AudioCodec.AMR, AudioCodec.OPUS, AudioCodec.SPEEX, AudioCodec.COOK, AudioCodec.ASAO,
+            AudioCodec.ADPCM_SWF, AudioCodec.PCM_MULAW,
             AudioCodec.VORBIS,
             AudioCodec.WMA_PRO, AudioCodec.WMA_V2,
         }
         audio_codecs_to_recode = {
-            AudioCodec.AMR, AudioCodec.OPUS, AudioCodec.SPEEX,
+            AudioCodec.AMR, AudioCodec.ASAO, AudioCodec.OPUS, AudioCodec.SPEEX, AudioCodec.COOK,
             AudioCodec.EAC3, AudioCodec.DTS_ES, AudioCodec.DTS_HRA, AudioCodec.DTS_MA, AudioCodec.TRUE_HD,
-            AudioCodec.ADPCM_IMA, AudioCodec.ADPCM_MS, AudioCodec.ADPCM_SWF, AudioCodec.PCM_S16L,
+            AudioCodec.ADPCM_IMA, AudioCodec.ADPCM_MS, AudioCodec.ADPCM_SWF, AudioCodec.PCM_MULAW, AudioCodec.PCM_S16L,
             AudioCodec.FLAC, AudioCodec.MP2, AudioCodec.VORBIS,
             AudioCodec.WMA_PRO, AudioCodec.WMA_V2
         }
