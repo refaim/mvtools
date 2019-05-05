@@ -380,7 +380,7 @@ def main():
             return (tmp_path, True)
 
         # TODO move to software abstraction
-        source_container_supported_by_mkvmerge = video_track.container_format() not in {media.File.FORMAT_3GP, media.File.FORMAT_WMV}
+        source_container_supported_by_mkvmerge = video_track.container_format() not in {media.File.FORMAT_3GP, media.File.FORMAT_SMK, media.File.FORMAT_WMV}
 
         source_video_codec = video_track.codec()
         source_video_crf = video_track.crf()
@@ -456,7 +456,12 @@ def main():
                 # TODO clarify iall=all= format string
                 # ffmpeg_filters.append('colorspace=iall={}:all={}'.format(src_color_space, dst_color_space))
 
-            ffmpeg_src_options = ['-color_range {}'.format(ffmpeg.build_color_range_argument(src_colors.range()))]
+            ffmpeg_src_options = []
+
+            src_colors_range = src_colors.range()
+            if src_colors_range is not None:
+                ffmpeg_src_options.append('-color_range {}'.format(ffmpeg.build_color_range_argument(src_colors_range)))
+
             ffmpeg_dst_options = ['-an', '-sn', '-dn']
             if ffmpeg_filters:
                 ffmpeg_dst_options.append('-filter:v {}'.format(','.join(ffmpeg_filters)))
@@ -506,14 +511,14 @@ def main():
             AudioCodec.AAC_HE, AudioCodec.AAC_HE_V2, AudioCodec.AAC_LC,
             AudioCodec.AMR, AudioCodec.OPUS, AudioCodec.SPEEX, AudioCodec.COOK, AudioCodec.ASAO,
             AudioCodec.ADPCM_SWF, AudioCodec.PCM_MULAW,
-            AudioCodec.VORBIS,
+            AudioCodec.VORBIS, AudioCodec.SMK,
             AudioCodec.WMA_PRO, AudioCodec.WMA_V2,
         }
         audio_codecs_to_recode = {
             AudioCodec.AMR, AudioCodec.ASAO, AudioCodec.OPUS, AudioCodec.SPEEX, AudioCodec.COOK,
             AudioCodec.EAC3, AudioCodec.DTS_ES, AudioCodec.DTS_HRA, AudioCodec.DTS_MA, AudioCodec.TRUE_HD,
             AudioCodec.ADPCM_IMA, AudioCodec.ADPCM_MS, AudioCodec.ADPCM_SWF, AudioCodec.PCM_MULAW, AudioCodec.PCM_S16L,
-            AudioCodec.FLAC, AudioCodec.MP2, AudioCodec.VORBIS,
+            AudioCodec.FLAC, AudioCodec.MP2, AudioCodec.VORBIS, AudioCodec.SMK,
             AudioCodec.WMA_PRO, AudioCodec.WMA_V2
         }
 

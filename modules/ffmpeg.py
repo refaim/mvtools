@@ -65,6 +65,7 @@ class Ffmpeg(object):
     }
 
     _PICTURE_FORMAT_RAW_TO_ENUM = {
+        'pal8': PictureFormat.PAL8,
         'yuv420p': PictureFormat.YUV420P,
         'yuvj420p': PictureFormat.YUVJ420P,
         'yuv420p10le': PictureFormat.YUV420P10LE,

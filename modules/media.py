@@ -39,6 +39,7 @@ class File(object):
     FORMAT_MP4 = 'mp4'
     FORMAT_MPG = 'mpg'
     FORMAT_RM = 'rm'
+    FORMAT_SMK = 'smk'
     FORMAT_SRT = 'srt'
     FORMAT_SSA = 'ssa'
     FORMAT_SUP = 'sup'
@@ -64,6 +65,7 @@ class File(object):
         FORMAT_MP4: (['*.mp4'], [Track.VID, Track.AUD, Track.SUB], [('MPEG-4', None), ('MPEG-4', 'Base Media'), ('MPEG-4', 'Base Media / Version 2'), ('MPEG-4', 'Sony PSP')]),
         FORMAT_MPG: (['*.mpg', '*.mpeg', '*.vob'], [Track.VID, Track.AUD, Track.SUB], [('MPEG-PS', None)]),
         FORMAT_RM: (['*.rm', '*.rmvb'], [Track.VID, Track.AUD], [('RealMedia', None)]),
+        FORMAT_SMK: (['*.smk'], [Track.VID, Track.AUD], [(None, None)]),
         FORMAT_SRT: (['*.srt'], [Track.SUB], [('SubRip', None)]),
         FORMAT_SSA: (['*.ssa', '*.ass'], [Track.SUB], []),
         FORMAT_SUP: (['*.sup'], [Track.SUB], [('PGS', None)]),

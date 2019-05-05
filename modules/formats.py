@@ -14,6 +14,7 @@ class VideoCodec(MyEnum):
     MSMPEG4V3 = MyEnum.auto()
     RV30 = MyEnum.auto()
     RV40 = MyEnum.auto()
+    SMK = MyEnum.auto()
     VC1 = MyEnum.auto()
     VP6 = MyEnum.auto()
     VP6F = MyEnum.auto()
@@ -71,6 +72,7 @@ class FieldOrder(MyEnum):
     INTERLACED_BOT = MyEnum.auto()
 
 class PictureFormat(MyEnum):
+    PAL8 = MyEnum.auto()
     YUV420P = MyEnum.auto()
     YUVJ420P = MyEnum.auto()
     YUV420P10LE = MyEnum.auto()
@@ -97,6 +99,7 @@ class AudioCodec(MyEnum):
     OPUS = MyEnum.auto()
     PCM_S16L = MyEnum.auto()
     PCM_MULAW = MyEnum.auto()
+    SMK = MyEnum.auto()
     SPEEX = MyEnum.auto()
     TRUE_HD = MyEnum.auto()
     VORBIS = MyEnum.auto()
