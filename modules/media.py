@@ -9,7 +9,7 @@ import cmd
 import lang
 import misc
 import platform
-
+from formats import AudioCodec
 from tracks import Track, AudioTrack, VideoTrack, SubtitleTrack, ChaptersTrack
 
 class File(object):
@@ -22,6 +22,7 @@ class File(object):
         Track.CHA: (ChaptersTrack, None),
     }
 
+    # TODO enum
     FORMAT_3GP = '3gp'
     FORMAT_AC3 = 'ac3'
     FORMAT_AMR = 'amr'
@@ -175,10 +176,10 @@ class Movie(object):
 
     def _set_codecs(self):
         for track in self.tracks(Track.AUD):
-            if track.codec_id() == AudioTrack.DTS:
+            if track.codec() == AudioCodec.DTS:
                 track_info = self._get_file_info(track.source_file())['tracks'][track.id()]
                 if 'ES' in track_info.get('Format_Profile', ''):
-                    track.set_codec_id(AudioTrack.DTS_ES)
+                    track.overwrite_codec(AudioCodec.DTS_ES)
 
     def _set_languages(self):
         if self._ignore_languages:

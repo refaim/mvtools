@@ -6,6 +6,7 @@ import collections
 import os
 import re
 import shutil
+
 import tvdb_api
 
 from modules import cli
@@ -14,20 +15,53 @@ from modules import lang
 from modules import media
 from modules import misc
 from modules import platform
-from modules.tracks import Track, VideoTrack, Colors, AudioTrack, SubtitleTrack
+from modules.ffmpeg import Ffmpeg
+from modules.formats import VideoCodec, PictureFormat, AudioCodec, SubtitleCodec, FieldOrder, VideoCodecProfile, \
+    VideoCodecLevel
+from modules.tracks import Track, VideoTrack
 
 MUX_BODY = os.path.join(platform.getcwd(), u'mux.cmd')
 MUX_HEAD = os.path.join(os.path.dirname(__file__), u'mux_head.cmd')
 
-TUNES_IDX_CRF = 0
-TUNES_IDX_REAL_TUNE = 1
-TUNES = collections.OrderedDict((
-    ('anm_good', (18, 'animation')),
-    ('anm_trash', (23, 'animation')),
-    ('film_good', (22, 'film')),
-    ('film_trash', (23, 'film')),
-    ('film_supertrash', (25, 'film')),
-))
+class InputTune(misc.MyEnum):
+    ANIMATION = 1
+    FILM = 2
+
+class InputQuality(misc.MyEnum):
+    GOOD = 1
+    TRASH = 2
+    SUPERTRASH = 3
+
+CODEC_TUNES = {
+    VideoCodec.H264: {
+        InputTune.ANIMATION: {
+            InputQuality.GOOD: (18, 'animation'),
+            InputQuality.TRASH: (23, 'animation'),
+        },
+        InputTune.FILM: {
+            InputQuality.GOOD: (22, 'film'),
+            InputQuality.TRASH: (23, 'film'),
+            InputQuality.SUPERTRASH: (25, 'film'),
+        }
+    },
+    VideoCodec.H265: {
+        InputTune.ANIMATION: {
+            InputQuality.GOOD: (20, 'animation'),
+            InputQuality.TRASH: (25, 'animation'),
+        },
+        InputTune.FILM: {
+            InputQuality.GOOD: (24, None),
+            InputQuality.TRASH: (26, None),
+            InputQuality.SUPERTRASH: (28, None),
+        }
+    }
+}
+
+# TODO determine by device
+CODEC_FFMPEG_PARAMETERS = {
+    VideoCodec.H264: (VideoCodecProfile.HIGH, VideoCodecLevel.L41),
+    VideoCodec.H265: (VideoCodecProfile.MAIN, VideoCodecLevel.L51),
+}
 
 CHANNEL_SCHEMES = {
     '1.0': 1,
@@ -119,7 +153,7 @@ def find_movies(search_path, ignore_languages, detect_satellites):
                 media_groups.append([video] + group)
             remaining_media -= set(group)
 
-    for group in sorted(media_groups):
+    for group in sorted(media_groups, key=lambda g: [os.path.dirname(g[0]).lower(), os.path.basename(g[0]).lower(), os.path.splitext(g[0])[1].lower()]):
         yield media.Movie(group, ignore_languages)
 
 def read_map_file(path, handle_key, handle_value):
@@ -134,6 +168,9 @@ def read_map_file(path, handle_key, handle_value):
                 result[handle_key(raw_key)] = handle_value(raw_val)
     return result
 
+def add_enum_argument(parser, arg, enum_class, default, help_text):
+    parser.add_argument(arg, choices=enum_class.get_names(), default=default, help=help_text)
+
 def main():
     parser = argparse.ArgumentParser()
     # TODO support sources as wildcards
@@ -143,7 +180,9 @@ def main():
     # TODO add argument groups
     parser.add_argument('-vk', default=False, action='store_true', help='keep source video')
     parser.add_argument('-vr', default=False, action='store_true', help='recode video')
-    parser.add_argument('-vt', help='force tune')
+    parser.add_argument('-vc', choices=VideoCodec.get_names([VideoCodec.H264, VideoCodec.H265]), default=VideoCodec.H264.name, help='set video encoding codec')
+    add_enum_argument(parser, '-vt', InputTune, None, 'set video encoding tune')
+    add_enum_argument(parser, '-vq', InputQuality, None, 'set video encoding quality')
     parser.add_argument('-va', default=None, choices=['16:9'], help='set video display aspect ratio')
     parser.add_argument('-vs', default=None, choices=['720p', '1080p', '1440p'], help='scale video')
     parser.add_argument('-ks', default=False, action='store_true', help='keep current colorspace')
@@ -171,11 +210,19 @@ def main():
 
     args = parser.parse_args()
     if args.cf and args.sc:
-        raise cli.Error(u'Use "-cf" OR "-sc"')
+        parser.error(u'Use -cf or -sc, not both')
     if args.nf and args.tv:
-        raise cli.Error(u'Use "-nf" OR "-tv"')
+        parser.error(u'Use -nf or -tv, not both')
     if args.vk and (args.vr or args.vt):
-        raise cli.Error(u'Use "-vk" OR "-vr/-vt"')
+        parser.error(u'Use -vk or -vr/-vt, not both')
+    if not args.vk and (not args.vt or not args.vq):
+        parser.error(u'Set -vt and -vq')
+
+    args.vc = VideoCodec.get_definition(args.vc)
+    if args.vt:
+        args.vt = InputTune.get_definition(args.vt)
+    if args.vq:
+        args.vq = InputQuality.get_definition(args.vq)
 
     def read_movie_path(path):
         path = os.path.normpath(path.strip())
@@ -192,6 +239,7 @@ def main():
     filenames_map = read_map_file(args.nf, read_movie_path, read_movie_path)
     raw_crops_map = read_map_file(args.cf, read_movie_path, read_crop_args)
 
+    tvdb = None
     if args.tv:
         tvdb = tvdb_api.Tvdb()
 
@@ -313,8 +361,8 @@ def main():
 
         target_directory = os.path.dirname(target_path)
         if not os.path.isdir(target_directory) and target_directory not in created_directories:
-           result_commands.extend(cmd.gen_create_dir(target_directory))
-           created_directories.add(target_directory)
+            result_commands.extend(cmd.gen_create_dir(target_directory))
+            created_directories.add(target_directory)
 
         def make_single_track_file(track, stream_id, file_ext=None, ffmpeg_opts=None, prefer_ffmpeg=True):
             if file_ext is None:
@@ -331,23 +379,30 @@ def main():
             result_commands.extend(command)
             return (tmp_path, True)
 
-        source_container_supported_by_mkvmerge = video_track.container_format() not in set([media.File.FORMAT_3GP, media.File.FORMAT_WMV])
+        # TODO move to software abstraction
+        source_container_supported_by_mkvmerge = video_track.container_format() not in {media.File.FORMAT_3GP, media.File.FORMAT_WMV}
 
-        # TODO support 2pass encoding
-        # TODO what if there is crf already?
-        encoded_ok = video_track.codec_id() == VideoTrack.CODEC_H264 and \
-            video_track.crf() is not None and \
-            video_track.profile() == VideoTrack.PROFILE_HIGH and \
-            video_track.level() == VideoTrack.LEVEL_41
+        source_video_codec = video_track.codec()
+        source_video_crf = video_track.crf()
+        source_video_profile = video_track.profile()
+        source_video_level = video_track.level()
+
+        target_video_codec = args.vc
+        target_video_profile, target_video_level = CODEC_FFMPEG_PARAMETERS[target_video_codec]
+
+        encoded_ok = source_video_codec == target_video_codec and \
+            source_video_crf is not None and \
+            source_video_profile == target_video_profile and \
+            source_video_level == target_video_level
         if args.vr or args.vs or not encoded_ok and not args.vk:
-            chosen_tune = args.vt or ask_to_select(u'Enter tune ID', TUNES.iterkeys())
-            tune_params = TUNES[chosen_tune]
+            ffmpeg = Ffmpeg()
+            target_crf, target_tune = CODEC_TUNES[target_video_codec][args.vt][args.vq]
 
             # TODO check out rutracker manuals for dvd rip filters and stuff
             ffmpeg_filters = []
 
             assert video_track.field_order() is not None
-            if video_track.field_order() in (VideoTrack.FO_INT_BOT, VideoTrack.FO_INT_TOP):
+            if video_track.field_order() in (FieldOrder.INTERLACED_BOT, FieldOrder.INTERLACED_TOP):
                 # TODO consider bwdif
                 ffmpeg_filters.append('yadif=1:-1:1')
 
@@ -390,9 +445,6 @@ def main():
                 ffmpeg_filters.append('scale=-16:1440')
 
             src_colors = video_track.colors()
-            assert video_track.pix_fmt() in (VideoTrack.YUV420P, VideoTrack.YUVJ420P, VideoTrack.YUV420P10LE), video_track.pix_fmt()
-            assert src_colors.range() in (Colors.RANGE_PC, Colors.RANGE_TV), src_colors.range()
-
             dst_color_space = src_colors.correct_space()
             if args.ks:
                 dst_color_space = src_colors.space()
@@ -404,22 +456,35 @@ def main():
                 # TODO clarify iall=all= format string
                 # ffmpeg_filters.append('colorspace=iall={}:all={}'.format(src_color_space, dst_color_space))
 
-            ffmpeg_src_options = ['-color_range {}'.format(src_colors.range())]
+            ffmpeg_src_options = ['-color_range {}'.format(ffmpeg.build_color_range_argument(src_colors.range()))]
             ffmpeg_dst_options = ['-an', '-sn', '-dn']
             if ffmpeg_filters:
                 ffmpeg_dst_options.append('-filter:v {}'.format(','.join(ffmpeg_filters)))
             ffmpeg_dst_options.extend([
-                '-c:v libx264', '-preset veryslow', '-pix_fmt {}'.format(VideoTrack.YUV420P),
-                '-tune {}'.format(tune_params[TUNES_IDX_REAL_TUNE]),
-                '-profile:v high', '-level:v 4.1', '-crf {}'.format(tune_params[TUNES_IDX_CRF]),
+                '-c:v {}'.format(ffmpeg.build_video_encoding_library_argument(target_video_codec)),
+                '-preset veryslow',
+                '-pix_fmt {}'.format(ffmpeg.build_picture_format_argument(PictureFormat.YUV420P)),
+                '-crf {}'.format(target_crf),
                 '-map_metadata -1', '-map_chapters -1',
             ])
+
+            arg_profile = ffmpeg.build_video_codec_profile_argument(target_video_codec, target_video_profile)
+            arg_level = ffmpeg.build_video_codec_level_argument(target_video_codec, target_video_level)
+            if target_video_codec == VideoCodec.H264:
+                ffmpeg_dst_options.extend(['-profile:v {}'.format(arg_profile), '-level:v {}'.format(arg_level)])
+            elif target_video_codec == VideoCodec.H265:
+                ffmpeg_dst_options.append('-x265-params "profile={}:level={}"'.format(arg_profile, arg_level))
+
+            if target_tune is not None:
+                ffmpeg_dst_options.append('-tune {}'.format(target_tune))
+
             if dst_color_space is not None and (video_track.is_hd() or src_colors.space() is not None):
                 ffmpeg_dst_options.extend([
-                    '-color_range {}'.format(src_colors.range()), # TODO "16-235 is a typical NTSC luma range. PAL always uses 0-255 luma range."
-                    '-color_primaries {}'.format(dst_color_space),
-                    '-color_trc {}'.format('gamma28' if dst_color_space == Colors.BT_601_PAL else dst_color_space),
-                    '-colorspace {}'.format(dst_color_space),
+                    # TODO "16-235 is a typical NTSC luma range. PAL always uses 0-255 luma range."
+                    '-color_range {}'.format(ffmpeg.build_color_range_argument(src_colors.range())),
+                    '-color_primaries {}'.format(ffmpeg.build_color_primaries_argument(dst_color_space)),
+                    '-color_trc {}'.format(ffmpeg.build_color_trc_argument(dst_color_space)),
+                    '-colorspace {}'.format(ffmpeg.build_color_space_argument(dst_color_space)),
                 ])
             else:
                 assert not video_track.is_hd()
@@ -434,30 +499,31 @@ def main():
             track_sources[video_track.qualified_id()] = [new_video_path, 0]
             mux_temporary_files.append(new_video_path)
 
-        audio_codecs_to_keep = set([AudioTrack.AAC_LC, AudioTrack.MP3])
-        audio_codecs_to_denorm = set([AudioTrack.AC3, AudioTrack.DTS])
-        audio_codecs_to_uncompress = set([
-            AudioTrack.AAC_HE, AudioTrack.AAC_HE_V2, AudioTrack.AAC_LC,
-            AudioTrack.AMR, AudioTrack.OPUS, AudioTrack.SPEEX,
-            AudioTrack.VORBIS, AudioTrack.WMAPRO, AudioTrack.WMAV2,
-        ])
-        audio_codecs_to_recode = set([
-            AudioTrack.AMR, AudioTrack.DTS_ES, AudioTrack.DTS_HRA, AudioTrack.DTS_MA,
-            AudioTrack.EAC3, AudioTrack.FLAC, AudioTrack.MP2, AudioTrack.OPUS,
-            AudioTrack.PCM_S16L, AudioTrack.SPEEX, AudioTrack.TRUE_HD, AudioTrack.VORBIS,
-            AudioTrack.WMAPRO, AudioTrack.WMAV2,
-        ])
+        # TODO move to software abstraction
+        audio_codecs_to_keep = {AudioCodec.AAC_LC, AudioCodec.MP3}
+        audio_codecs_to_denorm = {AudioCodec.AC3, AudioCodec.DTS}
+        audio_codecs_to_uncompress = {
+            AudioCodec.AAC_HE, AudioCodec.AAC_HE_V2, AudioCodec.AAC_LC,
+            AudioCodec.AMR, AudioCodec.OPUS, AudioCodec.SPEEX,
+            AudioCodec.ADPCM_SWF,
+            AudioCodec.VORBIS,
+            AudioCodec.WMA_PRO, AudioCodec.WMA_V2,
+        }
+        audio_codecs_to_recode = {
+            AudioCodec.AMR, AudioCodec.OPUS, AudioCodec.SPEEX,
+            AudioCodec.EAC3, AudioCodec.DTS_ES, AudioCodec.DTS_HRA, AudioCodec.DTS_MA, AudioCodec.TRUE_HD,
+            AudioCodec.ADPCM_IMA, AudioCodec.ADPCM_MS, AudioCodec.ADPCM_SWF, AudioCodec.PCM_S16L,
+            AudioCodec.FLAC, AudioCodec.MP2, AudioCodec.VORBIS,
+            AudioCodec.WMA_PRO, AudioCodec.WMA_V2
+        }
 
         max_audio_channels = CHANNEL_SCHEMES[args.ad]
         for track in output_tracks[Track.AUD]:
-            if track.codec_unknown():
-                raise cli.Error(u'Unhandled audio codec {}'.format(track.codec_id()))
-
             need_extract = not source_container_supported_by_mkvmerge
-            need_denorm = track.codec_id() in audio_codecs_to_denorm
+            need_denorm = track.codec() in audio_codecs_to_denorm
             need_downmix = track.channels() > max_audio_channels
-            need_recode = need_downmix or track.codec_id() in audio_codecs_to_recode or args.ar and track.codec_id() not in audio_codecs_to_keep
-            need_uncompress = track.codec_id() in audio_codecs_to_uncompress or args.aw
+            need_recode = need_downmix or track.codec() in audio_codecs_to_recode or args.ar and track.codec() not in audio_codecs_to_keep
+            need_uncompress = track.codec() in audio_codecs_to_uncompress or args.aw
 
             if need_extract or need_denorm or need_downmix or need_recode:
 
@@ -474,7 +540,7 @@ def main():
                     eac_opts = []
                     if need_downmix:
                         if max_audio_channels == 1:
-                            pass # will be processed later
+                            pass  # will be processed later
                         elif max_audio_channels == 2:
                             eac_opts.append('-downStereo')
                         elif max_audio_channels == 6:
@@ -507,11 +573,9 @@ def main():
                 track_sources[track.qualified_id()] = [dst_track_file, 0]
 
         for track in output_tracks[Track.SUB]:
-            if track.codec_unknown():
-                raise cli.Error(u'Unhandled subtitle codec {}'.format(track.codec_id()))
             if track.is_text():
                 ffmpeg_opts = None
-                if track.codec_id() == SubtitleTrack.MOV:
+                if track.codec() == SubtitleCodec.MOV:
                     ffmpeg_opts = []
                 track_file, is_track_file_temporary = make_single_track_file(track, cmd.FFMPEG_STREAM_SUB, ffmpeg_opts=ffmpeg_opts)
                 srt_file = platform.make_temporary_file('.srt')
@@ -523,7 +587,7 @@ def main():
                 mux_temporary_files.append(srt_file)
                 if is_track_file_temporary:
                     result_commands.extend(cmd.gen_del_files(args.sd, track_file))
-            elif track.codec_id() == SubtitleTrack.PGS:
+            elif track.codec() == SubtitleCodec.PGS:
                 track_file, is_track_file_temporary = make_single_track_file(track, cmd.FFMPEG_STREAM_SUB, prefer_ffmpeg=False)
                 idx_file = platform.make_temporary_file('.idx')
                 sub_file = u'{}.sub'.format(os.path.splitext(idx_file)[0])

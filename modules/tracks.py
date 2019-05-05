@@ -5,6 +5,10 @@ import re
 
 import misc
 import platform
+from formats import AudioCodec, FieldOrder, PictureFormat, ColorRange, ColorSpace, VideoFpsStandard, \
+    SubtitleCodec, VideoCodec
+from modules.ffmpeg import Ffmpeg
+
 
 class Track(object):
     AUD = 'audio'
@@ -18,15 +22,24 @@ class Track(object):
         SUB: ('--subtitle-tracks', '-S'),
     }
 
-    _CODEC_PROPS_IDX_NAME = 0
-    _CODEC_PROPS_IDX_FEXT = 1
+    _DURATION_REGEXP = re.compile(r'(?P<hh>\d+):(?P<mm>\d+):(?P<ss>[\d.]+)')
 
     def __init__(self, parent_path, parent_format, ffm_data, codec_props):
         self._parent_path = parent_path
         self._parent_format = parent_format
         self._ffm_data = ffm_data
-        self._codec_props = codec_props
+        self._ffmpeg = Ffmpeg()
         self._duration = None
+
+        self._codec_enums = {}
+        self._codec_ids = {}
+        self._codec_names = {}
+        self._codec_file_extensions = {}
+        for codec_enum, (codec_id, codec_name, codec_file_extension) in codec_props.iteritems():
+            self._codec_enums[codec_id] = codec_enum
+            self._codec_ids[codec_enum] = codec_id
+            self._codec_names[codec_enum] = codec_name
+            self._codec_file_extensions[codec_enum] = codec_file_extension
 
     def source_file(self):
         return self._parent_path
@@ -35,9 +48,7 @@ class Track(object):
         return self._parent_format
 
     def get_single_track_file_extension(self):
-        result = self._codec_props[self.codec_id()][self._CODEC_PROPS_IDX_FEXT]
-        assert result is not None
-        return result
+        return self._codec_file_extensions[self.codec()]
 
     def is_single(self):
         return platform.file_ext(self.source_file()) == self.get_single_track_file_extension()
@@ -49,21 +60,19 @@ class Track(object):
         return self._ffm_data['index']
 
     def qualified_id(self):
-        return (self.source_file(), self.id())
+        return self.source_file(), self.id()
 
     def type(self):
         return self._ffm_data['codec_type']
 
-    def codec_id(self):
+    def codec(self):
+        return self._codec_enums[self._codec_id()]
+
+    def _codec_id(self):
         return self._ffm_data['codec_name']
 
-    def codec_unknown(self):
-        return self.codec_id() not in self._codec_props
-
     def codec_name(self):
-        if self.codec_unknown():
-            return self.codec_id()
-        return self._codec_props[self.codec_id()][self._CODEC_PROPS_IDX_NAME]
+        return self._codec_names[self.codec()]
 
     def name(self):
         return self._tags().get('title', '')
@@ -76,8 +85,6 @@ class Track(object):
 
     def set_language(self, value):
         self._tags()['language'] = value
-
-    _DURATION_REGEXP = re.compile(r'(?P<hh>\d+):(?P<mm>\d+):(?P<ss>[\d\.]+)')
 
     def duration(self):
         if self._duration is None:
@@ -102,66 +109,50 @@ class Track(object):
     def is_default(self):
         return bool(self._ffm_data['disposition']['default'])
 
-class AudioTrack(Track):
-    AAC_HE = 'aac_he_aac'
-    AAC_HE_V2 = 'aac_he_aacv2'
-    AAC_LC = 'aac_lc'
-    AC3 = 'ac3'
-    ADPCM_IMA_WAV = 'adpcm_ima_wav'
-    AMR = 'amr_nb'
-    DTS = 'dts_dts'
-    DTS_ES = 'dts_dts_es'
-    DTS_HRA = 'dts_dts_hd_hra'
-    DTS_MA = 'dts_dts_hd_ma'
-    EAC3 = 'eac3'
-    FLAC = 'flac'
-    MP2 = 'mp2'
-    MP3 = 'mp3'
-    OPUS = 'opus'
-    PCM_S16L = 'pcm_s16le'
-    SPEEX = 'speex'
-    TRUE_HD = 'truehd'
-    VORBIS = 'vorbis'
-    WMAPRO = 'wmapro'
-    WMAV2 = 'wmav2'
 
+class AudioTrack(Track):
     _CODEC_PROPS = {
-        AAC_HE: ['aac_he', '.aac'],
-        AAC_HE_V2: ['aac_he_aacv2', '.aac'],
-        AAC_LC: ['aac_lc', '.aac'],
-        AC3: ['ac3', '.ac3'],
-        ADPCM_IMA_WAV: ['adpcm', '.wav'],
-        AMR: ['amr', '.amr'],
-        DTS: ['dts', '.dts'],
-        DTS_ES: ['dts', '.dts'],
-        DTS_HRA: ['dtshra', '.dtshr'],
-        DTS_MA: ['dtsma', '.dts'],
-        EAC3: ['eac3', '.eac3'],
-        FLAC: ['flac', '.flac'],
-        MP2: ['mp2', '.mp2'],
-        MP3: ['mp3', '.mp3'],
-        OPUS: ['opus', '.opus'],
-        PCM_S16L: ['pcm', '.wav'],
-        SPEEX: ['speex', '.spx'],
-        TRUE_HD: ['thd', '.dts'],
-        VORBIS: ['ogg', '.ogg'],
-        WMAPRO: ['wma', '.wma'],
-        WMAV2: ['wma', '.wma'],
+        AudioCodec.AAC_HE: ['aac_he_aac', 'aac_he', '.aac'],
+        AudioCodec.AAC_HE_V2: ['aac_he_aacv2', 'aac_he_aacv2', '.aac'],
+        AudioCodec.AAC_LC: ['aac_lc', 'aac_lc', '.aac'],
+        AudioCodec.AC3: ['ac3', 'ac3', '.ac3'],
+        AudioCodec.ADPCM_IMA: ['adpcm_ima_wav', 'adpcm', '.wav'],
+        AudioCodec.ADPCM_MS: ['adpcm_ms', 'adpcm', '.wav'],
+        AudioCodec.ADPCM_SWF: ['adpcm_swf', 'adpcm', '.wav'],
+        AudioCodec.AMR: ['amr_nb', 'amr', '.amr'],
+        AudioCodec.DTS: ['dts_dts', 'dts', '.dts'],
+        AudioCodec.DTS_ES: ['dts_dts_es', 'dts', '.dts'],
+        AudioCodec.DTS_HRA: ['dts_dts_hd_hra', 'dtshra', '.dtshr'],
+        AudioCodec.DTS_MA: ['dts_dts_hd_ma', 'dtsma', '.dts'],
+        AudioCodec.EAC3: ['eac3', 'eac3', '.eac3'],
+        AudioCodec.FLAC: ['flac', 'flac', '.flac'],
+        AudioCodec.MP2: ['mp2', 'mp2', '.mp2'],
+        AudioCodec.MP3: ['mp3', 'mp3', '.mp3'],
+        AudioCodec.OPUS: ['opus', 'opus', '.opus'],
+        AudioCodec.PCM_S16L: ['pcm_s16le', 'pcm', '.wav'],
+        AudioCodec.SPEEX: ['speex', 'speex', '.spx'],
+        AudioCodec.TRUE_HD: ['truehd', 'thd', '.dts'],
+        AudioCodec.VORBIS: ['vorbis', 'ogg', '.ogg'],
+        AudioCodec.WMA_PRO: ['wmapro', 'wma', '.wma'],
+        AudioCodec.WMA_V2: ['wmav2', 'wma', '.wma'],
     }
 
     def __init__(self, parent_path, parent_format, ffm_data):
         super(AudioTrack, self).__init__(parent_path, parent_format, ffm_data, self._CODEC_PROPS)
+        self._codec_overwrite = None
 
-    def codec_id(self):
+    def _codec_id(self):
+        if self._codec_overwrite is not None:
+            return self._codec_ids[self._codec_overwrite]
+
         profile = self._ffm_data.get('profile')
         result = self._ffm_data['codec_name']
         if profile:
             result += '_{}'.format(profile.replace('-', '_').replace(' ', '_'))
         return result.lower()
 
-    def set_codec_id(self, value):
-        self._ffm_data['profile'] = None
-        self._ffm_data['codec_name'] = value
+    def overwrite_codec(self, value):
+        self._codec_overwrite = value
 
     def channels(self):
         return int(self._ffm_data['channels'])
@@ -169,23 +160,33 @@ class AudioTrack(Track):
     def delay(self):
         return int(self._ffm_data['start_pts'])
 
+
 class VideoTrack(Track):
-    PAL = 'not_ffmpeg_const_pal'
-    NTSC = 'not_ffmpeg_const_ntsc'
-    DEINT = 'not_ffmpeg_const_deinterlaced'
-    WEBCAM = 'not_ffmpeg_const_webcam'
-    PORN = 'not_ffmpeg_const_porn'
+    # TODO move to formats
+    _FIELD_ORDERS = {
+        'progressive': FieldOrder.PROGRESSIVE,
+        'tt': FieldOrder.INTERLACED_TOP,
+        'bb': FieldOrder.INTERLACED_BOT,
+    }
 
-    YUV420P = 'yuv420p'
-    YUVJ420P = 'yuvj420p'
-    YUV420P10LE = 'yuv420p10le'
-    CODEC_H264 = 'h264'
-    PROFILE_HIGH = 'High'
-    LEVEL_41 = 41
+    _CODECS_WITH_PROFILES_AND_LEVELS = {
+        VideoCodec.H264,
+        VideoCodec.H265,
+    }
 
-    FO_PRG = 'progressive'
-    FO_INT_TOP = 'tt'
-    FO_INT_BOT = 'bb'
+    _CODEC_PROPS = {
+        VideoCodec.FLV1: ['flv1', 'flv', '.mkv'],
+        VideoCodec.MPEG1: ['mpeg1video', 'mpeg1', '.mkv'],
+        VideoCodec.MPEG4: ['mpeg4', 'mpeg4', '.mkv'],
+        VideoCodec.MSMPEG4V2: ['msmpeg4v2', 'mpeg4', '.mkv'],
+        VideoCodec.MSMPEG4V3: ['msmpeg4v3', 'mpeg4', '.mkv'],
+        VideoCodec.WMV1: ['wmv1', 'wmv', '.mkv'],
+        VideoCodec.WMV2: ['wmv2', 'wmv', '.mkv'],
+        VideoCodec.WMV3: ['wmv3', 'wmv', '.mkv'],
+        VideoCodec.H263: ['h263', 'x263', '.mkv'],
+        VideoCodec.H264: ['h264', 'x264', '.mkv'],
+        VideoCodec.H265: ['hevc', 'x264', '.mkv'],
+    }
 
     @staticmethod
     def dimensions_correct(w, h):
@@ -195,10 +196,10 @@ class VideoTrack(Track):
     def correct_dimensions(w, h, x, y):
         dw = w % 16
         dh = h % 8
-        return (w - dw, h - dh, x + int(math.ceil(dw * 0.5)), y + int(math.ceil(dh * 0.5)))
+        return w - dw, h - dh, x + int(math.ceil(dw * 0.5)), y + int(math.ceil(dh * 0.5))
 
     def __init__(self, parent_path, parent_format, ffm_data):
-        super(VideoTrack, self).__init__(parent_path, parent_format, ffm_data, {})
+        super(VideoTrack, self).__init__(parent_path, parent_format, ffm_data, self._CODEC_PROPS)
         self._crf = None
         self._field_order = None
         self._colors = Colors(self.width(), self.height(), self.standard(), self._ffm_data)
@@ -213,13 +214,17 @@ class VideoTrack(Track):
         return self.width() >= 1200 or self.height() >= 700
 
     def profile(self):
-        return self._ffm_data['profile']
+        if self.codec() not in self._CODECS_WITH_PROFILES_AND_LEVELS:
+            return None
+        return self._ffmpeg.parse_video_codec_profile(self._ffm_data['profile'])
 
     def level(self):
-        return self._ffm_data['level']
+        if self.codec() not in self._CODECS_WITH_PROFILES_AND_LEVELS:
+            return None
+        return self._ffmpeg.parse_video_codec_level(self.codec(), self._ffm_data['level'])
 
     def pix_fmt(self):
-        return self._ffm_data['pix_fmt']
+        return self.colors().pix_fmt()
 
     def crf(self):
         return self._crf
@@ -237,50 +242,44 @@ class VideoTrack(Track):
         a, b = [float(n) for n in rate_string.split('/')]
         rate_float = a / b
         if any(equals(rate_float, x, 0.1) for x in [23.976, 29.97]):
-            return self.NTSC
+            return VideoFpsStandard.NTSC
         if equals(rate_float, 25, 0.1):
-            return self.PAL
-        if any(equals(rate_float, x, 1.0) for x in [15.0, 35.0, 38.795]):
-            return self.WEBCAM
-        if any(equals(rate_float, x, 0.1) for x in [50, 120, 90000]) and self.is_hd():
-            return self.PORN
+            return VideoFpsStandard.PAL
+        if any(equals(rate_float, x, 1.0) for x in [15.0, 20.0, 27.3, 35.0, 38.795]):
+            return VideoFpsStandard.WEBCAM
+        if any(equals(rate_float, x, 0.1) for x in [30.3, 50, 120, 90000]) and self.is_hd():
+            return VideoFpsStandard.PORN
         if any(equals(rate_float, x, 0.1) for x in [50, 60]):
-            return self.DEINT
+            return VideoFpsStandard.DEINTERLACED
         assert not self.is_hd()
         return None
 
     def field_order(self):
         if self._field_order is None:
-            fo = self._ffm_data.get('field_order')
-            if fo is None:
-                fo = self.FO_PRG
-            if fo is not None:
-                assert fo in (self.FO_PRG, self.FO_INT_BOT, self.FO_INT_TOP)
-                self._field_order = fo
+            raw = self._ffm_data.get('field_order')
+            self._field_order = self._FIELD_ORDERS[raw] if raw is not None else FieldOrder.PROGRESSIVE
         return self._field_order
 
-    def set_field_order(self, value):
-        self._field_order = value
 
 class Colors(object):
-    BT_709 = 'bt709'
-    BT_601_PAL = 'bt470bg'
-    BT_601_NTSC = 'smpte170m'
-    FCC = 'fcc'
-
-    RANGE_PC = 'pc'
-    RANGE_TV = 'tv'
-
     def __init__(self, w, h, standard, ffm_data):
         self._width = w
         self._height = h
         self._standard = standard
         self._ffm_data = ffm_data
+        self._ffmpeg = Ffmpeg()
+
+    # TODO move out
+    def pix_fmt(self):
+        return self._ffmpeg.parse_picture_format(self._ffm_data['pix_fmt'])
 
     def range(self):
-        result = self._ffm_data.get('color_range')
-        if result is None and self._ffm_data['pix_fmt'] in (VideoTrack.YUV420P, VideoTrack.YUV420P10LE):
-            result = self.RANGE_TV
+        result = None
+        raw = self._ffm_data.get('color_range')
+        if raw is not None:
+            result = self._ffmpeg.parse_color_range(raw)
+        elif self.pix_fmt() in (PictureFormat.YUV420P, PictureFormat.YUV420P10LE):
+            result = ColorRange.TV
         return result
 
     def is_hd(self):
@@ -288,24 +287,22 @@ class Colors(object):
 
     def correct_space(self):
         if self.is_hd():
-            return self.BT_709
-        if self._standard == VideoTrack.PAL:
-            return self.BT_601_PAL
-        if self._standard == VideoTrack.NTSC:
-            return self.BT_601_NTSC
+            return ColorSpace.BT_709
+        if self._standard == VideoFpsStandard.PAL:
+            return ColorSpace.BT_601_PAL,
+        if self._standard == VideoFpsStandard.NTSC:
+            return ColorSpace.BT_601_NTSC
         assert not self.is_hd()
         return None
 
     def _guess_metric(self, metric):
-        result = self._ffm_data.get(metric)
-        if result is None:
-            result = self.correct_space()
-        assert result in (self.BT_709, self.BT_601_PAL, self.BT_601_NTSC, self.FCC)
-        return result
+        raw = self._ffm_data.get(metric)
+        return self._ffmpeg.parse_color_space(raw) if raw is not None else self.correct_space()
 
     def space(self):
-        if self._ffm_data.get('color_space') == self.FCC:
-            return self.FCC
+        raw = self._ffm_data.get('color_space')
+        if raw is not None and self._ffmpeg.parse_color_space(raw) == ColorSpace.FCC:
+            return ColorSpace.FCC
         return self._guess_metric('color_space')
 
     def trc(self):
@@ -314,21 +311,16 @@ class Colors(object):
     def primaries(self):
         return self._guess_metric('color_primaries')
 
+
 class SubtitleTrack(Track):
     _RE_SUB_CAPTIONS_NUM = re.compile(r', (?P<num>\d+) caption')
 
-    ASS = 'ass'
-    MOV = 'mov_text'
-    PGS = 'hdmv_pgs_subtitle'
-    SRT = 'subrip'
-    VOBSUB = 'dvd_subtitle'
-
     _CODEC_PROPS = {
-        ASS: ['ass', '.ass'],
-        MOV: ['mov', '.ass'],
-        PGS: ['pgs', '.sup'],
-        SRT: ['srt', '.srt'],
-        VOBSUB: ['vbs', None],
+        SubtitleCodec.ASS: ['ass', 'ass', '.ass'],
+        SubtitleCodec.MOV: ['mov_text', 'mov', '.ass'],
+        SubtitleCodec.PGS: ['hdmv_pgs_subtitle', 'pgs', '.sup'],
+        SubtitleCodec.SRT: ['subrip', 'srt', '.srt'],
+        SubtitleCodec.VOBSUB: ['dvd_subtitle', 'vbs', None],
     }
 
     def __init__(self, parent_path, parent_format, ffm_data):
@@ -336,7 +328,7 @@ class SubtitleTrack(Track):
         self._encoding = None
 
     def is_binary(self):
-        return self.codec_id() in (self.PGS, self.VOBSUB)
+        return self.codec() in (SubtitleCodec.PGS, SubtitleCodec.VOBSUB)
 
     def is_text(self):
         return not self.is_binary()
@@ -352,6 +344,7 @@ class SubtitleTrack(Track):
         if match:
             return int(match.groupdict()['num'])
         return None
+
 
 class ChaptersTrack(Track):
     def __init__(self, parent_path, parent_format, ffm_data):

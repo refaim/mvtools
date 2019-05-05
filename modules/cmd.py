@@ -118,6 +118,7 @@ def mediainfo(media_path):
             tracks[track_data['ID']] = track_data
     return {'tracks': tracks, 'general': general}
 
+# TODO fix this
 def detect_crf(movie_path):
     ffmpeg = u'ffmpeg -i {} -an -vframes 1 -f null - -v 48 2>&1'.format(quote(movie_path))
     stdout = platform.execute(ffmpeg)
