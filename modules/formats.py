@@ -27,6 +27,12 @@ class FileFormat(MyEnum):
     WEBM = MyEnum.auto()
     WMV = MyEnum.auto()
 
+class TrackType(MyEnum):
+    AUD = MyEnum.auto()
+    VID = MyEnum.auto()
+    SUB = MyEnum.auto()
+    CHA = MyEnum.auto()
+
 class VideoCodec(MyEnum):
     FLV1 = MyEnum.auto()
     H263 = MyEnum.auto()

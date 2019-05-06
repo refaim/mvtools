@@ -17,7 +17,7 @@ from modules import misc
 from modules import platform
 from modules.ffmpeg import Ffmpeg
 from modules.formats import VideoCodec, PictureFormat, AudioCodec, SubtitleCodec, FieldOrder, VideoCodecProfile, \
-    VideoCodecLevel, FileFormat
+    VideoCodecLevel, FileFormat, TrackType
 from modules.tracks import Track, VideoTrack
 
 MUX_BODY = os.path.join(platform.getcwd(), u'mux.cmd')
@@ -92,11 +92,11 @@ def ask_to_select(prompt, values, handle_response=lambda x: x, header=None):
 
 def ask_to_select_tracks(movie, track_type, candidates, header):
     def handle_response(text):
-        mpv_opts = {Track.AUD: u'--audio-file {}', Track.SUB: u'--sub-file {}'}
+        mpv_opts = {TrackType.AUD: u'--audio-file {}', TrackType.SUB: u'--sub-file {}'}
         if text == 'p':
             # TODO add chosen audio tracks when choosing subtitles
             # TODO somehow consider track delays
-            command = [u'mpv {}'.format(cmd.quote(list(movie.tracks(Track.VID))[0].source_file()))]
+            command = [u'mpv {}'.format(cmd.quote(list(movie.tracks(TrackType.VID))[0].source_file()))]
             for track in sorted(candidates, key=lambda t: movie.track_index_in_type(t)):
                 if track.is_single():
                     command.append(mpv_opts[track.type()].format(cmd.quote(track.source_file())))
@@ -107,7 +107,7 @@ def ask_to_select_tracks(movie, track_type, candidates, header):
     from_single_file = len({t.source_file() for t in candidates}) == 1
     for track in candidates:
         strings = [u'(ID {})'.format(track.id()), track.language(), track.codec_name()]
-        if track_type == Track.AUD:
+        if track_type == TrackType.AUD:
             strings.append('{}ch'.format(track.channels()))
         if track.name():
             strings.append(track.name())
@@ -144,7 +144,7 @@ def find_movies(search_path, ignore_languages, detect_satellites):
 
     media_groups = []
     for remaining_media in media_by_folder.itervalues():
-        video_paths = [fp for fp in remaining_media if Track.VID in media.File.possible_track_types(fp)]
+        video_paths = [fp for fp in remaining_media if TrackType.VID in media.File.possible_track_types(fp)]
         for video in sorted(video_paths, key=len):
             group = []
             if video in remaining_media:
@@ -282,10 +282,10 @@ def main():
             movies[new_path] = movie_object
 
     output_track_specs = collections.OrderedDict([
-        ((Track.VID, False), ['und']),
-        ((Track.AUD, False), args.al),
-        ((Track.SUB, False), args.sl),
-        ((Track.SUB, True), args.fl),
+        ((TrackType.VID, False), ['und']),
+        ((TrackType.AUD, False), args.al),
+        ((TrackType.SUB, False), args.sl),
+        ((TrackType.SUB, True), args.fl),
     ])
 
     if not (args.ma and os.path.isfile(MUX_BODY)):
@@ -343,8 +343,8 @@ def main():
                 chosen_track.set_forced(search_forced)
                 output_tracks[track_type].append(chosen_track)
 
-        assert len(output_tracks[Track.VID]) == 1
-        video_track = output_tracks[Track.VID][0]
+        assert len(output_tracks[TrackType.VID]) == 1
+        video_track = output_tracks[TrackType.VID][0]
 
         def track_sort_key(t):
             lng_idx = output_track_specs[(t.type(), t.is_forced())].index(t.language())
@@ -523,7 +523,7 @@ def main():
         }
 
         max_audio_channels = CHANNEL_SCHEMES[args.ad]
-        for track in output_tracks[Track.AUD]:
+        for track in output_tracks[TrackType.AUD]:
             need_extract = not source_container_supported_by_mkvmerge
             need_denorm = track.codec() in audio_codecs_to_denorm
             need_downmix = track.channels() > max_audio_channels
@@ -577,7 +577,7 @@ def main():
                 mux_temporary_files.append(dst_track_file)
                 track_sources[track.qualified_id()] = [dst_track_file, 0]
 
-        for track in output_tracks[Track.SUB]:
+        for track in output_tracks[TrackType.SUB]:
             if track.is_text():
                 ffmpeg_opts = None
                 if track.codec() == SubtitleCodec.MOV:
@@ -628,7 +628,7 @@ def main():
                         default = track.qualified_id() == output_tracks[track_type][0].qualified_id()
                         file_track_id = track_ids_map[track.qualified_id()]
                         mux.append('--track-name {0}:""'.format(file_track_id))
-                        if track_type == Track.SUB and track.encoding() is not None:
+                        if track_type == TrackType.SUB and track.encoding() is not None:
                             mux.append('--sub-charset {0}:{1}'.format(file_track_id, track.encoding()))
                         mux.append('--language {0}:{1}'.format(file_track_id, track.language()))
                         mux.append('--default-track {0}:{1}'.format(file_track_id, 'yes' if default else 'no'))
@@ -644,7 +644,7 @@ def main():
         mux.append('--title ""')
 
         track_order = []
-        for track_type in [Track.VID, Track.AUD, Track.SUB]:
+        for track_type in [TrackType.VID, TrackType.AUD, TrackType.SUB]:
             for track in output_tracks[track_type]:
                 source_file, source_file_track_id = track_sources[track.qualified_id()]
                 track_order.append('{}:{}'.format(source_file_ids[source_file], source_file_track_id))

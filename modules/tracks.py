@@ -5,21 +5,16 @@ import re
 
 import misc
 import platform
-from formats import AudioCodec, FieldOrder, PictureFormat, ColorRange, ColorSpace, VideoFpsStandard, \
-    SubtitleCodec, VideoCodec
-from modules.ffmpeg import Ffmpeg
-
+from ffmpeg import Ffmpeg
+from formats import FieldOrder, PictureFormat, ColorRange, ColorSpace, VideoFpsStandard, \
+    SubtitleCodec, VideoCodec, TrackType
 
 class Track(object):
-    AUD = 'audio'
-    VID = 'video'
-    SUB = 'subtitle'
-    CHA = 'chapters'
-
+    # TODO move to mkvmerge class
     TYPE_FLAGS = {
-        VID: (None, '-D'),
-        AUD: ('--audio-tracks', '-A'),
-        SUB: ('--subtitle-tracks', '-S'),
+        TrackType.VID: (None, '-D'),
+        TrackType.AUD: ('--audio-tracks', '-A'),
+        TrackType.SUB: ('--subtitle-tracks', '-S'),
     }
 
     _DURATION_REGEXP = re.compile(r'(?P<hh>\d+):(?P<mm>\d+):(?P<ss>[\d.]+)')

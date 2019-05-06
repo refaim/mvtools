@@ -9,44 +9,44 @@ import cmd
 import lang
 import misc
 import platform
-from formats import AudioCodec, FileFormat
+from formats import AudioCodec, FileFormat, TrackType
 from tracks import Track, AudioTrack, VideoTrack, SubtitleTrack, ChaptersTrack
 
 class File(object):
     _TRACK_PROPS_IDX_CLASS = 0
     _TRACK_PROPS_IDX_FFMPEG_STREAM = 1
     _TRACK_PROPS = {
-        Track.VID: (VideoTrack, cmd.FFMPEG_STREAM_VID),
-        Track.AUD: (AudioTrack, cmd.FFMPEG_STREAM_AUD),
-        Track.SUB: (SubtitleTrack, cmd.FFMPEG_STREAM_SUB),
-        Track.CHA: (ChaptersTrack, None),
+        TrackType.VID: (VideoTrack, cmd.FFMPEG_STREAM_VID),
+        TrackType.AUD: (AudioTrack, cmd.FFMPEG_STREAM_AUD),
+        TrackType.SUB: (SubtitleTrack, cmd.FFMPEG_STREAM_SUB),
+        TrackType.CHA: (ChaptersTrack, None),
     }
 
     _FORMATS_INFO = {
-        FileFormat.x3GP: (['*.3gp'], [Track.VID, Track.AUD], [('MPEG-4', '3GPP Media Release 4'), ('MPEG-4', '3GPP Media Release 5')]),
-        FileFormat.AC3: (['*.ac3'], [Track.AUD], [('AC-3', None)]),
-        FileFormat.AMR: (['*.amr'], [Track.AUD], [('AMR', None)]),
-        FileFormat.AVI: (['*.avi'], [Track.VID, Track.AUD], [('AVI', None), ('AVI', 'OpenDML')]),
-        FileFormat.CHA: (['*chapters*.txt', '*chapters*.xml'], [Track.CHA], [('Chapters', None)]),
-        FileFormat.EAC3: (['*.eac3'], [Track.AUD], [('E-AC-3', None)]),
-        FileFormat.FLAC: (['*.flac'], [Track.AUD], [('FLAC', None)]),
-        FileFormat.FLV: (['*.flv'], [Track.VID, Track.AUD], [('Flash Video', None)]),
-        FileFormat.M4A: (['*.m4a'], [Track.AUD], [('MPEG-4', 'Apple audio with iTunes info')]),
-        FileFormat.M4V: (['*.m4v'], [Track.VID, Track.AUD, Track.SUB], []),
-        FileFormat.MKV: (['*.mkv'], [Track.VID, Track.AUD, Track.SUB], [('Matroska', None)]),
-        FileFormat.MOV: (['*.mov'], [Track.VID, Track.AUD, Track.SUB], [('MPEG-4', 'QuickTime')]),
-        FileFormat.MP3: (['*.mp3'], [Track.AUD], [('MPEG Audio', None)]),
-        FileFormat.MP4: (['*.mp4'], [Track.VID, Track.AUD, Track.SUB], [('MPEG-4', None), ('MPEG-4', 'Base Media'), ('MPEG-4', 'Base Media / Version 2'), ('MPEG-4', 'Sony PSP')]),
-        FileFormat.MPG: (['*.mpg', '*.mpeg', '*.vob'], [Track.VID, Track.AUD, Track.SUB], [('MPEG-PS', None)]),
-        FileFormat.RM: (['*.rm', '*.rmvb'], [Track.VID, Track.AUD], [('RealMedia', None)]),
-        FileFormat.SMK: (['*.smk'], [Track.VID, Track.AUD], [(None, None)]),
-        FileFormat.SRT: (['*.srt'], [Track.SUB], [('SubRip', None)]),
-        FileFormat.SSA: (['*.ssa', '*.ass'], [Track.SUB], []),
-        FileFormat.SUP: (['*.sup'], [Track.SUB], [('PGS', None)]),
-        FileFormat.TS: (['*.ts'], [Track.VID, Track.AUD, Track.SUB], [('MPEG-TS', None)]),
-        FileFormat.WAV: (['*.wav'], [Track.AUD], [('Wave', None)]),
-        FileFormat.WEBM: (['*.webm'], [Track.VID, Track.AUD], [('WebM', None)]),
-        FileFormat.WMV: (['*.asf', '*.wma', '*.wmv'], [Track.VID, Track.AUD, Track.SUB], [('Windows Media', None)]),
+        FileFormat.x3GP: (['*.3gp'], [TrackType.VID, TrackType.AUD], [('MPEG-4', '3GPP Media Release 4'), ('MPEG-4', '3GPP Media Release 5')]),
+        FileFormat.AC3: (['*.ac3'], [TrackType.AUD], [('AC-3', None)]),
+        FileFormat.AMR: (['*.amr'], [TrackType.AUD], [('AMR', None)]),
+        FileFormat.AVI: (['*.avi'], [TrackType.VID, TrackType.AUD], [('AVI', None), ('AVI', 'OpenDML')]),
+        FileFormat.CHA: (['*chapters*.txt', '*chapters*.xml'], [TrackType.CHA], [('Chapters', None)]),
+        FileFormat.EAC3: (['*.eac3'], [TrackType.AUD], [('E-AC-3', None)]),
+        FileFormat.FLAC: (['*.flac'], [TrackType.AUD], [('FLAC', None)]),
+        FileFormat.FLV: (['*.flv'], [TrackType.VID, TrackType.AUD], [('Flash Video', None)]),
+        FileFormat.M4A: (['*.m4a'], [TrackType.AUD], [('MPEG-4', 'Apple audio with iTunes info')]),
+        FileFormat.M4V: (['*.m4v'], [TrackType.VID, TrackType.AUD, TrackType.SUB], []),
+        FileFormat.MKV: (['*.mkv'], [TrackType.VID, TrackType.AUD, TrackType.SUB], [('Matroska', None)]),
+        FileFormat.MOV: (['*.mov'], [TrackType.VID, TrackType.AUD, TrackType.SUB], [('MPEG-4', 'QuickTime')]),
+        FileFormat.MP3: (['*.mp3'], [TrackType.AUD], [('MPEG Audio', None)]),
+        FileFormat.MP4: (['*.mp4'], [TrackType.VID, TrackType.AUD, TrackType.SUB], [('MPEG-4', None), ('MPEG-4', 'Base Media'), ('MPEG-4', 'Base Media / Version 2'), ('MPEG-4', 'Sony PSP')]),
+        FileFormat.MPG: (['*.mpg', '*.mpeg', '*.vob'], [TrackType.VID, TrackType.AUD, TrackType.SUB], [('MPEG-PS', None)]),
+        FileFormat.RM: (['*.rm', '*.rmvb'], [TrackType.VID, TrackType.AUD], [('RealMedia', None)]),
+        FileFormat.SMK: (['*.smk'], [TrackType.VID, TrackType.AUD], [(None, None)]),
+        FileFormat.SRT: (['*.srt'], [TrackType.SUB], [('SubRip', None)]),
+        FileFormat.SSA: (['*.ssa', '*.ass'], [TrackType.SUB], []),
+        FileFormat.SUP: (['*.sup'], [TrackType.SUB], [('PGS', None)]),
+        FileFormat.TS: (['*.ts'], [TrackType.VID, TrackType.AUD, TrackType.SUB], [('MPEG-TS', None)]),
+        FileFormat.WAV: (['*.wav'], [TrackType.AUD], [('Wave', None)]),
+        FileFormat.WEBM: (['*.webm'], [TrackType.VID, TrackType.AUD], [('WebM', None)]),
+        FileFormat.WMV: (['*.asf', '*.wma', '*.wmv'], [TrackType.VID, TrackType.AUD, TrackType.SUB], [('Windows Media', None)]),
     }
     _format_signatures = None
 
@@ -77,8 +77,8 @@ class File(object):
         if self._tracks_by_type is None:
             tracks_data = {}
             for track_type in File.possible_track_types(self._path):
-                if track_type == Track.CHA:
-                    tracks_data.setdefault(Track.CHA, {})[-1] = {}
+                if track_type == TrackType.CHA:
+                    tracks_data.setdefault(TrackType.CHA, {})[-1] = {}
                 else:
                     stream_id = self._TRACK_PROPS[track_type][self._TRACK_PROPS_IDX_FFMPEG_STREAM]
                     for track_id, track in cmd.ffprobe(self._path, stream_id).iteritems():
@@ -126,8 +126,8 @@ class Movie(object):
         for path in self._media_paths:
             info = self._get_file_info(path)['general']
             self._media_files.append(File(path, info['format'], info['format_profile']))
-        assert len(list(self.tracks(Track.VID))) >= 1
-        assert len(list(self.tracks(Track.CHA))) <= 1
+        assert len(list(self.tracks(TrackType.VID))) >= 1
+        assert len(list(self.tracks(TrackType.CHA))) <= 1
 
     def _fill_metadata(self):
         self._set_codecs()
@@ -139,13 +139,13 @@ class Movie(object):
         for media_file in self._media_files:
             type_tracks = list(media_file.tracks(track_type))
             file_tracks = []
-            for file_track_type in (Track.AUD, Track.VID, Track.SUB):
+            for file_track_type in (TrackType.AUD, TrackType.VID, TrackType.SUB):
                 file_tracks.extend(media_file.tracks(file_track_type))
             if len(file_tracks) == len(type_tracks) == 1:
                 yield file_tracks[0]
 
     def _set_codecs(self):
-        for track in self.tracks(Track.AUD):
+        for track in self.tracks(TrackType.AUD):
             if track.codec() == AudioCodec.DTS:
                 track_info = self._get_file_info(track.source_file())['tracks'][track.id()]
                 if 'ES' in track_info.get('Format_Profile', ''):
@@ -153,18 +153,18 @@ class Movie(object):
 
     def _set_languages(self):
         if self._ignore_languages:
-            for track_type in (Track.AUD, Track.SUB):
+            for track_type in (TrackType.AUD, TrackType.SUB):
                 for track in self.tracks(track_type):
                     track.set_language('und')
 
-        for track_type in (Track.AUD, Track.SUB):
+        for track_type in (TrackType.AUD, TrackType.SUB):
             for track in self._single_file_tracks(track_type):
                 if track.language() == 'und':
                     guessed = lang.guess(track.source_file())
                     if len(guessed) == 1:
                         track.set_language(guessed[0])
 
-        for track in self._single_file_tracks(Track.SUB):
+        for track in self._single_file_tracks(TrackType.SUB):
             if not track.is_binary() and (track.language() == 'und' or track.encoding() is None):
                 encoding_data = platform.detect_encoding(track.source_file())
                 if encoding_data['confidence'] >= 0.8:
@@ -174,12 +174,12 @@ class Movie(object):
                     track.set_encoding(track.encoding() or lang.norm_encoding(encoding_data['encoding']))
 
     def _set_forced(self):
-        for track_type in (Track.AUD, Track.VID):
+        for track_type in (TrackType.AUD, TrackType.VID):
             for track in self.tracks(track_type):
                 track.set_forced(False)
 
         strings_forced = [u'forced', u'forsed', u'форсир', u'только надписи', u'tolko nadpisi']
-        for track in self._single_file_tracks(Track.SUB):
+        for track in self._single_file_tracks(TrackType.SUB):
             if not track.is_binary():
                 track.set_forced(None)
             name_string = u''.join(c.lower() for c in track.source_file() if c.isalpha() or c.isspace())
@@ -188,14 +188,14 @@ class Movie(object):
 
         strings_forced.append(u'caption')
         strings_full = [u'sdh']
-        for track in self.tracks(Track.SUB):
+        for track in self.tracks(TrackType.SUB):
             key = track.name().lower()
             if any(s in key for s in strings_forced):
                 track.set_forced(True)
             elif any(s in key for s in strings_full):
                 track.set_forced(False)
 
-        relevant_tracks = [track for track in self.tracks(Track.SUB) if not track.is_forced() and track.language() != 'chi' and 'sdh' not in track.name().lower()]
+        relevant_tracks = [track for track in self.tracks(TrackType.SUB) if not track.is_forced() and track.language() != 'chi' and 'sdh' not in track.name().lower()]
         track_groups = [
             [track for track in relevant_tracks if track.is_binary()],
             [track for track in relevant_tracks if track.is_text()],
@@ -211,7 +211,7 @@ class Movie(object):
                             track.set_forced(True)
 
     def _set_crf(self):
-        for track in self.tracks(Track.VID):
+        for track in self.tracks(TrackType.VID):
             if track.crf() is None:
                 track.set_crf(cmd.detect_crf(track.source_file()))
 
@@ -237,9 +237,9 @@ class Movie(object):
         return self._main_path
 
     def chapters_path(self):
-        tracks = list(self.tracks(Track.CHA))
+        tracks = list(self.tracks(TrackType.CHA))
         return tracks[0].source_file() if tracks else None
 
     def reference_duration(self):
-        durations = [track.duration() for track in self.tracks(Track.VID)]
+        durations = [track.duration() for track in self.tracks(TrackType.VID)]
         return durations[0] or None
