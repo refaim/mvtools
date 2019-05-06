@@ -9,16 +9,17 @@ import cmd
 import lang
 import misc
 import platform
+from ffmpeg import Ffmpeg
 from formats import AudioCodec, FileFormat, TrackType
-from tracks import Track, AudioTrack, VideoTrack, SubtitleTrack, ChaptersTrack
+from tracks import AudioTrack, VideoTrack, SubtitleTrack, ChaptersTrack
 
 class File(object):
     _TRACK_PROPS_IDX_CLASS = 0
     _TRACK_PROPS_IDX_FFMPEG_STREAM = 1
     _TRACK_PROPS = {
-        TrackType.VID: (VideoTrack, cmd.FFMPEG_STREAM_VID),
-        TrackType.AUD: (AudioTrack, cmd.FFMPEG_STREAM_AUD),
-        TrackType.SUB: (SubtitleTrack, cmd.FFMPEG_STREAM_SUB),
+        TrackType.VID: (VideoTrack, Ffmpeg.STREAM_ARGUMENT_VID),
+        TrackType.AUD: (AudioTrack, Ffmpeg.STREAM_ARGUMENT_AUD),
+        TrackType.SUB: (SubtitleTrack, Ffmpeg.STREAM_ARGUMENT_SUB),
         TrackType.CHA: (ChaptersTrack, None),
     }
 

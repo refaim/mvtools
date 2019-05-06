@@ -5,10 +5,6 @@ import xml.dom.minidom
 
 import platform
 
-FFMPEG_STREAM_AUD = 'a'
-FFMPEG_STREAM_SUB = 's'
-FFMPEG_STREAM_VID = 'V'
-
 def quote(path):
     if path == '-':
         return path

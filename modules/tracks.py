@@ -23,7 +23,7 @@ class Track(object):
         self._parent_path = parent_path
         self._parent_format = parent_format
         self._ffm_data = ffm_data
-        self._ffmpeg = Ffmpeg()
+        self._ffmpeg = Ffmpeg()  # TODO pass from outside
         self._duration = None
 
         self._codec_enums = {}

@@ -2,6 +2,10 @@ from formats import PictureFormat, ColorSpace, ColorRange, VideoCodec, VideoCode
 from misc import flip_dict
 
 class Ffmpeg(object):
+    STREAM_ARGUMENT_AUD = 'a'
+    STREAM_ARGUMENT_SUB = 's'
+    STREAM_ARGUMENT_VID = 'V'
+
     _VIDEO_ENCODING_LIBRARY_ENUM_TO_ARGUMENT = {
         VideoCodec.H264: 'libx264',
         VideoCodec.H265: 'libx265',

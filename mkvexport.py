@@ -500,7 +500,7 @@ def main():
             track_sources[video_track.qualified_id()] = [new_video_path, 0]
             mux_temporary_files.append(new_video_path)
         elif not source_container_supported_by_mkvmerge:
-            new_video_path, _ = make_single_track_file(video_track, cmd.FFMPEG_STREAM_VID, '.mkv')
+            new_video_path, _ = make_single_track_file(video_track, Ffmpeg.STREAM_ARGUMENT_VID, '.mkv')
             track_sources[video_track.qualified_id()] = [new_video_path, 0]
             mux_temporary_files.append(new_video_path)
 
@@ -537,7 +537,7 @@ def main():
                 if need_uncompress:
                     stf_ext = '.wav'
                     stf_ffmpeg_opts = ['-f wav', '-rf64 auto']
-                src_track_file, is_src_track_file_temporary = make_single_track_file(track, cmd.FFMPEG_STREAM_AUD, stf_ext, stf_ffmpeg_opts)
+                src_track_file, is_src_track_file_temporary = make_single_track_file(track, Ffmpeg.STREAM_ARGUMENT_AUD, stf_ext, stf_ffmpeg_opts)
 
                 eac_track_file = src_track_file
                 if need_denorm or need_downmix or need_recode:
@@ -582,7 +582,7 @@ def main():
                 ffmpeg_opts = None
                 if track.codec() == SubtitleCodec.MOV:
                     ffmpeg_opts = []
-                track_file, is_track_file_temporary = make_single_track_file(track, cmd.FFMPEG_STREAM_SUB, ffmpeg_opts=ffmpeg_opts)
+                track_file, is_track_file_temporary = make_single_track_file(track, Ffmpeg.STREAM_ARGUMENT_SUB, ffmpeg_opts=ffmpeg_opts)
                 srt_file = platform.make_temporary_file('.srt')
                 result_commands.append(u'python {script} {src_path} {dst_path}'.format(
                     script=cmd.quote(os.path.join(os.path.dirname(__file__), 'any2srt.py')),
@@ -593,7 +593,7 @@ def main():
                 if is_track_file_temporary:
                     result_commands.extend(cmd.gen_del_files(args.sd, track_file))
             elif track.codec() == SubtitleCodec.PGS:
-                track_file, is_track_file_temporary = make_single_track_file(track, cmd.FFMPEG_STREAM_SUB, prefer_ffmpeg=False)
+                track_file, is_track_file_temporary = make_single_track_file(track, Ffmpeg.STREAM_ARGUMENT_SUB, prefer_ffmpeg=False)
                 idx_file = platform.make_temporary_file('.idx')
                 sub_file = u'{}.sub'.format(os.path.splitext(idx_file)[0])
                 result_commands.extend(cmd.gen_bdsup2sub(track_file, idx_file, lang.alpha2(track.language())))
