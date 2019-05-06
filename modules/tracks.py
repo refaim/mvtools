@@ -161,13 +161,6 @@ class AudioTrack(Track):
 
 
 class VideoTrack(Track):
-    # TODO move to formats
-    _FIELD_ORDERS = {
-        'progressive': FieldOrder.PROGRESSIVE,
-        'tt': FieldOrder.INTERLACED_TOP,
-        'bb': FieldOrder.INTERLACED_BOT,
-    }
-
     _CODECS_WITH_PROFILES_AND_LEVELS = {
         VideoCodec.H264,
         VideoCodec.H265,
@@ -266,7 +259,7 @@ class VideoTrack(Track):
     def field_order(self):
         if self._field_order is None:
             raw = self._ffm_data.get('field_order')
-            self._field_order = self._FIELD_ORDERS[raw] if raw is not None else FieldOrder.PROGRESSIVE
+            self._field_order = self._ffmpeg.parse_field_order(raw) if raw is not None else FieldOrder.PROGRESSIVE
         return self._field_order
 
 

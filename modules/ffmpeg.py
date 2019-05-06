@@ -1,4 +1,4 @@
-from formats import PictureFormat, ColorSpace, ColorRange, VideoCodec, VideoCodecProfile, VideoCodecLevel
+from formats import PictureFormat, ColorSpace, ColorRange, VideoCodec, VideoCodecProfile, VideoCodecLevel, FieldOrder
 from misc import flip_dict
 
 class Ffmpeg(object):
@@ -84,6 +84,12 @@ class Ffmpeg(object):
         'tv': ColorRange.TV,
     }
 
+    _FIELD_ORDER_RAW_TO_ENUM = {
+        'progressive': FieldOrder.PROGRESSIVE,
+        'tt': FieldOrder.INTERLACED_TOP,
+        'bb': FieldOrder.INTERLACED_BOT,
+    }
+
     def __init__(self):
         self._video_codec_level_enum_to_argument = {}
         for codec, levels in self._VIDEO_CODEC_LEVEL_RAW_TO_ENUM.iteritems():
@@ -100,6 +106,7 @@ class Ffmpeg(object):
         self._color_primaries_enum_to_argument = flip_dict(self._COLOR_PRIMARIES_RAW_TO_ENUM)
         self._color_trc_enum_to_argument = flip_dict(self._COLOR_TRC_RAW_TO_ENUM)
         self._color_trc_enum_to_argument[ColorSpace.BT_601_PAL] = 'gamma28'
+        self._field_order_enum_to_argument = flip_dict(self._FIELD_ORDER_RAW_TO_ENUM)
 
     def build_video_encoding_library_argument(self, codec):
         return self._VIDEO_ENCODING_LIBRARY_ENUM_TO_ARGUMENT[codec]
@@ -138,3 +145,8 @@ class Ffmpeg(object):
         return self._COLOR_RANGE_RAW_TO_ENUM[value]
     def build_color_range_argument(self, value):
         return self._color_range_enum_to_argument[value]
+
+    def parse_field_order(self, value):
+        return self._FIELD_ORDER_RAW_TO_ENUM[value]
+    def build_field_order(self, value):
+        return self._field_order_enum_to_argument[value]
