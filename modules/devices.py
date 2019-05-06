@@ -3,7 +3,7 @@
 from abc import ABCMeta, abstractmethod
 
 from media import File
-from formats import AudioCodec, VideoCodec
+from formats import AudioCodec, VideoCodec, FileFormat
 
 
 # TODO телевизор на КЗ
@@ -93,7 +93,7 @@ class Device:
 # TODO MPEG-4 video, Simple Profile
 class IpodNano4G(Device):
     def get_supported_containers(self):
-        return {File.FORMAT_M4V, File.FORMAT_MOV, File.FORMAT_MP4}
+        return {FileFormat.M4V, FileFormat.MOV, FileFormat.MP4}
 
     def _safe_get_supported_video_codecs(self, container):
         return {VideoCodec.H264, VideoCodec.MPEG4}
@@ -127,7 +127,7 @@ class IpodNano4GWithExternalDisplay(IpodNano4G):
 
 class SamsungSMP601(Device):
     def get_supported_containers(self):
-        return {File.FORMAT_3GP, File.FORMAT_AVI, File.FORMAT_FLV, File.FORMAT_M4V, File.FORMAT_MKV, File.FORMAT_MP4, File.FORMAT_WEBM, File.FORMAT_WMV}
+        return {FileFormat.x3GP, FileFormat.AVI, FileFormat.FLV, FileFormat.M4V, FileFormat.MKV, FileFormat.MP4, FileFormat.WEBM, FileFormat.WMV}
 
     def _safe_get_supported_video_codecs(self, container):
         return {VideoCodec.FLV1, VideoCodec.H263, VideoCodec.H264, VideoCodec.MPEG4, VideoCodec.MSMPEG4V3, VideoCodec.VC1, VideoCodec.WMV1_WMV7, VideoCodec.WMV2_WMV8}
@@ -154,7 +154,7 @@ class SamsungSMP601(Device):
 
 class Honor8(Device):
     def get_supported_containers(self):
-        return {File.FORMAT_3GP, File.FORMAT_MP4, File.FORMAT_RM, File.FORMAT_WMV}
+        return {FileFormat.x3GP, FileFormat.MP4, FileFormat.RM, FileFormat.WMV}
 
     def _safe_get_supported_video_codecs(self, container):
         return {VideoCodec.H263, VideoCodec.H264, VideoCodec.H265, VideoCodec.MPEG4, VideoCodec.VP8}
@@ -187,7 +187,7 @@ class SamsungTvUE48H6200AK(Device):
 
     def get_supported_containers(self):
         # TODO *.vro, *.tp, *.trp, *.svi, *.m2tsm *.mts, *.divx
-        return {File.FORMAT_3GP, File.FORMAT_AVI, File.FORMAT_FLV, File.FORMAT_MKV, File.FORMAT_MP4, File.FORMAT_MOV, File.FORMAT_MPG, File.FORMAT_TS, File.FORMAT_WEBM, File.FORMAT_WMV}
+        return {FileFormat.x3GP, FileFormat.AVI, FileFormat.FLV, FileFormat.MKV, FileFormat.MP4, FileFormat.MOV, FileFormat.VOB, FileFormat.TS, FileFormat.WEBM, FileFormat.WMV}
 
     # TODO Supports up to H.264, Level 4.1
     # TODO VC1 AP L4 is not supported
@@ -195,11 +195,11 @@ class SamsungTvUE48H6200AK(Device):
     # TODO This can only support the BD MVC specifications.
     # TODO what h.265 profile is supported?
     def _safe_get_supported_video_codecs(self, container):
-        if container == File.FORMAT_WEBM:
+        if container == FileFormat.WEBM:
             return {VideoCodec.VP8}
         # TODO DivX 3.11 / 4 / 5 / 6, MVC
         result = {VideoCodec.H263, VideoCodec.H264, VideoCodec.MJPEG, VideoCodec.MPEG1, VideoCodec.MPEG2, VideoCodec.MSMPEG4V1, VideoCodec.MSMPEG4V2, VideoCodec.MSMPEG4V3, VideoCodec.VC1, VideoCodec.VP6, VideoCodec.WMV1_WMV7, VideoCodec.WMV2_WMV8, VideoCodec.WMV3_WMV9}
-        if container in [File.FORMAT_MKV, File.FORMAT_MP4, File.FORMAT_TS]:
+        if container in [FileFormat.MKV, FileFormat.MP4, FileFormat.TS]:
             result.add(VideoCodec.H265)
         return result
 
@@ -214,7 +214,7 @@ class SamsungTvUE48H6200AK(Device):
         return 30  # TODO 30 for FHD, 60 for HD
 
     def _safe_get_max_video_mbps(self, container, codec):
-        if container == File.FORMAT_WEBM:
+        if container == FileFormat.WEBM:
             return 20
         return 30
 
@@ -226,7 +226,7 @@ class SamsungTvUE48H6200AK(Device):
     # TODO AIFF in *.aif/*.aiff
     # TODO ALAC in *.m4a
     def _safe_get_supported_audio_codecs(self, container):
-        if container == File.FORMAT_WEBM:
+        if container == FileFormat.WEBM:
             return {AudioCodec.VORBIS}
         # TODO LPCM, WMA, DTS(Core, LBR), G.711(A-Law)
         return {AudioCodec.AAC_LC, AudioCodec.AAC_HE, AudioCodec.AC3, AudioCodec.ADPCM_IMA, AudioCodec.ADPCM_MS, AudioCodec.EAC3, AudioCodec.MP3, AudioCodec.PCM_MULAW}

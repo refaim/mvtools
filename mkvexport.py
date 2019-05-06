@@ -17,7 +17,7 @@ from modules import misc
 from modules import platform
 from modules.ffmpeg import Ffmpeg
 from modules.formats import VideoCodec, PictureFormat, AudioCodec, SubtitleCodec, FieldOrder, VideoCodecProfile, \
-    VideoCodecLevel
+    VideoCodecLevel, FileFormat
 from modules.tracks import Track, VideoTrack
 
 MUX_BODY = os.path.join(platform.getcwd(), u'mux.cmd')
@@ -380,7 +380,7 @@ def main():
             return tmp_path, True
 
         # TODO move to software abstraction
-        source_container_supported_by_mkvmerge = video_track.container_format() not in {media.File.FORMAT_3GP, media.File.FORMAT_SMK, media.File.FORMAT_WMV}
+        source_container_supported_by_mkvmerge = video_track.container_format() not in {FileFormat.x3GP, FileFormat.SMK, FileFormat.WMV}
 
         source_video_codec = video_track.codec()
         source_video_crf = video_track.crf()

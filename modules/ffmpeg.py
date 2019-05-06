@@ -89,10 +89,10 @@ class Ffmpeg(object):
         for codec, levels in self._VIDEO_CODEC_LEVEL_RAW_TO_ENUM.iteritems():
             self._video_codec_level_enum_to_argument[codec] = flip_dict(levels)
 
-        x265_levels = {}
+        h265_levels = {}
         for level, argument in self._video_codec_level_enum_to_argument[VideoCodec.H265].iteritems():
-            x265_levels[level] = int(argument / 3)
-        self._video_codec_level_enum_to_argument[VideoCodec.H265] = x265_levels
+            h265_levels[level] = int(argument / 3)
+        self._video_codec_level_enum_to_argument[VideoCodec.H265] = h265_levels
 
         self._picture_format_enum_to_argument = flip_dict(self._PICTURE_FORMAT_RAW_TO_ENUM)
         self._color_range_enum_to_argument = flip_dict(self._COLOR_RANGE_RAW_TO_ENUM)

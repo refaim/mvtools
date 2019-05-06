@@ -1,5 +1,32 @@
 from modules.misc import MyEnum
 
+class FileFormat(MyEnum):
+    x3GP = MyEnum.auto()
+    AC3 = MyEnum.auto()
+    AMR = MyEnum.auto()
+    AVI = MyEnum.auto()
+    CHA = MyEnum.auto()
+    EAC3 = MyEnum.auto()
+    FLAC = MyEnum.auto()
+    FLV = MyEnum.auto()
+    M4A = MyEnum.auto()
+    M4V = MyEnum.auto()
+    MKV = MyEnum.auto()
+    MOV = MyEnum.auto()
+    MP3 = MyEnum.auto()
+    MP4 = MyEnum.auto()
+    MPG = MyEnum.auto()
+    RM = MyEnum.auto()
+    SMK = MyEnum.auto()
+    SRT = MyEnum.auto()
+    SSA = MyEnum.auto()
+    SUP = MyEnum.auto()
+    TS = MyEnum.auto()
+    VOB = MyEnum.auto()
+    WAV = MyEnum.auto()
+    WEBM = MyEnum.auto()
+    WMV = MyEnum.auto()
+
 class VideoCodec(MyEnum):
     FLV1 = MyEnum.auto()
     H263 = MyEnum.auto()

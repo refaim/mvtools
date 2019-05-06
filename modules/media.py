@@ -9,7 +9,7 @@ import cmd
 import lang
 import misc
 import platform
-from formats import AudioCodec
+from formats import AudioCodec, FileFormat
 from tracks import Track, AudioTrack, VideoTrack, SubtitleTrack, ChaptersTrack
 
 class File(object):
@@ -22,66 +22,33 @@ class File(object):
         Track.CHA: (ChaptersTrack, None),
     }
 
-    # TODO enum
-    FORMAT_3GP = '3gp'
-    FORMAT_AC3 = 'ac3'
-    FORMAT_AMR = 'amr'
-    FORMAT_AVI = 'avi'
-    FORMAT_CHA = 'cha'
-    FORMAT_EAC3 = 'eac3'
-    FORMAT_FLAC = 'flac'
-    FORMAT_FLV = 'flv'
-    FORMAT_M4A = 'm4a'
-    FORMAT_M4V = 'm4v'
-    FORMAT_MKV = 'mkv'
-    FORMAT_MOV = 'mov'
-    FORMAT_MP3 = 'mp3'
-    FORMAT_MP4 = 'mp4'
-    FORMAT_MPG = 'mpg'
-    FORMAT_RM = 'rm'
-    FORMAT_SMK = 'smk'
-    FORMAT_SRT = 'srt'
-    FORMAT_SSA = 'ssa'
-    FORMAT_SUP = 'sup'
-    FORMAT_TS = 'ts'
-    FORMAT_WAV = 'wav'
-    FORMAT_WEBM = 'webm'
-    FORMAT_WMV = 'wmv'
-
     _FORMATS_INFO = {
-        FORMAT_3GP: (['*.3gp'], [Track.VID, Track.AUD], [('MPEG-4', '3GPP Media Release 4'), ('MPEG-4', '3GPP Media Release 5')]),
-        FORMAT_AC3: (['*.ac3'], [Track.AUD], [('AC-3', None)]),
-        FORMAT_AMR: (['*.amr'], [Track.AUD], [('AMR', None)]),
-        FORMAT_AVI: (['*.avi'], [Track.VID, Track.AUD], [('AVI', None), ('AVI', 'OpenDML')]),
-        FORMAT_CHA: (['*chapters*.txt', '*chapters*.xml'], [Track.CHA], [('Chapters', None)]),
-        FORMAT_EAC3: (['*.eac3'], [Track.AUD], [('E-AC-3', None)]),
-        FORMAT_FLAC: (['*.flac'], [Track.AUD], [('FLAC', None)]),
-        FORMAT_FLV: (['*.flv'], [Track.VID, Track.AUD], [('Flash Video', None)]),
-        FORMAT_M4A: (['*.m4a'], [Track.AUD], [('MPEG-4', 'Apple audio with iTunes info')]),
-        FORMAT_M4V: (['*.m4v'], [Track.VID, Track.AUD, Track.SUB], []),
-        FORMAT_MKV: (['*.mkv'], [Track.VID, Track.AUD, Track.SUB], [('Matroska', None)]),
-        FORMAT_MOV: (['*.mov'], [Track.VID, Track.AUD, Track.SUB], [('MPEG-4', 'QuickTime')]),
-        FORMAT_MP3: (['*.mp3'], [Track.AUD], [('MPEG Audio', None)]),
-        FORMAT_MP4: (['*.mp4'], [Track.VID, Track.AUD, Track.SUB], [('MPEG-4', None), ('MPEG-4', 'Base Media'), ('MPEG-4', 'Base Media / Version 2'), ('MPEG-4', 'Sony PSP')]),
-        FORMAT_MPG: (['*.mpg', '*.mpeg', '*.vob'], [Track.VID, Track.AUD, Track.SUB], [('MPEG-PS', None)]),
-        FORMAT_RM: (['*.rm', '*.rmvb'], [Track.VID, Track.AUD], [('RealMedia', None)]),
-        FORMAT_SMK: (['*.smk'], [Track.VID, Track.AUD], [(None, None)]),
-        FORMAT_SRT: (['*.srt'], [Track.SUB], [('SubRip', None)]),
-        FORMAT_SSA: (['*.ssa', '*.ass'], [Track.SUB], []),
-        FORMAT_SUP: (['*.sup'], [Track.SUB], [('PGS', None)]),
-        FORMAT_TS: (['*.ts'], [Track.VID, Track.AUD, Track.SUB], [('MPEG-TS', None)]),
-        FORMAT_WAV: (['*.wav'], [Track.AUD], [('Wave', None)]),
-        FORMAT_WEBM: (['*.webm'], [Track.VID, Track.AUD], [('WebM', None)]),
-        FORMAT_WMV: (['*.asf', '*.wma', '*.wmv'], [Track.VID, Track.AUD, Track.SUB], [('Windows Media', None)]),
+        FileFormat.x3GP: (['*.3gp'], [Track.VID, Track.AUD], [('MPEG-4', '3GPP Media Release 4'), ('MPEG-4', '3GPP Media Release 5')]),
+        FileFormat.AC3: (['*.ac3'], [Track.AUD], [('AC-3', None)]),
+        FileFormat.AMR: (['*.amr'], [Track.AUD], [('AMR', None)]),
+        FileFormat.AVI: (['*.avi'], [Track.VID, Track.AUD], [('AVI', None), ('AVI', 'OpenDML')]),
+        FileFormat.CHA: (['*chapters*.txt', '*chapters*.xml'], [Track.CHA], [('Chapters', None)]),
+        FileFormat.EAC3: (['*.eac3'], [Track.AUD], [('E-AC-3', None)]),
+        FileFormat.FLAC: (['*.flac'], [Track.AUD], [('FLAC', None)]),
+        FileFormat.FLV: (['*.flv'], [Track.VID, Track.AUD], [('Flash Video', None)]),
+        FileFormat.M4A: (['*.m4a'], [Track.AUD], [('MPEG-4', 'Apple audio with iTunes info')]),
+        FileFormat.M4V: (['*.m4v'], [Track.VID, Track.AUD, Track.SUB], []),
+        FileFormat.MKV: (['*.mkv'], [Track.VID, Track.AUD, Track.SUB], [('Matroska', None)]),
+        FileFormat.MOV: (['*.mov'], [Track.VID, Track.AUD, Track.SUB], [('MPEG-4', 'QuickTime')]),
+        FileFormat.MP3: (['*.mp3'], [Track.AUD], [('MPEG Audio', None)]),
+        FileFormat.MP4: (['*.mp4'], [Track.VID, Track.AUD, Track.SUB], [('MPEG-4', None), ('MPEG-4', 'Base Media'), ('MPEG-4', 'Base Media / Version 2'), ('MPEG-4', 'Sony PSP')]),
+        FileFormat.MPG: (['*.mpg', '*.mpeg', '*.vob'], [Track.VID, Track.AUD, Track.SUB], [('MPEG-PS', None)]),
+        FileFormat.RM: (['*.rm', '*.rmvb'], [Track.VID, Track.AUD], [('RealMedia', None)]),
+        FileFormat.SMK: (['*.smk'], [Track.VID, Track.AUD], [(None, None)]),
+        FileFormat.SRT: (['*.srt'], [Track.SUB], [('SubRip', None)]),
+        FileFormat.SSA: (['*.ssa', '*.ass'], [Track.SUB], []),
+        FileFormat.SUP: (['*.sup'], [Track.SUB], [('PGS', None)]),
+        FileFormat.TS: (['*.ts'], [Track.VID, Track.AUD, Track.SUB], [('MPEG-TS', None)]),
+        FileFormat.WAV: (['*.wav'], [Track.AUD], [('Wave', None)]),
+        FileFormat.WEBM: (['*.webm'], [Track.VID, Track.AUD], [('WebM', None)]),
+        FileFormat.WMV: (['*.asf', '*.wma', '*.wmv'], [Track.VID, Track.AUD, Track.SUB], [('Windows Media', None)]),
     }
     _format_signatures = None
-
-    # TODO move to _FORMATS_INFO
-    # '*.dts': (Track.AUD,),
-    # '*.dtshr': (Track.AUD,),
-    # '*.dtsma': (Track.AUD,),
-    # '*.mka': (Track.AUD,),
-    # '*.mks': (Track.SUB),
 
     @classmethod
     def possible_track_types(cls, file_path):
