@@ -472,7 +472,7 @@ _ISO_639_LANGUAGE_SUBSET = {
     'zun': [None, ['Zuni']],
     'zza': [None, ['Zaza', 'Dimili', 'Dimli', 'Kirdki', 'Kirmanjki', 'Zazaki']],
 }
-_LANGUAGE_STRINGS = misc.make_strings_dict({ alpha3: value[1] for alpha3, value in _ISO_639_LANGUAGE_SUBSET.iteritems() })
+_LANGUAGE_STRINGS = misc.make_strings_dict({alpha3: value[1] for alpha3, value in _ISO_639_LANGUAGE_SUBSET.iteritems()})
 LANGUAGES = set(_ISO_639_LANGUAGE_SUBSET.iterkeys())
 
 _ENCODINGS = {

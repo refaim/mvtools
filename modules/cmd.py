@@ -83,9 +83,9 @@ def ffprobe(media_path, stream_ids):
         u'-show_streams',
     ]
     for stream_specifier in stream_ids:
-        ffprobe = u'ffprobe {opts} -select_streams {stream} {path}'.format(
+        command = u'ffprobe {opts} -select_streams {stream} {path}'.format(
             opts=u' '.join(ffprobe_opts), stream=stream_specifier, path=quote(media_path))
-        for stream in json.loads(platform.execute(ffprobe))['streams']:
+        for stream in json.loads(platform.execute(command))['streams']:
             tracks[stream['index']] = stream
     return tracks
 
@@ -122,5 +122,5 @@ def mediainfo(media_path):
 def detect_crf(movie_path):
     ffmpeg = u'ffmpeg -i {} -an -vframes 1 -f null - -v 48 2>&1'.format(quote(movie_path))
     stdout = platform.execute(ffmpeg)
-    match = re.search(r'crf=(?P<crf>[\d\.]+)', stdout)
+    match = re.search(r'crf=(?P<crf>[\d.]+)', stdout)
     return float(match.groupdict()['crf']) if match else None

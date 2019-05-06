@@ -1,7 +1,6 @@
 from formats import PictureFormat, ColorSpace, ColorRange, VideoCodec, VideoCodecProfile, VideoCodecLevel
 from misc import flip_dict
 
-
 class Ffmpeg(object):
     _VIDEO_ENCODING_LIBRARY_ENUM_TO_ARGUMENT = {
         VideoCodec.H264: 'libx264',

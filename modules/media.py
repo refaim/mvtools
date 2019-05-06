@@ -117,12 +117,12 @@ class File(object):
                     for track_id, track in cmd.ffprobe(self._path, stream_id).iteritems():
                         tracks_data.setdefault(track['codec_type'], {})[track_id] = track
 
-            self._tracks_by_type = { track_type: [] for track_type in self._TRACK_PROPS.iterkeys() }
+            self._tracks_by_type = {track_type: [] for track_type in self._TRACK_PROPS.iterkeys()}
             for track_type, tracks_of_type in tracks_data.iteritems():
                 for track_id, track_data in tracks_of_type.iteritems():
                     track_class = self._TRACK_PROPS[track_type][self._TRACK_PROPS_IDX_CLASS]
                     self._tracks_by_type[track_type].append(track_class(self._path, self._format, track_data))
-                self._tracks_by_type[track_type].sort(key=lambda track: track.qualified_id())
+                self._tracks_by_type[track_type].sort(key=lambda t: t.qualified_id())
         return self._tracks_by_type
 
     def tracks(self, track_type):
@@ -228,11 +228,11 @@ class Movie(object):
             elif any(s in key for s in strings_full):
                 track.set_forced(False)
 
-        relevant_tracks = [track for track in self.tracks(Track.SUB)
-            if not track.is_forced() and track.language() != 'chi' and 'sdh' not in track.name().lower()]
-        track_groups = []
-        track_groups.append([track for track in relevant_tracks if track.is_binary()])
-        track_groups.append([track for track in relevant_tracks if track.is_text()])
+        relevant_tracks = [track for track in self.tracks(Track.SUB) if not track.is_forced() and track.language() != 'chi' and 'sdh' not in track.name().lower()]
+        track_groups = [
+            [track for track in relevant_tracks if track.is_binary()],
+            [track for track in relevant_tracks if track.is_text()],
+        ]
         metrics = ((lambda t: t.frames_len(), 50.0), (lambda t: t.num_captions(), 50.0))
         for value_getter, threshold_percentage in metrics:
             for track_group in track_groups:

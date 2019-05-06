@@ -74,7 +74,7 @@ ACTIONS_IDX_ENABLED = 1
 ACTIONS_IDX_FUNC = 2
 # TODO table-like print
 def ask_to_select(prompt, values, handle_response=lambda x: x, header=None):
-    values_dict = values if isinstance(values, dict) else { i: v for i, v in enumerate(values) }
+    values_dict = values if isinstance(values, dict) else {i: v for i, v in enumerate(values)}
     chosen_id = None
     while chosen_id not in values_dict:
         if header is not None:
@@ -92,19 +92,19 @@ def ask_to_select(prompt, values, handle_response=lambda x: x, header=None):
 
 def ask_to_select_tracks(movie, track_type, candidates, header):
     def handle_response(text):
-        MPV_OPTS = { Track.AUD: u'--audio-file {}', Track.SUB: u'--sub-file {}' }
+        mpv_opts = {Track.AUD: u'--audio-file {}', Track.SUB: u'--sub-file {}'}
         if text == 'p':
             # TODO add chosen audio tracks when choosing subtitles
             # TODO somehow consider track delays
             command = [u'mpv {}'.format(cmd.quote(list(movie.tracks(Track.VID))[0].source_file()))]
             for track in sorted(candidates, key=lambda t: movie.track_index_in_type(t)):
                 if track.is_single():
-                    command.append(MPV_OPTS[track.type()].format(cmd.quote(track.source_file())))
+                    command.append(mpv_opts[track.type()].format(cmd.quote(track.source_file())))
             platform.execute(u'{} >nul 2>&1'.format(u' '.join(command)), capture_output=False)
         return text
 
     candidate_strings = {}
-    from_single_file = len({ t.source_file() for t in candidates }) == 1
+    from_single_file = len({t.source_file() for t in candidates}) == 1
     for track in candidates:
         strings = [u'(ID {})'.format(track.id()), track.language(), track.codec_name()]
         if track_type == Track.AUD:
@@ -370,14 +370,14 @@ def main():
             if ffmpeg_opts is None:
                 ffmpeg_opts = ['-c:{} copy'.format(stream_id)]
             if file_ext == platform.file_ext(track.source_file()) and track.is_single():
-                return (track.source_file(), False)
+                return track.source_file(), False
             tmp_path = platform.make_temporary_file(file_ext)
             if not prefer_ffmpeg and platform.file_ext(track.source_file()) == '.mkv':
                 command = cmd.gen_mkvtoolnix_extract_track(track.source_file(), tmp_path, track.id())
             else:
                 command = cmd.gen_ffmpeg_extract_track(track.source_file(), tmp_path, track.id(), [], ffmpeg_opts)
             result_commands.extend(command)
-            return (tmp_path, True)
+            return tmp_path, True
 
         # TODO move to software abstraction
         source_container_supported_by_mkvmerge = video_track.container_format() not in {media.File.FORMAT_3GP, media.File.FORMAT_SMK, media.File.FORMAT_WMV}
@@ -441,7 +441,7 @@ def main():
                 ffmpeg_filters.append('scale=1280:-8')
             elif args.vs == '1080p':
                 ffmpeg_filters.append('scale=1920:-8')
-            elif args.vs == '1440p': # TODO !!!!!!!!!!
+            elif args.vs == '1440p':  # TODO !!!!!!!!!!
                 ffmpeg_filters.append('scale=-16:1440')
 
             src_colors = video_track.colors()
@@ -669,14 +669,13 @@ def main():
                 args.sd,
                 *sorted(set(media_file.path() for media_file in movie.media_files()))))
 
-        allowed_exit_codes = { 'robocopy': 1, 'mkvmerge': 1 }
+        allowed_exit_codes = {'robocopy': 1, 'mkvmerge': 1}
         with codecs.open(MUX_BODY, 'a', 'utf-8') as body_file:
             for command in result_commands:
                 fail_exit_code = 1
                 for program, code in allowed_exit_codes.iteritems():
                     if program in command.lower():
                         fail_exit_code = code + 1
-                prepared_commands = None
                 stop_statement = u'call :stop {}'.format(misc.random_printable(8))
                 if fail_exit_code == 1: prepared_commands = [u'{} || {}'.format(command.strip(), stop_statement)]
                 else: prepared_commands = [command.strip(), u'if errorlevel {} {}'.format(fail_exit_code, stop_statement)]
@@ -685,6 +684,7 @@ def main():
             body_file.write(u'\r\n')
 
     return 0
+
 
 if __name__ == '__main__':
     cli.run(main)
