@@ -1,10 +1,18 @@
-from formats import PictureFormat, ColorSpace, ColorRange, VideoCodec, VideoCodecProfile, VideoCodecLevel, FieldOrder
+from formats import PictureFormat, ColorSpace, ColorRange, VideoCodec, VideoCodecProfile, VideoCodecLevel, FieldOrder, \
+    TrackType
 from misc import flip_dict
 
 class Ffmpeg(object):
     STREAM_ARGUMENT_AUD = 'a'
     STREAM_ARGUMENT_SUB = 's'
     STREAM_ARGUMENT_VID = 'V'
+
+    _TRACK_TYPE_RAW_TO_ENUM = {
+        'video': TrackType.VID,
+        'audio': TrackType.AUD,
+        'subtitle': TrackType.SUB,
+        'chapters': TrackType.CHA,
+    }
 
     _VIDEO_ENCODING_LIBRARY_ENUM_TO_ARGUMENT = {
         VideoCodec.H264: 'libx264',
@@ -111,6 +119,9 @@ class Ffmpeg(object):
         self._color_trc_enum_to_argument = flip_dict(self._COLOR_TRC_RAW_TO_ENUM)
         self._color_trc_enum_to_argument[ColorSpace.BT_601_PAL] = 'gamma28'
         self._field_order_enum_to_argument = flip_dict(self._FIELD_ORDER_RAW_TO_ENUM)
+
+    def parse_track_type(self, value):
+        return self._TRACK_TYPE_RAW_TO_ENUM[value]
 
     def build_video_encoding_library_argument(self, codec):
         return self._VIDEO_ENCODING_LIBRARY_ENUM_TO_ARGUMENT[codec]

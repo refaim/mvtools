@@ -62,6 +62,7 @@ class File(object):
     def __init__(self, file_path, container_format, container_format_profile):
         self._path = file_path
         self._tracks_by_type = None
+        self._ffmpeg = Ffmpeg()  # TODO singleton
 
         if File._format_signatures is None:
             formats = {}
@@ -83,7 +84,7 @@ class File(object):
                 else:
                     stream_id = self._TRACK_PROPS[track_type][self._TRACK_PROPS_IDX_FFMPEG_STREAM]
                     for track_id, track in cmd.ffprobe(self._path, stream_id).iteritems():
-                        tracks_data.setdefault(track['codec_type'], {})[track_id] = track
+                        tracks_data.setdefault(self._ffmpeg.parse_track_type(track['codec_type']), {})[track_id] = track
 
             self._tracks_by_type = {track_type: [] for track_type in self._TRACK_PROPS.iterkeys()}
             for track_type, tracks_of_type in tracks_data.iteritems():

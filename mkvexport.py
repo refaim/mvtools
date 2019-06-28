@@ -332,7 +332,7 @@ def main():
                     for track in sorted_candidates:
                         candidates_by_index[movie.track_index_in_type(track)] = track.qualified_id()
                     header = u'--- {}, {}, {} ---'.format(
-                        track_type.capitalize(), target_lang.upper(), forced_string)
+                        track_type, target_lang.upper(), forced_string)
                     # TODO if tv AND if tracks ids, names and codecs same as before then choose track automatically
                     chosen_track_index = ask_to_select_tracks(movie, track_type, sorted_candidates, header)
                     chosen_track_id = candidates_by_index[chosen_track_index]

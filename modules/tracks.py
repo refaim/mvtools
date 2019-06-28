@@ -7,7 +7,8 @@ import misc
 import platform
 from ffmpeg import Ffmpeg
 from formats import FieldOrder, PictureFormat, ColorRange, ColorSpace, VideoFpsStandard, \
-    SubtitleCodec, VideoCodec, TrackType
+    SubtitleCodec, VideoCodec, TrackType, AudioCodec
+
 
 class Track(object):
     # TODO move to mkvmerge class
@@ -58,7 +59,7 @@ class Track(object):
         return self.source_file(), self.id()
 
     def type(self):
-        return self._ffm_data['codec_type']
+        return self._ffmpeg.parse_track_type(self._ffm_data['codec_type'])
 
     def codec(self):
         return self._codec_enums[self._codec_id()]
