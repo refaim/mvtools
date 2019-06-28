@@ -2,7 +2,6 @@
 
 from abc import ABCMeta, abstractmethod
 
-from media import File
 from formats import AudioCodec, VideoCodec, FileFormat
 
 

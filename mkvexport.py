@@ -188,20 +188,20 @@ def main():
     parser.add_argument('-ks', default=False, action='store_true', help='keep current colorspace')
 
     parser.add_argument('-cr', default=False, action='store_true', help='crop video')
-    parser.add_argument('-cf', type=cli.argparse_path, default=None, help='path to crop map file')
+    parser.add_argument('-cf', type=cli.argparse_path, default=None, metavar='<path>', help='path to crop map file')
     parser.add_argument('-sc', default=False, action='store_true', help='use same crop values for all files')
 
-    parser.add_argument('-al', nargs='*', type=cli.argparse_lang, default=[], help='ordered list of audio 3-letter language codes to keep')
+    parser.add_argument('-al', nargs='*', type=cli.argparse_lang, default=[], metavar='lang', help='ordered list of audio 3-letter language codes to keep')
     parser.add_argument('-ar', default=False, action='store_true', help='recode audio')
     parser.add_argument('-ad', default='5.1', choices=CHANNEL_SCHEMES.keys(), help='downmix to N channels')
     parser.add_argument('-aw', default=False, action='store_true', help='convert audio to wavfile before encoding')
 
-    parser.add_argument('-sl', nargs='*', type=cli.argparse_lang, default=[], help='ordered list of full subtitle 3-letter language codes to keep')
-    parser.add_argument('-fl', nargs='*', type=cli.argparse_lang, default=[], help='ordered list of forced subtitle  3-letter language codes to keep')
+    parser.add_argument('-sl', nargs='*', type=cli.argparse_lang, default=[], metavar='lang', help='ordered list of full subtitle 3-letter language codes to keep')
+    parser.add_argument('-fl', nargs='*', type=cli.argparse_lang, default=[], metavar='lang', help='ordered list of forced subtitle  3-letter language codes to keep')
     parser.add_argument('-fo', default=False, action='store_true', help='make forced subtitles optional')
 
-    parser.add_argument('-nf', type=cli.argparse_path, default=None, help='path to names map file')
-    parser.add_argument('-tv', default=None, help='TV series name')
+    parser.add_argument('-nf', type=cli.argparse_path, default=None, metavar='<path>', help='path to names map file')
+    parser.add_argument('-tv', default=None, metavar='<name>', help='TV series name')
     parser.add_argument('-il', default=False, action='store_true', help='Ignore track language data')
     parser.add_argument('-xx', default=False, action='store_true', help='Remove original files after processing')
     parser.add_argument('-ma', default=False, action='store_true', help='Append mux file instead of overwrite')
