@@ -6,6 +6,7 @@ import collections
 import os
 import re
 import shutil
+import sys
 
 import tvdb_api
 
@@ -584,8 +585,8 @@ def main():
                     ffmpeg_opts = []
                 track_file, is_track_file_temporary = make_single_track_file(track, Ffmpeg.STREAM_ARGUMENT_SUB, ffmpeg_opts=ffmpeg_opts)
                 srt_file = platform.make_temporary_file('.srt')
-                result_commands.append(u'python {script} {src_path} {dst_path}'.format(
-                    script=cmd.quote(os.path.join(os.path.dirname(__file__), 'any2srt.py')),
+                result_commands.append(u'{python} {script} {src_path} {dst_path}'.format(
+                    python=sys.executable, script=cmd.quote(os.path.join(os.path.dirname(__file__), 'any2srt.py')),
                     src_path=cmd.quote(track_file), dst_path=cmd.quote(srt_file)))
                 track_sources[track.qualified_id()] = [srt_file, 0]
                 track.set_encoding(lang.norm_encoding('utf-8'))
