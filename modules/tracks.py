@@ -292,7 +292,7 @@ class Colors(object):
         if self.is_hd():
             return ColorSpace.BT_709
         if self._standard == VideoFpsStandard.PAL:
-            return ColorSpace.BT_601_PAL,
+            return ColorSpace.BT_601_PAL
         if self._standard == VideoFpsStandard.NTSC:
             return ColorSpace.BT_601_NTSC
         assert not self.is_hd()
