@@ -31,7 +31,7 @@ if __name__ == '__main__':
             raise ConvertError('Conversion failed!')
 
         tmp_path = search_line(
-            r'{} -> (?P<path>.+?)\.\.\.'.format(os.path.basename(src_path)),
+            r'{} -> (?P<path>.+?)\.\.\.'.format(re.escape(os.path.basename(src_path))),
             cleaned_output,
             'Unable to find file name')['path']
         if not os.path.isfile(tmp_path):
