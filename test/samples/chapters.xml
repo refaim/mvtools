@@ -1,0 +1,116 @@
+﻿<?xml version="1.0"?>
+<!-- <!DOCTYPE Chapters SYSTEM "matroskachapters.dtd"> -->
+<Chapters>
+  <EditionEntry>
+    <EditionFlagDefault>1</EditionFlagDefault>
+    <EditionUID>2583131577723428569</EditionUID>
+    <ChapterAtom>
+      <ChapterUID>9442253142195443874</ChapterUID>
+      <ChapterTimeStart>00:00:00.080000000</ChapterTimeStart>
+      <ChapterTimeEnd>00:09:40.880000000</ChapterTimeEnd>
+      <ChapterDisplay>
+        <ChapterString>Chapter 01</ChapterString>
+        <ChapterLanguage>eng</ChapterLanguage>
+      </ChapterDisplay>
+    </ChapterAtom>
+    <ChapterAtom>
+      <ChapterUID>11400054324948560967</ChapterUID>
+      <ChapterTimeStart>00:09:40.880000000</ChapterTimeStart>
+      <ChapterTimeEnd>00:19:41.360000000</ChapterTimeEnd>
+      <ChapterDisplay>
+        <ChapterString>Chapter 02</ChapterString>
+        <ChapterLanguage>eng</ChapterLanguage>
+      </ChapterDisplay>
+    </ChapterAtom>
+    <ChapterAtom>
+      <ChapterUID>12953873909945746909</ChapterUID>
+      <ChapterTimeStart>00:19:41.360000000</ChapterTimeStart>
+      <ChapterTimeEnd>00:26:42.320000000</ChapterTimeEnd>
+      <ChapterDisplay>
+        <ChapterString>Chapter 03</ChapterString>
+        <ChapterLanguage>eng</ChapterLanguage>
+      </ChapterDisplay>
+    </ChapterAtom>
+    <ChapterAtom>
+      <ChapterUID>9435113759785007415</ChapterUID>
+      <ChapterTimeStart>00:26:42.320000000</ChapterTimeStart>
+      <ChapterTimeEnd>00:32:20.720000000</ChapterTimeEnd>
+      <ChapterDisplay>
+        <ChapterString>Chapter 04</ChapterString>
+        <ChapterLanguage>eng</ChapterLanguage>
+      </ChapterDisplay>
+    </ChapterAtom>
+    <ChapterAtom>
+      <ChapterUID>6610488294199441022</ChapterUID>
+      <ChapterTimeStart>00:32:20.720000000</ChapterTimeStart>
+      <ChapterTimeEnd>00:42:42.800000000</ChapterTimeEnd>
+      <ChapterDisplay>
+        <ChapterString>Chapter 05</ChapterString>
+        <ChapterLanguage>eng</ChapterLanguage>
+      </ChapterDisplay>
+    </ChapterAtom>
+    <ChapterAtom>
+      <ChapterUID>5028237681340887684</ChapterUID>
+      <ChapterTimeStart>00:42:42.800000000</ChapterTimeStart>
+      <ChapterTimeEnd>00:53:55.760000000</ChapterTimeEnd>
+      <ChapterDisplay>
+        <ChapterString>Chapter 06</ChapterString>
+        <ChapterLanguage>eng</ChapterLanguage>
+      </ChapterDisplay>
+    </ChapterAtom>
+    <ChapterAtom>
+      <ChapterUID>18425013466039668402</ChapterUID>
+      <ChapterTimeStart>00:53:55.760000000</ChapterTimeStart>
+      <ChapterTimeEnd>00:59:25.040000000</ChapterTimeEnd>
+      <ChapterDisplay>
+        <ChapterString>Chapter 07</ChapterString>
+        <ChapterLanguage>eng</ChapterLanguage>
+      </ChapterDisplay>
+    </ChapterAtom>
+    <ChapterAtom>
+      <ChapterUID>14917218482607546345</ChapterUID>
+      <ChapterTimeStart>00:59:25.040000000</ChapterTimeStart>
+      <ChapterTimeEnd>01:04:44.720000000</ChapterTimeEnd>
+      <ChapterDisplay>
+        <ChapterString>Chapter 08</ChapterString>
+        <ChapterLanguage>eng</ChapterLanguage>
+      </ChapterDisplay>
+    </ChapterAtom>
+    <ChapterAtom>
+      <ChapterUID>15565859123258554637</ChapterUID>
+      <ChapterTimeStart>01:04:44.720000000</ChapterTimeStart>
+      <ChapterTimeEnd>01:13:03.920000000</ChapterTimeEnd>
+      <ChapterDisplay>
+        <ChapterString>Chapter 09</ChapterString>
+        <ChapterLanguage>eng</ChapterLanguage>
+      </ChapterDisplay>
+    </ChapterAtom>
+    <ChapterAtom>
+      <ChapterUID>10924596776169415740</ChapterUID>
+      <ChapterTimeStart>01:13:03.920000000</ChapterTimeStart>
+      <ChapterTimeEnd>01:27:45.680000000</ChapterTimeEnd>
+      <ChapterDisplay>
+        <ChapterString>Chapter 10</ChapterString>
+        <ChapterLanguage>eng</ChapterLanguage>
+      </ChapterDisplay>
+    </ChapterAtom>
+    <ChapterAtom>
+      <ChapterUID>3399848184242473268</ChapterUID>
+      <ChapterTimeStart>01:27:45.680000000</ChapterTimeStart>
+      <ChapterTimeEnd>01:36:16.400000000</ChapterTimeEnd>
+      <ChapterDisplay>
+        <ChapterString>Chapter 11</ChapterString>
+        <ChapterLanguage>eng</ChapterLanguage>
+      </ChapterDisplay>
+    </ChapterAtom>
+    <ChapterAtom>
+      <ChapterUID>5751628065227406647</ChapterUID>
+      <ChapterTimeStart>01:36:16.400000000</ChapterTimeStart>
+      <ChapterTimeEnd>01:46:42.000000000</ChapterTimeEnd>
+      <ChapterDisplay>
+        <ChapterString>Chapter 12</ChapterString>
+        <ChapterLanguage>eng</ChapterLanguage>
+      </ChapterDisplay>
+    </ChapterAtom>
+  </EditionEntry>
+</Chapters>

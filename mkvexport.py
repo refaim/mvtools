@@ -16,6 +16,7 @@ from modules import lang
 from modules import media
 from modules import misc
 from modules import platform
+from modules.detectors import MiDetector, FfmpegDetector
 from modules.ffmpeg import Ffmpeg
 from modules.formats import VideoCodec, PictureFormat, AudioCodec, SubtitleCodec, FieldOrder, VideoCodecProfile, \
     VideoCodecLevel, FileFormat, TrackType
@@ -154,8 +155,11 @@ def find_movies(search_path, ignore_languages, detect_satellites):
                 media_groups.append([video] + group)
             remaining_media -= set(group)
 
+    ff_detector = FfmpegDetector(Ffmpeg())
+    mi_detector = MiDetector()
+
     for group in sorted(media_groups, key=lambda g: [os.path.dirname(g[0]).lower(), os.path.basename(g[0]).lower(), os.path.splitext(g[0])[1].lower()]):
-        yield media.Movie(group, ignore_languages)
+        yield media.Movie(group, ignore_languages, ff_detector, mi_detector)
 
 def read_map_file(path, handle_key, handle_value):
     result = None

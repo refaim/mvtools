@@ -6,6 +6,7 @@ class FileFormat(MyEnum):
     AMR = MyEnum.auto()
     AVI = MyEnum.auto()
     CHA = MyEnum.auto()
+    DTS = MyEnum.auto()
     EAC3 = MyEnum.auto()
     FLAC = MyEnum.auto()
     FLV = MyEnum.auto()
@@ -13,9 +14,11 @@ class FileFormat(MyEnum):
     M4V = MyEnum.auto()
     MKV = MyEnum.auto()
     MOV = MyEnum.auto()
+    MP2 = MyEnum.auto()
     MP3 = MyEnum.auto()
     MP4 = MyEnum.auto()
     MPG = MyEnum.auto()
+    OGG = MyEnum.auto()
     RM = MyEnum.auto()
     SMK = MyEnum.auto()
     SRT = MyEnum.auto()
@@ -32,6 +35,78 @@ class TrackType(MyEnum):
     VID = MyEnum.auto()
     SUB = MyEnum.auto()
     CHA = MyEnum.auto()
+
+
+FILE_FORMAT_SUPPORTED_TRACK_TYPES = {
+    FileFormat.AC3: {TrackType.AUD},
+    FileFormat.AMR: {TrackType.AUD},
+    FileFormat.AVI: {TrackType.VID, TrackType.AUD},
+    FileFormat.CHA: {TrackType.CHA},
+    FileFormat.DTS: {TrackType.AUD},
+    FileFormat.EAC3: {TrackType.AUD},
+    FileFormat.FLAC: {TrackType.AUD},
+    FileFormat.FLV: {TrackType.VID, TrackType.AUD},
+    FileFormat.M4A: {TrackType.AUD},
+    FileFormat.M4V: {TrackType.VID, TrackType.AUD, TrackType.SUB},
+    FileFormat.MKV: {TrackType.VID, TrackType.AUD, TrackType.SUB},
+    FileFormat.MOV: {TrackType.VID, TrackType.AUD, TrackType.SUB},
+    FileFormat.MP2: {TrackType.AUD},
+    FileFormat.MP3: {TrackType.AUD},
+    FileFormat.MP4: {TrackType.VID, TrackType.AUD, TrackType.SUB},
+    FileFormat.MPG: {TrackType.VID, TrackType.AUD, TrackType.SUB},
+    FileFormat.OGG: {TrackType.VID, TrackType.AUD, TrackType.SUB},
+    FileFormat.RM: {TrackType.VID, TrackType.AUD},
+    FileFormat.SMK: {TrackType.VID, TrackType.AUD},
+    FileFormat.SRT: {TrackType.SUB},
+    FileFormat.SSA: {TrackType.SUB},
+    FileFormat.SUP: {TrackType.SUB},
+    FileFormat.TS: {TrackType.VID, TrackType.AUD, TrackType.SUB},
+    FileFormat.VOB: {TrackType.VID, TrackType.AUD, TrackType.SUB},
+    FileFormat.WAV: {TrackType.AUD},
+    FileFormat.WEBM: {TrackType.VID, TrackType.AUD},
+    FileFormat.WMV: {TrackType.VID, TrackType.AUD, TrackType.SUB},
+    FileFormat.x3GP: {TrackType.VID, TrackType.AUD},
+}
+
+FILE_FORMAT_FILENAME_WILDCARDS = {
+    '*.3gp': FileFormat.x3GP,
+    '*.ac3': FileFormat.AC3,
+    '*.amr': FileFormat.AMR,
+    '*.asf': FileFormat.WMV,
+    '*.ass': FileFormat.SSA,
+    '*.avi': FileFormat.AVI,
+    '*.dts': FileFormat.DTS,
+    '*.eac3': FileFormat.EAC3,
+    '*.flac': FileFormat.FLAC,
+    '*.flv': FileFormat.FLV,
+    '*.m4a': FileFormat.M4A,
+    '*.m4v': FileFormat.M4V,
+    '*.mkv': FileFormat.MKV,
+    '*.mov': FileFormat.MOV,
+    '*.mp2': FileFormat.MP2,
+    '*.mp3': FileFormat.MP3,
+    '*.mp4': FileFormat.MP4,
+    '*.mpeg': FileFormat.MPG,
+    '*.mpg': FileFormat.MPG,
+    '*.ogg': FileFormat.OGG,
+    '*.ogv': FileFormat.OGG,
+    '*.opus': FileFormat.OGG,
+    '*.ra': FileFormat.RM,
+    '*.rm': FileFormat.RM,
+    '*.rmvb': FileFormat.RM,
+    '*.smk': FileFormat.SMK,
+    '*.srt': FileFormat.SRT,
+    '*.ssa': FileFormat.SSA,
+    '*.sup': FileFormat.SUP,
+    '*.ts': FileFormat.TS,
+    '*.vob': FileFormat.VOB,
+    '*.wav': FileFormat.WAV,
+    '*.webm': FileFormat.WEBM,
+    '*.wma': FileFormat.WMV,
+    '*.wmv': FileFormat.WMV,
+    '*chapters*.txt': FileFormat.CHA,
+    '*chapters*.xml': FileFormat.CHA,
+}
 
 class VideoCodec(MyEnum):
     FLV1 = MyEnum.auto()

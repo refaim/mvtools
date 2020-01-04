@@ -5,8 +5,9 @@ import re
 
 import misc
 import platform
+from detectors import DetectedTrack, FfmpegTrack, FfmpegVideoTrack, MiVideoTrack
 from ffmpeg import Ffmpeg
-from formats import FieldOrder, PictureFormat, ColorRange, ColorSpace, VideoFpsStandard, \
+from formats import PictureFormat, ColorRange, ColorSpace, VideoFpsStandard, \
     SubtitleCodec, VideoCodec, TrackType, AudioCodec
 
 
@@ -20,11 +21,14 @@ class Track(object):
 
     _DURATION_REGEXP = re.compile(r'(?P<hh>\d+):(?P<mm>\d+):(?P<ss>[\d.]+)')
 
-    def __init__(self, parent_path, parent_format, ffm_data, codec_props):
+    def __init__(self, parent_path, parent_format, ff_track, mi_track, codec_props):
+        # type: (str, str, FfmpegTrack, DetectedTrack, dict) -> None
         self._parent_path = parent_path
         self._parent_format = parent_format
-        self._ffm_data = ffm_data
-        self._ffmpeg = Ffmpeg()  # TODO pass from outside
+        self._ffm_data = ff_track.raw_data  # TODO obsolete
+        self._ff_track = ff_track
+        self._mi_track = mi_track
+        self._ffmpeg = Ffmpeg()  # TODO obsolete
         self._duration = None
 
         self._codec_enums = {}
@@ -53,13 +57,13 @@ class Track(object):
         return self._ffm_data.setdefault('tags', {})
 
     def id(self):
-        return self._ffm_data['index']
+        return self._ff_track.id
 
     def qualified_id(self):
         return self.source_file(), self.id()
 
     def type(self):
-        return self._ffmpeg.parse_track_type(self._ffm_data['codec_type'])
+        return self._ff_track.type
 
     def codec(self):
         return self._codec_enums[self._codec_id()]
@@ -137,8 +141,8 @@ class AudioTrack(Track):
         AudioCodec.WMA_V2: ['wmav2', 'wma', '.wma'],
     }
 
-    def __init__(self, parent_path, parent_format, ffm_data):
-        super(AudioTrack, self).__init__(parent_path, parent_format, ffm_data, self._CODEC_PROPS)
+    def __init__(self, parent_path, parent_format, ff_info, mi_info):
+        super(AudioTrack, self).__init__(parent_path, parent_format, ff_info, mi_info, self._CODEC_PROPS)
         self._codec_overwrite = None
 
     def _codec_id(self):
@@ -201,17 +205,18 @@ class VideoTrack(Track):
         dh = h % 8
         return w - dw, h - dh, x + int(math.ceil(dw * 0.5)), y + int(math.ceil(dh * 0.5))
 
-    def __init__(self, parent_path, parent_format, ffm_data):
-        super(VideoTrack, self).__init__(parent_path, parent_format, ffm_data, self._CODEC_PROPS)
+    def __init__(self, parent_path, parent_format, ff_track, mi_track):
+        super(VideoTrack, self).__init__(parent_path, parent_format, ff_track, mi_track, self._CODEC_PROPS)
         self._crf = None
-        self._field_order = None
         self._colors = Colors(self.width(), self.height(), self.standard(), self._ffm_data)
+        self._ff_track = self._ff_track  # type: FfmpegVideoTrack
+        self._mi_track = self._mi_track  # type: MiVideoTrack
 
     def width(self):
-        return self._ffm_data['width']
+        return self._ff_track.width
 
     def height(self):
-        return self._ffm_data['height']
+        return self._ff_track.height
 
     def is_hd(self):
         return self.width() >= 1200 or self.height() >= 700
@@ -258,10 +263,7 @@ class VideoTrack(Track):
         return None
 
     def field_order(self):
-        if self._field_order is None:
-            raw = self._ffm_data.get('field_order')
-            self._field_order = self._ffmpeg.parse_field_order(raw) if raw is not None else FieldOrder.PROGRESSIVE
-        return self._field_order
+        return self._ff_track.field_order or self._mi_track.field_order
 
 
 class Colors(object):
@@ -326,8 +328,8 @@ class SubtitleTrack(Track):
         SubtitleCodec.VOBSUB: ['dvd_subtitle', 'vbs', None],
     }
 
-    def __init__(self, parent_path, parent_format, ffm_data):
-        super(SubtitleTrack, self).__init__(parent_path, parent_format, ffm_data, self._CODEC_PROPS)
+    def __init__(self, parent_path, parent_format, ff_info, mi_info):
+        super(SubtitleTrack, self).__init__(parent_path, parent_format, ff_info, mi_info, self._CODEC_PROPS)
         self._encoding = None
 
     def is_binary(self):
@@ -350,8 +352,8 @@ class SubtitleTrack(Track):
 
 
 class ChaptersTrack(Track):
-    def __init__(self, parent_path, parent_format, ffm_data):
-        super(ChaptersTrack, self).__init__(parent_path, parent_format, ffm_data, {})
+    def __init__(self, parent_path, parent_format, ff_info, mi_info):
+        super(ChaptersTrack, self).__init__(parent_path, parent_format, ff_info, mi_info, {})
 
     def id(self):
         return id(self)

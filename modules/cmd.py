@@ -1,7 +1,5 @@
-import json
 import os
 import re
-import xml.dom.minidom
 
 import platform
 
@@ -68,51 +66,6 @@ def gen_bdsup2sub(src_file, dst_file, language):
     return [u'java -jar {jar} -l {lng} -o {dst} {src}'.format(
         jar=quote(platform.execute('where bdsup2sub.jar').strip()),
         lng=language, dst=quote(dst_file), src=quote(src_file))]
-
-def ffprobe(media_path, stream_ids):
-    tracks = {}
-    ffprobe_opts = [
-        u'-v quiet',
-        u'-print_format json',
-        u'-probesize {}'.format(50 * 1024 * 1024),
-        u'-analyzeduration {}'.format(int(3e+7)),
-        u'-show_streams',
-    ]
-    for stream_specifier in stream_ids:
-        command = u'ffprobe {opts} -select_streams {stream} {path}'.format(
-            opts=u' '.join(ffprobe_opts), stream=stream_specifier, path=quote(media_path))
-        for stream in json.loads(platform.execute(command))['streams']:
-            tracks[stream['index']] = stream
-    return tracks
-
-def mediainfo(media_path):
-    doc = xml.dom.minidom.parseString(platform.execute(u'mediainfo --Output=XML {}'.format(quote(media_path))))
-    media_info = doc.getElementsByTagName('MediaInfo')[0]
-    media = media_info.getElementsByTagName('media')[0]
-    tracks = {}
-    general = {}
-    for track in media.getElementsByTagName('track'):
-        track_data = {}
-        for tag in track.childNodes:
-            if isinstance(tag, xml.dom.minidom.Element):
-                track_data[tag.nodeName] = tag.childNodes[0].nodeValue
-        track_type = track.getAttribute('type')
-        if track_type == 'General':
-            track_format = track_data.get('Format')
-            if track_format is None:
-                _, extension = os.path.splitext(media_path.lower())
-                if extension == '.srt':
-                    track_format = 'SubRip'
-                elif extension == '.sup':
-                    track_format = 'PGS'
-                elif 'chapters' in media_path.lower():
-                    track_format = 'Chapters'
-            general['format'] = track_format
-            general['format_profile'] = track_data.get('Format_Profile')
-        elif track_type in ('Video', 'Audio', 'Text'):
-            track_data['ID'] = int(track_data.get('ID', 1)) - 1
-            tracks[track_data['ID']] = track_data
-    return {'tracks': tracks, 'general': general}
 
 # TODO fix this
 def detect_crf(movie_path):
