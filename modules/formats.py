@@ -6,6 +6,7 @@ class FileFormat(MyEnum):
     AMR = MyEnum.auto()
     AVI = MyEnum.auto()
     CHA = MyEnum.auto()
+    DTS = MyEnum.auto()
     EAC3 = MyEnum.auto()
     FLAC = MyEnum.auto()
     FLV = MyEnum.auto()
@@ -59,7 +60,9 @@ class VideoCodec(MyEnum):
 class VideoCodecProfile(MyEnum):
     BASELINE = MyEnum.auto()
     MAIN = MyEnum.auto()
+    MAIN_10 = MyEnum.auto()
     HIGH = MyEnum.auto()
+    HIGH_10 = MyEnum.auto()
 
 class VideoCodecLevel(MyEnum):
     L10 = MyEnum.auto()
@@ -94,10 +97,11 @@ class ColorRange(MyEnum):
     TV = MyEnum.auto()
 
 class ColorSpace(MyEnum):
+    FCC = MyEnum.auto()
     BT_601_NTSC = MyEnum.auto()
     BT_601_PAL = MyEnum.auto()
     BT_709 = MyEnum.auto()
-    FCC = MyEnum.auto()
+    BT_2020 = MyEnum.auto()
 
 class FieldOrder(MyEnum):
     PROGRESSIVE = MyEnum.auto()
@@ -130,7 +134,9 @@ class AudioCodec(MyEnum):
     MP2 = MyEnum.auto()
     MP3 = MyEnum.auto()
     OPUS = MyEnum.auto()
+    PCM_S16B = MyEnum.auto()
     PCM_S16L = MyEnum.auto()
+    PCM_S24L = MyEnum.auto()
     PCM_MULAW = MyEnum.auto()
     SMK = MyEnum.auto()
     SPEEX = MyEnum.auto()

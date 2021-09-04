@@ -23,7 +23,9 @@ class Ffmpeg(object):
         'Baseline': VideoCodecProfile.BASELINE,
         'Constrained Baseline': VideoCodecProfile.BASELINE,
         'High': VideoCodecProfile.HIGH,
+        'High 10': VideoCodecProfile.HIGH_10,
         'Main': VideoCodecProfile.MAIN,
+        'Main 10': VideoCodecProfile.MAIN_10,
     }
 
     _VIDEO_CODEC_PROFILE_ENUM_TO_ARGUMENT = {
@@ -83,6 +85,7 @@ class Ffmpeg(object):
     }
 
     _COLOR_SPACE_RAW_TO_ENUM = {
+        'bt2020nc': ColorSpace.BT_2020,
         'bt470bg': ColorSpace.BT_601_PAL,
         'bt709': ColorSpace.BT_709,
         'fcc': ColorSpace.FCC,

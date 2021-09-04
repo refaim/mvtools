@@ -506,19 +506,18 @@ def main():
             mux_temporary_files.append(new_video_path)
 
         # TODO move to software abstraction
-        audio_codecs_to_keep = {AudioCodec.AAC_LC, AudioCodec.MP3}
         audio_codecs_to_denorm = {AudioCodec.AC3, AudioCodec.DTS}
         audio_codecs_to_uncompress = {
             AudioCodec.AAC_HE, AudioCodec.AAC_HE_V2, AudioCodec.AAC_LC,
             AudioCodec.AMR, AudioCodec.OPUS, AudioCodec.SPEEX, AudioCodec.COOK, AudioCodec.ASAO,
-            AudioCodec.ADPCM_SWF, AudioCodec.PCM_MULAW,
+            AudioCodec.ADPCM_SWF, AudioCodec.PCM_MULAW, AudioCodec.PCM_S16B,
             AudioCodec.VORBIS, AudioCodec.SMK,
             AudioCodec.WMA_PRO, AudioCodec.WMA_V2,
         }
         audio_codecs_to_recode = {
             AudioCodec.AMR, AudioCodec.ASAO, AudioCodec.OPUS, AudioCodec.SPEEX, AudioCodec.COOK,
             AudioCodec.EAC3, AudioCodec.DTS_ES, AudioCodec.DTS_HRA, AudioCodec.DTS_MA, AudioCodec.TRUE_HD,
-            AudioCodec.ADPCM_IMA, AudioCodec.ADPCM_MS, AudioCodec.ADPCM_SWF, AudioCodec.PCM_MULAW, AudioCodec.PCM_S16L,
+            AudioCodec.ADPCM_IMA, AudioCodec.ADPCM_MS, AudioCodec.ADPCM_SWF, AudioCodec.PCM_MULAW, AudioCodec.PCM_S16B, AudioCodec.PCM_S16L, AudioCodec.PCM_S24L,
             AudioCodec.FLAC, AudioCodec.MP2, AudioCodec.VORBIS, AudioCodec.SMK,
             AudioCodec.WMA_PRO, AudioCodec.WMA_V2
         }
@@ -528,7 +527,7 @@ def main():
             need_extract = not source_container_supported_by_mkvmerge
             need_denorm = track.codec() in audio_codecs_to_denorm
             need_downmix = track.channels() > max_audio_channels
-            need_recode = need_downmix or track.codec() in audio_codecs_to_recode or args.ar and track.codec() not in audio_codecs_to_keep
+            need_recode = need_downmix or track.codec() in audio_codecs_to_recode or args.ar and track.codec() != AudioCodec.AAC_LC
             need_uncompress = track.codec() in audio_codecs_to_uncompress or args.aw
 
             if need_extract or need_denorm or need_downmix or need_recode:

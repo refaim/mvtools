@@ -29,6 +29,7 @@ class File(object):
         FileFormat.AMR: (['*.amr'], [TrackType.AUD], [('AMR', None)]),
         FileFormat.AVI: (['*.avi'], [TrackType.VID, TrackType.AUD], [('AVI', None), ('AVI', 'OpenDML')]),
         FileFormat.CHA: (['*chapters*.txt', '*chapters*.xml'], [TrackType.CHA], [('Chapters', None)]),
+        FileFormat.DTS: (['*.dts', '*.dtshr'], [TrackType.AUD], [('DTS', None)]),
         FileFormat.EAC3: (['*.eac3'], [TrackType.AUD], [('E-AC-3', None)]),
         FileFormat.FLAC: (['*.flac'], [TrackType.AUD], [('FLAC', None)]),
         FileFormat.FLV: (['*.flv'], [TrackType.VID, TrackType.AUD], [('Flash Video', None)]),
