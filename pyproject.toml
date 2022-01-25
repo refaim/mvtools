@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "mvtools"
+version = "1.0"
+description = ""
+authors = ["Roman Kharitonov <rkharito@yandex.ru>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^2.7"
+tvdb_api = "^2.0"
+chardet = "^3.0.4"
+enum34 = "^1.1.6"
+requests-cache = "^0.5.2"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

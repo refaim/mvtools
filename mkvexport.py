@@ -605,7 +605,7 @@ def main():
         mux_path = platform.make_temporary_file('.mkv')
 
         # TODO add cover to files
-        mux = ['mkvmerge']
+        mux = ['call', 'mkvmerge']
         mux.extend(['--output', cmd.quote(mux_path)])
         mux.extend(['--no-track-tags', '--no-global-tags', '--disable-track-statistics-tags'])
 
@@ -660,7 +660,7 @@ def main():
                 cmd.quote(movie.chapters_path()), cmd.quote(mux_path)))
 
         clean_mux_path = platform.make_temporary_file('.mkv')
-        result_commands.append(u'mkclean {} {}'.format(cmd.quote(mux_path), cmd.quote(clean_mux_path)))
+        result_commands.append(u'call mkclean {} {}'.format(cmd.quote(mux_path), cmd.quote(clean_mux_path)))
         result_commands.extend(cmd.gen_del_files(args.sd, mux_path))
         result_commands.extend(cmd.gen_move_file(clean_mux_path, target_path, args.sd))
 
